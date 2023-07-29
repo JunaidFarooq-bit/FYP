@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+{% load static %}
+<head>
+    <title>Smart Web Analyzer</title>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="stylesheet" href="{% static 'fyp.css'%}">
+    <link rel="icon" type="image/ico" href="{% static 'favicon-1.ico'%}">
+            <!-- Font Awesome CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+</head>
+
+<body style="background-color:rgb(255, 255, 255)">
+    <!-- Sidebar -->
+<style>
+     @media (max-width: 996px) {
+            #mylogo {
+                display: none !important;
+            }
+</style>
+ <main style="margin-top: 58px; ">
+             {% if messages %}
+                            {% for message in messages %}
+                            {% if message.tags == 'success' %}
+                                <div class="alert-success m-2" id="msg" role="alert" style="background-color: #023761; text-decoration: none;color:white; font-size: 25px;height: 48px;padding-top:4px; padding-bottom: 4px ;padding-left: 30px;">
+                                    {{ message }}
+                                </div>
+                            {% elif message.tags == 'error' %}
+                                 <div class="alert-danger m-2" id="msg1" role="alert" style="background-color: #B30202; text-decoration: none;color:white; font-size: 25px;height: 48px;padding-top:4px; padding-bottom: 4px ;padding-left: 30px;">
+                                    {{ message }}
+                                </div>
+                            {% endif %}
+                            {% endfor %}
+                        {% endif %}
+    <div class="container">
+        <div class="row">
+            <div class="col-md-8 offset-md-2 mt-5">
+                <br>
+                <br>
+                <h3 class="text-center">Keyword Position Checker</h3>
+                <p class="text-center mt-3">Keyword position refers to where a keyword appears in a webpage's content. Optimizing keyword position can improve a webpage's SEO by increasing its relevance to search engines and users.</p>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-8 offset-md-2">
+                <form name="myForm" id="myForm" action="/keyPosition" method="post" required>
+                    {% csrf_token %}
+                    <div class="form-group mt-4">
+                        <input placeholder="Enter URL" name="url" autocomplete="on" type="search" id="id_url" class="form-control rounded" style="min-width: 350px; min-height:25px"
+                        {% if url %}
+                               value={{url}}
+                        {% endif %}
+                        />
+                    </div>
+                    <div class="form-group mt-4">
+                        <input placeholder="Enter Keyword" name="keyword" autocomplete="on" type="search" id="id_keyword" class="form-control rounded" style="min-width: 350px; min-height:25px"
+                        {% if keyword %}
+                               value={{keyword}}
+                        {% endif %}
+                        />
+                    </div>
+                    <div class="form-group text-center">
+                        <button class="btn btn-primary" onclick="myFunction()" style="background-image: linear-gradient(to bottom,#2670ac,#023761)  !important;" type="submit">Submit</button>
+                </form>
+                        <button onclick="trynewurl()" class="btn btn-secondary" style="background-image: linear-gradient(to bottom,#2670ac,#023761)  !important;" type="submit"><a style=" color:white;text-decoration:none;" href="{% url 'keyPosition' %}" >Try New URL!</a></button>
+                    </div>
+
+            </div>
+        </div>
+ {% if rank %}
+        <div class="row mt-5">
+            <div class="col-md-8 offset-md-2">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Keyword Rank:</th>
+                            <td>{{rank}}</td>
+                        </tr>
+
+                    </thead>
+                </table>
+            </div>
+        </div>
+{% endif %}
+    </div>
+
+    <!--Main Navigation-->
+    <header>
+
+
+        <!-- Sidebar -->
+<nav id="sidebarMenu" class="collapse d-lg-block sidebar collapse bg-primary" style="background-image: linear-gradient(to bottom,#023761,#02569b,#80aacd)  !important;">
+  <div class="position-sticky">
+    <div class="list-group list-group-flush mx-3 mt-4">
+      <a href="{% url 'Home' %}" class="list-group-item list-group-item-action py-2 ripple ">
+        <span class="icon me-3"><i class="fas fa-tachometer-alt"></i></span>
+        <span class="text">Website Audit</span>
+      </a>
+      <a href="{% url 'backlink' %}" class="list-group-item list-group-item-action py-2 ripple ">
+        <span class="icon me-3"><i class="fas fa-chart-line"></i></span>
+        <span class="text">Backlinks Checker</span>
+      </a>
+      <a href="{% url 'DomainAuthority' %}" class="list-group-item list-group-item-action py-2 ripple">
+        <span class="icon me-3"><i class="fas fa-chart-pie"></i></span>
+        <span class="text">Domain Authority</span>
+      </a>
+      <a href="{% url 'pageAuthority' %}" class="list-group-item list-group-item-action py-2 ripple">
+        <span class="icon me-3"><i class="fas fa-chart-pie"></i></span>
+        <span class="text">Page Authority</span>
+      </a>
+        <a href="{% url 'keyPosition' %}" class="list-group-item list-group-item-action py-2 ripple active">
+        <span class="icon me-3"><i class="fas fa-chart-line"></i></span>
+        <span class="text">Keyword Position</span>
+      </a>
+      <a href="{% url 'mobiletest' %}" class="list-group-item list-group-item-action py-2 ripple">
+        <span class="icon me-3"><i class="fas fa-chart-bar"></i></span>
+        <span class="text">Mobile Friendly Test</span>
+      </a>
+      <a href="{% url 'robot' %}" class="list-group-item list-group-item-action py-2 ripple">
+        <span class="icon me-3"><i class="fas fa-globe"></i></span>
+        <span class="text">Robot.txt Generator</span>
+      </a>
+      <a href="{% url 'keysuggestion' %}" class="list-group-item list-group-item-action py-2 ripple">
+        <span class="icon me-3"><i class="fas fa-chart-line"></i></span>
+        <span class="text">Keyword Suggestion</span>
+      </a>
+    </div>
+  </div>
+</nav>
+       <!-- Navbar -->
+        <nav id="main-navbar" class="navbar navbar-expand-lg navbar-light bg-white fixed-top" style="background-image: linear-gradient(to right,#023761,#02569b,#80aacd)  !important;">
+          <!-- Container wrapper -->
+          <button class="navbar-toggler" id="navbar-toggle" type="button" data-mdb-toggle="collapse" data-mdb-target="#sidebarMenu" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle navigation" style="color: white; margin: 0px;" onclick="navbar()">
+                        <i class="fas fa-bars"></i>
+                    </button>
+          <!-- Container wrapper -->
+            <div id="mylogo">
+            <img src="{% static 'logo.png'%}" style="display:inline-block !important;width: 40px; height: auto; margin-right: 5px;" />
+<h4 style="color: white; display: inline-block;" class="logo">Smart Web Analyzer</h4>                </div>
+            <div style="width:calc(100% - 280px)">
+                    <div class="row" style="width: 100%;">
+                        <div class="col-sm-9">
+                        </div>
+                        <div class="col-sm-3">
+                            <button class="btn" type="submit" style="background-image: linear-gradient(to bottom,#2670ac,#023761)  !important;padding-left: 20px; padding-right: 20px;float: right;"><a style=" color:white;text-decoration:none;" href="{% url 'logout' %}" >Logout</a></button>
+                        </div>
+                    </div>
+            </div>
+            </nav>
+
+    </header>
+   <script>
+        function trynewurl() {
+            var url = document.getElementById("urlfield");
+            var c = document.getElementById("content");
+            c.style.display = "none";
+            url.value = ""
+        }
+    </script>
+
+      <script>
+             const toggler= document.getElementById("sidebarMenu");
+                                        function navbar(){
+
+            if (toggler.style.display === 'block') {
+              toggler.style.display = 'none';
+            } else {
+              toggler.style.display = 'block';
+            }
+            }
+
+             function myFunction() {
+                var urlRegex = /^(https?|ftp):\/\/[^\s/$.?#].[^\s]*$/i;
+                var url = document.getElementById("id_url").value;
+                var keyword = document.getElementById("id_keyword").value;
+                var isValid = true;
+
+                if (url.trim() === "" && keyword.trim() === "") {
+                    alert("Enter both URL and keyword first.");
+                    isValid = false;
+                } else if (url.trim() === "") {
+                    alert("Enter a valid URL first.");
+                    isValid = false;
+                } else if (!urlRegex.test(url)) {
+                    alert("Enter a valid URL format.");
+                    isValid = false;
+                } else if (keyword.trim() === "") {
+                    alert("Enter a valid keyword first.");
+                    isValid = false;
+                }
+
+                if (isValid) {
+                    // If the form data is valid, submit the form
+                    document.getElementById("myForm").submit();
+                }
+            }
+
+            setTimeout(function(){
+              if ($('#msg').length > 0) {
+                $('#msg').remove();
+              }
+            }, 4000)
+
+            setTimeout(function(){
+              if ($('#msg1').length > 0) {
+                $('#msg1').remove();
+              }
+            }, 4000)
+        </script>
+
+    </main>
+    <!--Main layout-->
+    <!-- Optional JavaScript -->
+    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js " integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo " crossorigin="anonymous "></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js " integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1 " crossorigin="anonymous "></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js " integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM " crossorigin="anonymous "></script>
+</body>
+
+</html>

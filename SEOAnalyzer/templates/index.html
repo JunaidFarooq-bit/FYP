@@ -1,0 +1,454 @@
+<!doctype html>
+<html lang="en">
+{% load static %}
+<head>
+    <title>Smart Web Analyzer</title>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="stylesheet" href="{% static 'fyp.css'%}">
+    <link rel="icon" type="image/ico" href="{% static 'favicon-1.ico'%}">
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+        <!-- Font Awesome CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+
+</head>
+
+<body style="background-color:rgb(255, 255, 255)">
+    <style>
+#loader {
+display: none;
+position: fixed;
+z-index: 9999;
+top: 0;
+left: 0;
+width: 100%;
+height: 100%;
+background-color: rgba(255, 255, 255, 0.5);
+}
+
+.loader-animation {
+border: 16px solid #f3f3f3;
+border-top: 16px solid #3498db;
+border-radius: 50%;
+width: 120px;
+height: 120px;
+animation: spin 2s linear infinite;
+position: absolute;
+top: 50%;
+left: 50%;
+transform: translate(-50%, -50%);
+}
+
+@keyframes spin {
+0% { transform: rotate(0deg); }
+100% { transform: rotate(360deg); }
+}
+</style>
+    <!-- Container wrapper -->
+    <style>
+        @media (max-width: 996px) {
+            #mylogo {
+                display: none !important;
+            }
+            #searchdiv{
+            width:auto !important;
+            }
+            #id_url{
+                width: 100px !important;
+                margin-left: 0px !important;
+            }
+            #myButton{
+            width: 100px !important;
+            font-size:12px;
+            padding-bottom:7px;
+            padding-top:7px;
+            margin-left:3px !important;
+            margin-right:3px !important;
+            flex: 0 0 79px !important;
+            }
+            #try{
+             width: 50px !important;
+            font-size:12px;
+            padding-bottom:7px;
+            padding-top:7px;
+            padding-left:0px !important;
+            padding-right:0px !important;
+            margin-right:3px;
+            flex: 0 0 109px !important;
+            }
+
+            #logout {
+                margin-left: 0px !important;
+                width: 60px !important;
+            font-size:12px;
+            padding-bottom:7px;
+            padding-top:7px;
+            margin-top:2px;
+            padding-left:0px !important;
+            padding-right:0px !important;
+            margin-right:3px;
+            flex: 0 0 109px !important;
+
+            }
+            #logoutdiv {
+                width: 0px !important;
+
+                margin-right:0px !important;
+            }
+        }
+
+        @media (max-width: 1410px) {
+            #mylogo h4 {
+                font-size: 0px !important;
+            }
+              #id_url{
+                width: 200px !important;
+                margin-left: 100px !important;
+        }
+
+         @media (max-width: 687px) {
+
+              #id_url{
+                width: 100px !important;
+                margin-left: 50px !important;
+        }
+         @media (max-width: 487px) {
+        #searchdiv{
+            width:auto !important;
+            }
+            #id_url{
+                width: 45px !important;
+                margin-left: 0px !important;
+            }
+         @media (max-width: 537) {
+
+              #id_url{
+                width: 70px !important;
+                margin-left: 40px !important;
+        }
+
+        @media (max-width: 487px) {
+        #searchdiv{
+            width:auto !important;
+            }
+            #id_url{
+                width: 45px !important;
+                margin-left: 0px !important;
+            }
+    </style>
+        <div id="loader">
+        <div class="loader-animation"></div>
+        </div>
+
+    <!--Main Navigation-->
+    <!--Main layout-->
+    <main style="margin-top: 58px;">
+                        {% if messages %}
+                        {% for message in messages %}
+                        {% if message.tags == 'success' %}
+                            <div class="alert-success m-2" id="msg" role="alert" style="background-color: #023761; text-decoration: none;color:white; font-size: 25px;height: 48px;padding-top:4px; padding-bottom: 4px ;padding-left: 30px;">
+                                {{ message }}
+                            </div>
+                        {% elif message.tags == 'error' %}
+                             <div class="alert-danger m-2" id="msg1" role="alert" style="background-color: #B30202; text-decoration: none;color:white; font-size: 25px;height: 48px;padding-top:4px; padding-bottom: 4px ;padding-left: 30px;">
+                                {{ message }}
+                            </div>
+                        {% endif %}
+                        {% endfor %}
+                    {% endif %}
+
+
+        <div class="container pt-4">
+                <div id="accordion" style="height: 48px;">
+                    <div class="card" style="background-color: #023761;height: 48px;">
+
+                        <h5 style="padding-top:4px; padding-bottom: 4px ;padding-left: 30px;">
+                            <button class="btn btn-link" id="enable-disable" data-toggle="collapse" data-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne" style="background-color: #023761; text-decoration: none;color:white; font-size: 19px; ">
+                            Content Analysis
+                            </button>
+                        </h5>
+                    </div>
+                </div>
+
+
+            <div id="collapseOne" class="collapse show" aria-labelledby="headingOne" data-parent="#accordion">
+                <div class="card-body" style="background-color: transparent;">
+                    <div class="container" style="position: relative ; left: 100px;">
+                    </div>
+                </div>
+            </div>
+
+
+
+                <div id="accordion" style="height: 48px;">
+                    <div class="card" style="background-color: #023761;height: 48px;">
+
+                        <h5 style="padding-top:4px; padding-bottom: 4px ;padding-left: 30px;">
+                            <button class="btn btn-link" data-toggle="collapse" data-target="#collapseTwo" aria-expanded="true" aria-controls="collapseTwo" style="background-color: #023761; text-decoration: none;color:white; font-size: 19px; ">
+                            Structured Analysis
+                            </button>
+                        </h5>
+                    </div>
+                </div>
+            <div id="collapseTwo" class="collapse show" aria-labelledby="headingTwo" data-parent="#accordion">
+                <div class="card-body" style="background-color: transparent;">
+                    <div class="container" style="position: relative ; left: 100px;   ">
+                    </div>
+                </div>
+            </div>
+
+                <div id="accordion" style="height: 48px;">
+                    <div class="card" style="background-color: #023761;height: 48px;">
+
+                        <h5 style="padding-top:4px; padding-bottom: 4px ;padding-left: 30px;">
+                            <button class="btn btn-link" data-toggle="collapse" data-target="#collapseThree" aria-expanded="true" aria-controls="collapseThree" style="background-color: #023761; text-decoration: none;color:white; font-size: 19px; ">
+                            Technology Analysis
+                            </button>
+                        </h5>
+                    </div>
+                </div>
+
+            <div id="collapseThree" class="collapse show" aria-labelledby="headingThree" data-parent="#accordion">
+                <div class="card-body" style="background-color: transparent;">
+                    <div class="container" style="position: relative ; left: 100px;   ">
+                    </div>
+                </div>
+            </div>
+
+
+                <div id="accordion" style="height: 48px;">
+                    <div class="card" style="background-color: #023761;height: 48px;">
+
+                        <h5 style="padding-top:4px; padding-bottom: 4px ;padding-left: 30px;">
+                            <button class="btn btn-link" data-toggle="collapse" data-target="#collapseFour" aria-expanded="true" aria-controls="collapseFour" style="background-color: #023761; text-decoration: none;color:white; font-size: 19px; ">
+                            Security Analysis
+                            </button>
+                        </h5>
+                    </div>
+                </div>
+
+            <div id="collapseFour" class="collapse show" aria-labelledby="headingFour" data-parent="#accordion">
+                <div class="card-body" style="background-color: transparent;">
+                    <div class="container" style="position: relative ; left: 100px;   ">
+                    </div>
+                </div>
+            </div>
+
+                <div id="accordion" style="height: 48px;">
+                    <div class="card" style="background-color: #023761;height: 48px;">
+
+                        <h5 style="padding-top:4px; padding-bottom: 4px ;padding-left: 30px;">
+                            <button class="btn btn-link" data-toggle="collapse" data-target="#collapseFive" aria-expanded="true" aria-controls="collapseFive" style="background-color: #023761; text-decoration: none;color:white; font-size: 19px; ">
+                            Social Analysis
+                            </button>
+                        </h5>
+                    </div>
+                </div>
+            <div id="collapseFive" class="collapse show" aria-labelledby="headingFive" data-parent="#accordion">
+                <div class="card-body" style="background-color: transparent;">
+                    <div class="container" style="position: relative ; left: 100px;   ">
+                    </div>
+                </div>
+            </div>
+
+                <div id="accordion" style="height: 48px;">
+                    <div class="card" style="background-color: #023761;height: 48px;">
+
+                        <h5 style="padding-top:4px; padding-bottom: 4px ;padding-left: 30px;">
+                            <button class="btn btn-link" data-toggle="collapse" data-target="#collapseSix" aria-expanded="true" aria-controls="collapseSix" style="background-color: #023761; text-decoration: none;color:white; font-size: 19px; ">
+                            Performance Analysis
+                            </button>
+                        </h5>
+                    </div>
+                </div>
+            <div id="collapseSix" class="collapse show" aria-labelledby="headingSix" data-parent="#accordion">
+                <div class="card-body" style="background-color: transparent;">
+                    <div class="container" style="position: relative ; left: 100px;   ">
+                    </div>
+                </div>
+            </div>
+
+
+                <div id="accordion" style="height: 48px;">
+                    <div class="card" style="background-color: #023761;height: 48px;">
+
+                        <h5 style="padding-top:4px; padding-bottom: 4px ;padding-left: 30px;">
+                            <button class="btn btn-link" data-toggle="collapse" data-target="#collapseSeven" aria-expanded="true" aria-controls="collapseSeven" style="background-color: #023761; text-decoration: none;color:white; font-size: 19px; ">
+                            Mobile Usability Analysis
+                            </button>
+                        </h5>
+                    </div>
+                </div>
+            <div id="collapseSeven" class="collapse show" aria-labelledby="headingSeven" data-parent="#accordion">
+                <div class="card-body" style="background-color: transparent;">
+                    <div class="container" style="position: relative ; left: 100px;  ">
+                    </div>
+                </div>
+            </div>
+
+            <br><br>
+
+        </div>
+        <!--Main Navigation-->
+        <header>
+
+
+                    <!-- Sidebar -->
+        <nav id="sidebarMenu" class="collapse d-lg-block sidebar collapse bg-primary" style="background-image: linear-gradient(to bottom,#023761,#02569b,#80aacd)  !important;">
+          <div class="position-sticky">
+            <div class="list-group list-group-flush mx-3 mt-4">
+              <a href="{% url 'Home' %}" class="list-group-item list-group-item-action py-2 ripple active">
+                <span class="icon me-3"><i class="fas fa-tachometer-alt"></i></span>
+                <span class="text">Website Audit</span>
+              </a>
+              <a href="{% url 'backlink' %}" class="list-group-item list-group-item-action py-2 ripple">
+                <span class="icon me-3"><i class="fas fa-chart-line"></i></span>
+                <span class="text">Backlinks Checker</span>
+              </a>
+              <a href="{% url 'DomainAuthority' %}" class="list-group-item list-group-item-action py-2 ripple">
+                <span class="icon me-3"><i class="fas fa-chart-pie"></i></span>
+                <span class="text">Domain Authority</span>
+              </a>
+              <a href="{% url 'pageAuthority' %}" class="list-group-item list-group-item-action py-2 ripple">
+                <span class="icon me-3"><i class="fas fa-chart-pie"></i></span>
+                <span class="text">Page Authority</span>
+              </a>
+                <a href="{% url 'keyPosition' %}" class="list-group-item list-group-item-action py-2 ripple">
+                <span class="icon me-3"><i class="fas fa-chart-line"></i></span>
+                <span class="text">Keyword Position</span>
+              </a>
+              <a href="{% url 'mobiletest' %}" class="list-group-item list-group-item-action py-2 ripple">
+                <span class="icon me-3"><i class="fas fa-chart-bar"></i></span>
+                <span class="text">Mobile Friendly Test</span>
+              </a>
+              <a href="{% url 'robot' %}" class="list-group-item list-group-item-action py-2 ripple">
+                <span class="icon me-3"><i class="fas fa-globe"></i></span>
+                <span class="text">Robot.txt Generator</span>
+              </a>
+              <a href="{% url 'keysuggestion' %}" class="list-group-item list-group-item-action py-2 ripple">
+                <span class="icon me-3"><i class="fas fa-chart-line"></i></span>
+                <span class="text">Keyword Suggestion</span>
+              </a>
+            </div>
+          </div>
+        </nav>
+        <!-- Sidebar -->
+      
+        <!-- Navbar -->
+       <nav id="main-navbar" class="navbar navbar-expand-lg navbar-light bg-white fixed-top" style="background-image: linear-gradient(to right,#023761,#02569b,#80aacd) !important;">
+
+    <!-- Search form -->
+    <div style="width: 100%;">
+        <div class="row" style="width: 100%;">
+            <form name="myForm" id="myForm" action="/show" method="post" required class="d-none d-flex input-group w-auto my-auto">
+                {% csrf_token %}
+                <div class="col-md-1" style="width: 65px !important;">
+                    <button class="navbar-toggler" id="navbar-toggle" type="button" data-mdb-toggle="collapse" data-mdb-target="#sidebarMenu" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle navigation" style="color: white; margin: 0px;" onclick="navbar()">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                </div>
+
+                <div id="mylogo" style="position: absolute; left: 0; top: 0;">
+                    <img src="{% static 'logo.png'%}" style="margin-right: 5px; width: 40px; height: auto; display: inline-block;" />
+                    <h4 style="color: white; display: inline-block;" class="logo">Smart Web Analyzer</h4>
+                </div>
+
+                <div class="col" id="searchdiv" style="width: 100%;">
+                    <div style="display: flex; align-items: center; justify-content: flex-start;">
+                        <input placeholder="Enter URL" name="fname" autocomplete="on" type="search" id="id_url" class="form-control rounded" style="width: 500px; min-height: 25px; display: inline-block; margin-left: 350px;" />
+
+                        <button id="myButton" onclick="myFunction()" class="btn" value="Checkup" type="submit" style=" flex: 0 0 107px; background-image: linear-gradient(to bottom,#2670ac,#023761) !important; color: white; margin-left: 20px; margin-right: 20px; padding-right: 15px; display: inline-block;">
+                            <a style="color: white;">Check up</a>
+                        </button>
+                        </form>
+
+                        <button class="btn" id="try" type="submit" style="flex: 0 0 130px; width: auto; background-image: linear-gradient(to bottom,#2670ac,#023761) !important; padding-left: 15px; padding-right: 15px;">
+                            <a style="color: white;text-decoration:none;" href="{% url 'Home' %}">Try New URL!</a>
+                        </button>
+                    </div>
+                </div>
+                <div class="col"></div>
+                <div class="col" id="logoutdiv">
+                    <button class="btn" id="logout" type="submit" style="flex: 0 0 130px; width: auto;background-image: linear-gradient(to bottom,#2670ac,#023761) !important; float: right !important; padding-left: 20px; padding-right: 20px;">
+                        <a style="color: white;text-decoration:none;" href="{% url 'logout' %}">Logout</a>
+                    </button>
+                </div>
+
+        </div>
+    </div>
+</nav>
+            <!-- Navbar -->
+
+    </header>
+
+        <script>
+            function myFunction() {
+                var url = document.getElementById("id_url").value;
+                var isValid = true;
+
+                // Regular expression to check for a valid URL format
+                var urlRegex = /^(https?|ftp):\/\/[^\s/$.?#].[^\s]*$/i;
+
+                if (url.trim() === "") {
+                    alert("Enter a valid URL first.");
+                    isValid = false;
+                } else if (!urlRegex.test(url)) {
+                    alert("Enter a valid URL format.");
+                    isValid = false;
+                }
+
+                if (isValid) {
+                    // If the form data is valid, submit the form
+                    document.getElementById("myForm").submit();
+                }
+            }
+
+            const toggler= document.getElementById("sidebarMenu");
+                                        function navbar(){
+
+            if (toggler.style.display === 'block') {
+              toggler.style.display = 'none';
+            } else {
+              toggler.style.display = 'block';
+            }
+            }
+
+            setTimeout(function(){
+              if ($('#msg').length > 0) {
+                $('#msg').remove();
+              }
+            }, 4000)
+
+            setTimeout(function(){
+              if ($('#msg1').length > 0) {
+                $('#msg1').remove();
+              }
+            }, 4000)
+
+
+            const button = document.getElementById('myButton');
+            const loader = document.getElementById('loader');
+
+            button.addEventListener('click', () => {
+            loader.style.display = 'flex';
+            });
+
+            window.addEventListener('load', () => {
+            loader.style.display = 'none';
+            });
+
+        </script>
+
+
+    </main>
+    <!--Main layout-->
+    <!-- Optional JavaScript -->
+    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+</body>
+
+</html>
