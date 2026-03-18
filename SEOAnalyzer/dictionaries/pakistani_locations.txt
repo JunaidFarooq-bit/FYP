@@ -1,0 +1,22 @@
+# Pakistani cities and locations
+    karachi
+    lahore
+    islamabad
+    rawalpindi
+    faisalabad
+    multan
+    peshawar
+    quetta
+    hyderabad
+    sindh
+    punjab
+    balochistan
+    kpk
+    pakistan
+    pakistani
+    shahrah
+    clifton
+    defence
+    gulshan
+    saddar
+    

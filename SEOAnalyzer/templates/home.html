@@ -1,887 +1,2668 @@
 <!doctype html>
 <html lang="en">
-{% load static %}
-<head>
-    <title>Smart Web Analyzer</title>
+  {% load static %}
+  <head>
+    <title>WEB LIFT - Professional SEO Analysis</title>
     <!-- Required meta tags -->
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <link rel="stylesheet" href="{% static 'fyp.css'%}">
-    <link rel="icon" type="image/ico" href="{% static 'favicon-1.ico'%}">
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, shrink-to-fit=no"
+    />
+    <link rel="icon" type="image/ico" href="{% static 'favicon-1.ico'%}" />
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+
     <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+      integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T"
+      crossorigin="anonymous"
+    />
+
     <!-- Font Awesome CSS -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"
+    />
 
-<!-- Bootstrap CSS -->
-<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{% static 'fyp.css'%}" />
+    <link rel="stylesheet" href="{% static 'modern-style.css'%}" />
+  </head>
 
-<!-- Bootstrap JavaScript -->
-<script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
-<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
-</head>
+  <body>
+    <!-- Loader -->
+    <div id="loader">
+      <div class="loader-animation">
+        <div class="loader-ring"></div>
+        <div class="loader-ring"></div>
+        <div class="loader-ring"></div>
+        <span class="loader-text">Analyzing...</span>
+      </div>
+    </div>
 
-<body style="background-color:rgb(255, 255, 255)">
- <style>
-#loader {
-display: none;
-position: fixed;
-z-index: 9999;
-top: 0;
-left: 0;
-width: 100%;
-height: 100%;
-background-color: rgba(255, 255, 255, 0.5);
-}
-
-.loader-animation {
-border: 16px solid #f3f3f3;
-border-top: 16px solid #3498db;
-border-radius: 50%;
-width: 120px;
-height: 120px;
-animation: spin 2s linear infinite;
-position: absolute;
-top: 50%;
-left: 50%;
-transform: translate(-50%, -50%);
-}
-
-@keyframes spin {
-0% { transform: rotate(0deg); }
-100% { transform: rotate(360deg); }
-}
-</style>
-
-    <style>
-        @media (max-width: 996px) {
-            #mylogo {
-                display: none !important;
-            }
-            #searchdiv{
-            width:auto !important;
-            }
-            #id_url{
-                width: 100px !important;
-                margin-left: 0px !important;
-            }
-            #myButton{
-            width: 100px !important;
-            font-size:12px;
-            padding-bottom:7px;
-            padding-top:7px;
-            margin-left:3px !important;
-            margin-right:3px !important;
-            flex: 0 0 79px !important;
-            }
-            #try{
-             width: 50px !important;
-            font-size:12px;
-            padding-bottom:7px;
-            padding-top:7px;
-            padding-left:0px !important;
-            padding-right:0px !important;
-            margin-right:3px;
-            flex: 0 0 109px !important;
-            }
-
-            #logout {
-                margin-left: 0px !important;
-                width: 60px !important;
-            font-size:12px;
-            padding-bottom:7px;
-            padding-top:7px;
-            margin-top:2px;
-            padding-left:0px !important;
-            padding-right:0px !important;
-            margin-right:3px;
-            flex: 0 0 109px !important;
-
-            }
-            #logoutdiv {
-                width: 0px !important;
-
-                margin-right:0px !important;
-            }
-        }
-
-        @media (max-width: 1410px) {
-            #mylogo h4 {
-                font-size: 0px !important;
-            }
-              #id_url{
-                width: 200px !important;
-                margin-left: 100px !important;
-        }
-
-         @media (max-width: 687px) {
-
-              #id_url{
-                width: 100px !important;
-                margin-left: 50px !important;
-        }
-         @media (max-width: 487px) {
-        #searchdiv{
-            width:auto !important;
-            }
-            #id_url{
-                width: 45px !important;
-                margin-left: 0px !important;
-            }
-         @media (max-width: 537) {
-
-              #id_url{
-                width: 70px !important;
-                margin-left: 40px !important;
-        }
-
-        @media (max-width: 487px) {
-        #searchdiv{
-            width:auto !important;
-            }
-            #id_url{
-                width: 45px !important;
-                margin-left: 0px !important;
-            }
-    </style>
-
-        <div id="loader">
-        <div class="loader-animation"></div>
+    <!-- Main Navigation Header -->
+    <header>
+      <!-- Sidebar Navigation -->
+      <nav
+        id="sidebarMenu"
+        class="sidebar collapse d-lg-block"
+        aria-label="Main navigation"
+      >
+        <div class="sidebar-header">
+          <div class="sidebar-logo">
+            <img src="{% static 'logo.png'%}" alt="WEB LIFT Logo" />
+            <h5>WEB LIFT</h5>
+          </div>
         </div>
 
-    <!--Main Navigation-->
-    <!--Main layout-->
-    <main style="margin-top: 58px;">
-         {% if messages %}
-                        {% for message in messages %}
-                        {% if message.tags == 'success' %}
-                            <div class="alert-success m-2" id="msg" role="alert" style="background-color: #023761; text-decoration: none;color:white; font-size: 25px;height: 48px;padding-top:4px; padding-bottom: 4px ;padding-left: 30px;">
-                                {{ message }}
-                            </div>
-                        {% elif message.tags == 'error' %}
-                             <div class="alert-danger m-2" id="msg1" role="alert" style="background-color: #B30202; text-decoration: none;color:white; font-size: 25px;height: 48px;padding-top:4px; padding-bottom: 4px ;padding-left: 30px;">
-                                {{ message }}
-                            </div>
-                        {% endif %}
-                        {% endfor %}
-                    {% endif %}
-        <div class="container pt-4">
-                <div id="accordion" style="height: 48px;">
-                    <div class="card" style="background-color: #023761;height: 48px;">
-
-                        <h5 style="padding-top:4px; padding-bottom: 4px ;padding-left: 30px;">
-                            <button class="btn btn-link" id="enable-disable" data-toggle="collapse" data-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne" style="background-color: #023761; text-decoration: none;color:white; font-size: 19px; ">
-                            Content Analysis
-                            </button>
-                        </h5>
-                    </div>
-                </div>
-
-            <div id="collapseOne" class="collapse show" aria-labelledby="headingOne" data-parent="#accordion">
-                <div class="card-body" style="background-color: transparent;">
-                    <div class="container" style="position: relative ; left: 20px;">
-                        <div class="row" id="content" >
-                            <table class="table table-hover ">
-                                <thead>
-                                    <tr>
-
-                                        <th scope="col">Meta Title</th>
-                                        <td>{{title}}{{title_verdict}}</td>
-                                    </tr>
-
-
-                                </thead>
-                                <tbody>
-                                    <tr>
-
-                                        <th scope="col">Meta Description</th>
-                                        <td>{{description}}{{desc_verdict}}</td>
-
-                                    </tr>
-                                    <tr>
-
-                                        <th scope="col">Headings</th>
-                                        <td>{{heading}}{{head_verdict}}</td>
-
-                                    </tr>
-
-                                    <tr>
-
-                                        <th scope="col">Google Preview</th>
-                                        <td>{{google_verdict}}</td>
-
-                                    </tr>
-
-                                    <tr>
-
-                                        <th scope="col">Keyword Density</th>
-
-                                        <td>
-                                        {% if density_dict %}
-                                            {% for x,y in density_dict.items %}
-                                            {{ x }} : {{ y }}
-                                            <br>
-                                            {% endfor %}
-                                        {% endif %}
-                                        {% if density %}
-                                            {{density}}
-                                        {% endif %}
-
-
-                                        </td>
-
-                                    </tr>
-
-                                    <tr>
-
-                                        <th scope="col">Image Alt Check<i class="fas fa-question-circle"  data-toggle="popover" data-content="Alt attribute is an HTML attribute applied to image tags to provide a text alternative when image is not loaded for search engines."></i></th>
-                                        <td>{{alt_check}}
-                                        <button onclick="myclick3()" style="margin-left:210px;border:0;background-color: #023761;color:white;">More</button>
-                                            <div id="link2-container" style="display:none;">
-                                            <textarea id="link2" name="my-textbox" rows="3" cols="80" style="margin-left:230px;border:1;overflow: auto; resize: both;">{{alt_links}}</textarea>
-                                            </div>
-                                        </td>
-
-                                    </tr>
-
-                                    <tr>
-
-                                        <th scope="col">External Links</th>
-                                        <td>{{External_links}}
-                                         <button onclick="myclick1()" style="margin-left:210px;border:0;background-color: #023761;color:white;">More</button>
-                                            <div id="link-container" style="display:none;">
-                                            <textarea id="link" name="my-textbox" rows="3" cols="80" style="margin-left:230px;border:1;overflow: auto; resize: both;">{{e_url}}</textarea>
-                                            </div>
-
-                                        </td>
-
-                                    </tr>
-
-                                    <tr>
-
-                                        <th scope="col">Internal Links</th>
-                                        <td>{{Internal_links}}
-                                        <button onclick="myclick2()" style="margin-left:200px;border:0;background-color: #023761;color:white;">More</button>
-                                            <div id="link1-container" style="display:none;">
-                                            <textarea id="link1" name="my-textbox" rows="3" cols="80" style="margin-left:230px;border:1;overflow: auto; resize: both;">{{i_url}}</textarea>
-                                            </div>
-
-                                        </td>
-
-                                    </tr>
-
-                                    <tr>
-
-                                        <th scope="col">Status Code</th>
-                                        <td style="padding-right: 330px;">{{status}}</td>
-
-                                    </tr>
-
-
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                </div>
-            </div>
-
-                 <div id="accordion" style="height: 48px;">
-                    <div class="card" style="background-color: #023761;height: 48px;">
-
-                        <h5 style="padding-top:4px; padding-bottom: 4px ;padding-left: 30px;">
-                            <button class="btn btn-link" data-toggle="collapse" data-target="#collapseTwo" aria-expanded="true" aria-controls="collapseTwo" style="background-color: #023761; text-decoration: none;color:white; font-size: 19px; ">
-                            Structured Analysis
-                            </button>
-                        </h5>
-                    </div>
-                </div>
-
-            <div id="collapseTwo" class="collapse show" aria-labelledby="headingTwo" data-parent="#accordion">
-                <div class="card-body" style="background-color: transparent;">
-                    <div class="container" style="position: relative ; left: 20px;   ">
-                        <div class="row" id="structured">
-                            <table class="table table-hover ">
-                                <thead>
-                                    <tr>
-
-                                        <th scope="col">Robot.txt<i class="fas fa-question-circle"  data-toggle="popover" data-content="The robots. txt file, also known as the robot’s exclusion protocol or standard, is a
-                                        text file that tells web robots (most often search engines) which pages on your site to crawl. It
-                                        also tells web robots which pages not to crawl."></i></th>
-                                        <td>{{robot}}</td>
-
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-
-                                        <th scope="col">Sitemap<i class="fas fa-question-circle"  data-toggle="popover" data-content="XML sitemap is a list of your website's URLs. It acts as a roadmap to tell search engines what content is available and how to reach it."></i></th>
-                                        <td>{{sitemap}}</td>
-
-                                    </tr>
-                                    <tr>
-
-                                        <th scope="col">Broken Links</th>
-                                        <td>{{b_links}}
-                                            <button onclick="myclick()" style="margin-left:250px;border:0;background-color: #023761;color:white;">More</button>
-                                            <div id="list-container" style="display:none;">
-                                            <textarea id="list" name="my-textbox" rows="3" cols="60" style="margin-left:250px;border:1;overflow: auto; resize: both;">{{b_url}}</textarea>
-                                            </div>
-                                        </td>
-
-                                    </tr>
-                                    <tr>
-
-                                        <th scope="col">Schema<i class="fas fa-question-circle"  data-toggle="popover" data-content="Schema markup is code (semantic vocabulary) that you place on your website to help the search engines return more informative results for users."></i></th>
-                                        <td>{{schema}}</td>
-
-                                    </tr>
-
-                                    <tr>
-
-                                        <th scope="col">Open Graph Protocol<i class="fas fa-question-circle" data-toggle="popover" data-content="Using the Open Graph Protocol can help website owners increase the visibility and engagement of their website on social media, and make their website's content more shareable and discoverable."></i></th>
-                                        <td>{{open_gp}}</td>
-
-                                    </tr>
-
-                                    <tr>
-
-                                        <th scope="col">Favicon</th>
-                                        <td style="padding-right: 410px;">{{Favicon}}</td>
-
-                                    </tr>
-
-
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-               <div id="accordion" style="height: 48px;">
-                    <div class="card" style="background-color: #023761;height: 48px;">
-
-                        <h5 style="padding-top:4px; padding-bottom: 4px ;padding-left: 30px;">
-                            <button class="btn btn-link" data-toggle="collapse" data-target="#collapseThree" aria-expanded="true" aria-controls="collapseThree" style="background-color: #023761; text-decoration: none;color:white; font-size: 19px; ">
-                            Technology Analysis
-                            </button>
-                        </h5>
-                    </div>
-                </div>
-            <div id="collapseThree" class="collapse show" aria-labelledby="headingThree" data-parent="#accordion">
-                <div class="card-body" style="background-color: transparent;">
-                    <div class="container" style="position: relative ; left: 20px;   ">
-                        <div class="row" id="technology" >
-                            <table class="table table-hover ">
-                                <thead>
-                                    <tr>
-
-                                        <th scope="col">Server IP</th>
-                                        <td>{{s_ip}}</td>
-
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-
-                                        <th scope="col">Server Location</th>
-                                        <td>{{s_loc}}</td>
-
-                                    </tr>
-                                    <tr>
-
-                                        <th scope="col">Hostname</th>
-                                        <td>{{hostname}}</td>
-
-                                    </tr>
-                                    <tr>
-
-                                        <th scope="col">Technology</th>
-                                        <td>{{technology}}</td>
-
-                                    </tr>
-
-                                    <tr>
-
-                                        <th scope="col">Google Analytic<i class="fas fa-question-circle"  data-toggle="popover" data-content="Analytics refers to the process of collecting, tracking, and analyzing your
-                                                                                                                                            marketing data with the core aim of growing your website's organic traffic. The website must
-                                                                                                                                            have Google analytics."></i></th>
-                                        <td>{{analytics}}</td>
-
-                                    </tr>
-
-                                    <tr>
-
-                                        <th scope="col">DocType</th>
-                                        <td>{{doctype}}</td>
-
-                                    </tr>
-
-                                    <tr>
-
-                                        <th scope="col">Encoding<i class="fas fa-question-circle"  data-toggle="popover" data-content="The encoding type refers to the character encoding, which is the method of
-                                                                                                                                        converting a sequence of bytes into a sequence of characters. The website should have content that is rightly encoded."></i></th>
-                                        <td>{{encoding}}</td>
-
-                                    </tr>
-                                    <tr>
-
-                                        <th scope="col">W3C Validation<i class="fas fa-question-circle"  data-toggle="popover" data-content=" It is the process of checking your website's code to determine if it follows the
-                                                                                                                                            correct formatting standards. Failure to validate your code against these standards could mean
-                                                                                                                                            your website suffers errors or your traffic numbers are not as high as they could be due to poor
-                                                                                                                                            readability."></i></th>
-                                        <td style="padding-right: 410px;">{{w3c}}</td>
-
-                                    </tr>
-
-
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-
-               <div id="accordion" style="height: 48px;">
-                    <div class="card" style="background-color: #023761;height: 48px;">
-
-                        <h5 style="padding-top:4px; padding-bottom: 4px ;padding-left: 30px;">
-                            <button class="btn btn-link" data-toggle="collapse" data-target="#collapseFour" aria-expanded="true" aria-controls="collapseFour" style="background-color: #023761; text-decoration: none;color:white; font-size: 19px; ">
-                            Security Analysis
-                            </button>
-                        </h5>
-                    </div>
-                </div>
-
-            <div id="collapseFour" class="collapse show" aria-labelledby="headingFour" data-parent="#accordion">
-                <div class="card-body" style="background-color: transparent;">
-                    <div class="container" style="position: relative ; left: 20px;   ">
-                        <div class="row" id="security" >
-                            <table class="table table-hover ">
-                                <thead>
-                                    <tr>
-
-                                        <th scope="col">SSL Name</th>
-                                        <td>{{ssl_name}}</td>
-
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-
-                                        <th scope="col">SSL Oragnization</th>
-                                        <td>{{ssl_organ}}</td>
-
-                                    </tr>
-                                    <tr>
-
-                                        <th scope="col">SSL Expiry</th>
-                                        <td>{{ssl_expiry}}</td>
-
-                                    </tr>
-
-                                    <tr>
-
-                                        <th scope="col">HTTPS Redirection<i class="fas fa-question-circle"  data-toggle="popover" data-content="HTTPS redirection is the process of automatically redirecting a user's web traffic from an insecure HTTP connection to a secure HTTPS connection,
-                                                                                                                                                ensuring that data transmitted between the user and the website is encrypted and protected.
-                                                                                                                                                It helps to enhance the security and privacy of the user's browsing experience."></i></th>
-                                        <td>{{http_redir}}</td>
-
-                                    </tr>
-
-                                    <tr>
-
-                                        <th scope="col">DMCA Check<i class="fas fa-question-circle"  data-toggle="popover" data-content="The Digital Millennium Copyright Act (DMCA) is one of the most important laws
-                                                                                                                                           affecting the Internet and technology."></i></th>
-                                        <td>{{dmca}}</td>
-
-                                    </tr>
-
-                                    <tr>
-
-                                        <th scope="col">Verdict on SSL</th>
-                                        <td style="padding-right: 350px;">{{ssl_verdict}}</td>
-
-                                    </tr>
-
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-
-                <div id="accordion" style="height: 48px;">
-                    <div class="card" style="background-color: #023761;height: 48px;">
-
-                        <h5 style="padding-top:4px; padding-bottom: 4px ;padding-left: 30px;">
-                            <button class="btn btn-link" data-toggle="collapse" data-target="#collapseFive" aria-expanded="true" aria-controls="collapseFive" style="background-color: #023761; text-decoration: none;color:white; font-size: 19px; ">
-                            Social Analysis
-                            </button>
-                        </h5>
-                    </div>
-                </div>
-            <div id="collapseFive" class="collapse show" aria-labelledby="headingFive" data-parent="#accordion">
-                <div class="card-body" style="background-color: transparent;">
-                    <div class="container" style="position: relative ; left: 20px;   ">
-                        <div class="row" id="social" >
-                            <table class="table table-hover ">
-                                <thead>
-                                    <tr>
-
-                                        <th scope="col">Facebook</th>
-                                        <td>{{facebook}}</td>
-
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-
-                                        <th scope="col">Instagram</th>
-                                        <td>{{insta}}</td>
-
-                                    </tr>
-                                    <tr>
-
-                                        <th scope="col">Twitter</th>
-                                        <td>{{twitter}}</td>
-
-                                    </tr>
-                                    <tr>
-
-                                        <th scope="col">Linkedin</th>
-                                        <td>{{linkedin}}</td>
-
-                                    </tr>
-
-                                    <tr>
-
-                                        <th scope="col">Verdict on Social<i class="fas fa-question-circle"  data-toggle="popover" data-content="The connectivity of a website with social media in SEO refers to integrating social media platforms with a website to improve visibility,
-                                                                                                                                                generate social signals, build backlinks, and establish brand authority, ultimately impacting search engine rankings."></i></th>
-                                        <td style="padding-right: 410px;">{{social_verdict}}</td>
-
-                                    </tr>
-
-
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div id="accordion" style="height: 48px;">
-                    <div class="card" style="background-color: #023761;height: 48px;">
-
-                        <h5 style="padding-top:4px; padding-bottom: 4px ;padding-left: 30px;">
-                            <button class="btn btn-link" data-toggle="collapse" data-target="#collapseSix" aria-expanded="true" aria-controls="collapseSix" style="background-color: #023761; text-decoration: none;color:white; font-size: 19px; ">
-                            Performance Analysis
-                            </button>
-                        </h5>
-                    </div>
-                </div>
-           <!--</div>-->
-            <div id="collapseSix" class="collapse show" aria-labelledby="headingSix" data-parent="#accordion">
-                <div class="card-body" style="background-color: transparent;">
-                    <div class="container" style="position: relative ; left: 20px;   ">
-                        <div class="row" id="performance" >
-                            <table class="table table-hover ">
-                                <thead>
-                                    <tr>
-
-                                        <th scope="col">WebPage Overall Speed</th>
-                                        <td>{{website_speed}}s&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<0-2.5 seconds></td>
-
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-
-                                        <th scope="col">CSS Minification<i class="fas fa-question-circle"  data-toggle="popover" data-content=" Minifying CSS files can help reduce their file sizes by removing comments, white spaces, and redundant code."></i></th>
-                                        <td>{{css_minified}}</td>
-
-                                    </tr>
-                                    <tr>
-
-                                        <th scope="col">JSS Minification<i class="fas fa-question-circle"  data-toggle="popover" data-content="Minifying JS files will decrease your page load time, thereby providing a better user experience."></i></th>
-                                        <td>{{jss_minified}}</td>
-
-                                    </tr>
-                                    <tr>
-
-                                        <th scope="col">Optimized Plugins<i class="fas fa-question-circle"  data-toggle="popover" data-content="SEO plugins are built with a focus on optimizing specific aspects such as speed, SEO, security, caching, database management,
-                                                                                                                                                image optimization, and more, resulting in improved overall performance and user experience."></i></th>
-                                        <td>{{opt_plugins}}</td>
-
-                                    </tr>
-                                    <tr>
-
-                                        <th scope="col">Verdict on Speed</th>
-                                        <td style="padding-right: 420px;">{{speed_verdit}}</td>
-
-                                    </tr>
-
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-                <div id="accordion" style="height: 48px;">
-                    <div class="card" style="background-color: #023761;height: 48px;">
-
-                        <h5 style="padding-top:4px; padding-bottom: 4px ;padding-left: 30px;">
-                            <button class="btn btn-link" data-toggle="collapse" data-target="#collapseSeven" aria-expanded="true" aria-controls="collapseSeven" style="background-color: #023761; text-decoration: none;color:white; font-size: 19px; ">
-                            Mobile Usability Analysis
-                            </button>
-                        </h5>
-                    </div>
-                </div>
-
-            <div id="collapseSeven" class="collapse show" aria-labelledby="headingSeven" data-parent="#accordion">
-                <div class="card-body" style="background-color: transparent;">
-                    <div class="container" style="position: relative ; left: 20px;  ">
-                        <div class="row" id="mobile" >
-                            <table class="table table-hover ">
-                                <thead>
-                                    <tr>
-
-                                        <th scope="col">Mobile Speed Score</th>
-                                        <td>{{mobile_speed}}s&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<0-3 seconds></td>
-
-
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-
-                                        <th scope="col">AMP Check<i class="fas fa-question-circle"  data-toggle="popover" data-content="Accelerated Mobile Pages is an Open-Source Framework,with AMP it is possible to create simple mobile websites that load almost instantly."></i></th>
-                                        <td>{{amp}}</td>
-
-                                    </tr>
-                                    <tr>
-
-                                        <th scope="col">Mobile Rendering<i class="fas fa-question-circle"  data-toggle="popover" data-content="Mobile Rendering is the process where Googlebot retrieves your pages,
-                                                                                                                                                runs your code, and assesses your content to understand the layout or structure of your site.
-                                                                                                                                                The mobile version of the website must be stable and well functional."></i></th>
-                                        <td>{{mobile_render}}</td>
-
-                                    </tr>
-                                    <tr>
-
-                                        <th scope="col">Mobile Preview</th>
-                                        <td>{{mobile_prev}}</td>
-
-                                    </tr>
-                                    <tr>
-
-                                        <th scope="col">Verdict on Speed</th>
-                                        <td style="padding-right: 350px;">{{mobile_score_verdict}}</td>
-
-                                    </tr>
-
-
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-                <button id='myButton' class="btn"  type="submit" style="background-color:rgb(73, 75, 80); margin-left: 400px; padding-left: 20px; padding-right: 20px;padding-top: 10px;padding-bottom: 10px;"><a style="color:white;text-decoration:none;" href="{% url 'report' %}" >Download PDF Report</a></button>
-
-            <br><br>
-
+        <div class="sidebar-content">
+          <div class="nav-section">
+            <span class="nav-section-title">Analysis Tools</span>
+            <a
+              href="{% url 'Home' %}"
+              class="sidebar-link active"
+              aria-current="page"
+            >
+              <i class="fas fa-tachometer-alt"></i>
+              <span>Website Audit</span>
+            </a>
+            <a href="{% url 'backlink' %}" class="sidebar-link">
+              <i class="fas fa-link"></i>
+              <span>Backlinks</span>
+            </a>
+            <a href="{% url 'DomainAuthority' %}" class="sidebar-link">
+              <i class="fas fa-chart-pie"></i>
+              <span>Domain Authority</span>
+            </a>
+            <a href="{% url 'pageAuthority' %}" class="sidebar-link">
+              <i class="fas fa-file-alt"></i>
+              <span>Page Authority</span>
+            </a>
+            <a href="{% url 'mobiletest' %}" class="sidebar-link">
+              <i class="fas fa-mobile-alt"></i>
+              <span>Mobile Friendly Test</span>
+            </a>
+            <a
+              href="{% url 'sentiment_analysis' %}"
+              class="sidebar-link"
+              aria-current="page"
+            >
+              <i class="fas fa-smile"></i>
+              <span>Sentiment Analysis</span>
+            </a>
+          </div>
         </div>
-        <!--Main Navigation-->
-        <header>
+      </nav>
 
-            <!-- Sidebar -->
-<nav id="sidebarMenu" class="collapse d-lg-block sidebar collapse bg-primary" style="background-image: linear-gradient(to bottom,#023761,#02569b,#80aacd)  !important;">
-  <div class="position-sticky">
-    <div class="list-group list-group-flush mx-3 mt-4">
-      <a href="{% url 'Home' %}" class="list-group-item list-group-item-action py-2 ripple active">
-        <span class="icon me-3"><i class="fas fa-tachometer-alt"></i></span>
-        <span class="text">Website Audit</span>
-      </a>
-      <a href="{% url 'backlink' %}" class="list-group-item list-group-item-action py-2 ripple">
-        <span class="icon me-3"><i class="fas fa-chart-line"></i></span>
-        <span class="text">Backlinks Checker</span>
-      </a>
-      <a href="{% url 'DomainAuthority' %}" class="list-group-item list-group-item-action py-2 ripple">
-        <span class="icon me-3"><i class="fas fa-chart-pie"></i></span>
-        <span class="text">Domain Authority</span>
-      </a>
-      <a href="{% url 'pageAuthority' %}" class="list-group-item list-group-item-action py-2 ripple">
-        <span class="icon me-3"><i class="fas fa-chart-pie"></i></span>
-        <span class="text">Page Authority</span>
-      </a>
-        <a href="{% url 'keyPosition' %}" class="list-group-item list-group-item-action py-2 ripple">
-        <span class="icon me-3"><i class="fas fa-chart-line"></i></span>
-        <span class="text">Keyword Position</span>
-      </a>
-      <a href="{% url 'mobiletest' %}" class="list-group-item list-group-item-action py-2 ripple">
-        <span class="icon me-3"><i class="fas fa-chart-bar"></i></span>
-        <span class="text">Mobile Friendly Test</span>
-      </a>
-      <a href="{% url 'robot' %}" class="list-group-item list-group-item-action py-2 ripple">
-        <span class="icon me-3"><i class="fas fa-globe"></i></span>
-        <span class="text">Robot.txt Generator</span>
-      </a>
-      <a href="{% url 'keysuggestion' %}" class="list-group-item list-group-item-action py-2 ripple">
-        <span class="icon me-3"><i class="fas fa-chart-line"></i></span>
-        <span class="text">Keyword Suggestion</span>
-      </a>
+      <!-- Top Navbar -->
+      <nav
+        id="main-navbar"
+        class="navbar navbar-expand-lg fixed-top"
+        role="navigation"
+      >
+        <div class="navbar-container">
+          <!-- Mobile Toggle -->
+          <button
+            class="navbar-toggler"
+            id="navbar-toggle"
+            type="button"
+            aria-controls="sidebarMenu"
+            aria-expanded="false"
+            aria-label="Toggle navigation"
+            onclick="navbar()"
+          >
+            <i class="fas fa-bars"></i>
+          </button>
+
+          <!-- Desktop Logo -->
+          {% comment %}
+          <div class="navbar-logo" id="mylogo">
+            <img src="{% static 'logo.png'%}" alt="WEB LIFT Logo" />
+            <h4>WEB LIFT</h4>
+          </div>
+          {% endcomment %}
+
+          <!-- Search Form -->
+          <form
+            name="myForm"
+            id="myForm"
+            action="/show"
+            method="post"
+            class="navbar-search"
+          >
+            {% csrf_token %}
+            <div class="search-wrapper">
+              <div class="search-input-group">
+                <i class="fas fa-search search-icon"></i>
+                <input
+                  placeholder="Enter website URL to analyze..."
+                  name="fname"
+                  autocomplete="on"
+                  type="search"
+                  id="id_url"
+                  class="search-input"
+                  aria-label="Website URL"
+                  {% if url %}value="{{url}}"
+                  {% endif %}
+                />
+              </div>
+
+              <div class="navbar-actions">
+                <button
+                  id="analyzeBtn"
+                  onclick="myFunction()"
+                  class="btn btn-primary"
+                  type="submit"
+                >
+                  <i class="fas fa-search-plus"></i>
+                  <span>Analyze</span>
+                </button>
+
+                <a
+                  class="btn btn-primary"
+                  href="{% url 'Home' %}"
+                  class="btn btn-outline"
+                  id="try"
+                >
+                  <i class="fas fa-redo"></i>
+                  <span>New URL</span>
+                </a>
+
+                <a
+                  class="btn btn-primary"
+                  href="{% url 'logout' %}"
+                  class="btn btn-outline logout-btn"
+                  id="logout"
+                >
+                  <i class="fas fa-sign-out-alt"></i>
+                  <span>Logout</span>
+                </a>
+              </div>
+            </div>
+          </form>
+        </div>
+      </nav>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Alert Messages -->
+      {% if messages %} {% for message in messages %}
+      <div class="alert-modern alert-{{ message.tags }}" id="msg" role="alert">
+        <div class="alert-content">
+          <i
+            class="fas {% if message.tags == 'success' %}fa-check-circle{% else %}fa-exclamation-circle{% endif %}"
+          ></i>
+          <span>{{ message }}</span>
+        </div>
+        <button class="alert-close" onclick="this.parentElement.remove()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      {% endfor %} {% endif %}
+
+      <div class="container-fluid content-wrapper">
+        <!-- Content Analysis Section -->
+        <!-- ========================================
+     CONTENT ANALYSIS SECTION - 2026 SEO OPTIMIZED
+     Displays all E-E-A-T data from the enhanced backend
+     ======================================== -->
+
+<section class="analysis-section" aria-labelledby="content-analysis-heading">
+  <!-- Collapsible Header -->
+  <div
+    class="section-header"
+    role="button"
+    tabindex="0"
+    aria-expanded="true"
+    aria-controls="collapseOne"
+    data-toggle="collapse"
+    data-target="#collapseOne"
+  >
+    <div class="section-title">
+      <i class="fas fa-file-alt section-icon" aria-hidden="true"></i>
+      <h2 id="content-analysis-heading">Content Analysis</h2>
+    </div>
+    <i class="fas fa-chevron-down collapse-icon" aria-hidden="true"></i>
+  </div>
+
+  <!-- Content Section -->
+  <div id="collapseOne" class="collapse show section-content">
+    <div class="analysis-grid">
+      
+      <!-- ========================================
+           META TITLE CARD - Enhanced with E-E-A-T
+           ======================================== -->
+      <article class="analysis-card" aria-labelledby="meta-title-heading">
+        <header class="card-header">
+          <h3 id="meta-title-heading">
+            <i class="fas fa-heading" aria-hidden="true"></i>
+            Meta Title
+          </h3>
+          <!-- ✅ NEW: Display E-E-A-T Score -->
+          <span class="eeat-score-badge" data-score="{{title_eeat_score}}">
+            E-E-A-T: {{title_eeat_score}}/100
+          </span>
+        </header>
+        
+        <div class="card-body">
+          <!-- Title Text -->
+          <p class="result-text">{{title}}</p>
+          
+          <!-- Length Info -->
+          <div class="meta-info">
+            <span class="meta-badge">
+              <i class="fas fa-ruler-horizontal" aria-hidden="true"></i>
+              {{title_length}} characters
+            </span>
+          </div>
+          
+          <!-- Verdict -->
+          <span class="verdict-badge">{{title_verdict}}</span>
+          
+          <!-- ✅ NEW: E-E-A-T Signals -->
+          {% if title_eeat_signals %}
+          <div class="eeat-signals">
+            <h4 class="signals-heading">
+              <i class="fas fa-check-circle" aria-hidden="true"></i>
+              E-E-A-T Signals Detected
+            </h4>
+            <ul class="signals-list">
+              {% for signal in title_eeat_signals %}
+              <li>{{signal}}</li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% endif %}
+          
+          <!-- ✅ NEW: Issues List -->
+          {% if title_issues and title_issues.0 != '✅ No issues detected' %}
+          <div class="issues-container">
+            <h4 class="issues-heading">
+              <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
+              Issues Found
+            </h4>
+            <ul class="issues-list">
+              {% for issue in title_issues %}
+              <li>{{issue}}</li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% endif %}
+          
+          <!-- ✅ NEW: AI Recommendations -->
+          {% if title_eeat_recommendations %}
+          <div class="recommendations-container">
+            <h4 class="recommendations-heading">
+              <i class="fas fa-lightbulb" aria-hidden="true"></i>
+              AI Recommendations
+            </h4>
+            <ul class="recommendations-list">
+              {% for rec in title_eeat_recommendations %}
+              <li>{{rec}}</li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% endif %}
+        </div>
+      </article>
+
+      <!-- ========================================
+           META DESCRIPTION CARD - Enhanced with E-E-A-T
+           ======================================== -->
+      <article class="analysis-card" aria-labelledby="meta-desc-heading">
+        <header class="card-header">
+          <h3 id="meta-desc-heading">
+            <i class="fas fa-align-left" aria-hidden="true"></i>
+            Meta Description
+          </h3>
+          <!-- ✅ NEW: Display E-E-A-T Score -->
+          <span class="eeat-score-badge" data-score="{{desc_eeat_score}}">
+            E-E-A-T: {{desc_eeat_score}}/100
+          </span>
+        </header>
+        
+        <div class="card-body">
+          <!-- Description Text -->
+          <p class="result-text">{{description}}</p>
+          
+          <!-- Length Info -->
+          <div class="meta-info">
+            <span class="meta-badge">
+              <i class="fas fa-ruler-horizontal" aria-hidden="true"></i>
+              {{desc_length}} characters
+            </span>
+          </div>
+          
+          <!-- Verdict -->
+          <span class="verdict-badge">{{desc_verdict}}</span>
+          
+          <!-- ✅ NEW: E-E-A-T Signals -->
+          {% if desc_eeat_signals %}
+          <div class="eeat-signals">
+            <h4 class="signals-heading">
+              <i class="fas fa-check-circle" aria-hidden="true"></i>
+              E-E-A-T Signals Detected
+            </h4>
+            <ul class="signals-list">
+              {% for signal in desc_eeat_signals %}
+              <li>{{signal}}</li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% endif %}
+          
+          <!-- ✅ NEW: Issues List -->
+          {% if desc_issues and desc_issues.0 != '✅ No issues detected' %}
+          <div class="issues-container">
+            <h4 class="issues-heading">
+              <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
+              Issues Found
+            </h4>
+            <ul class="issues-list">
+              {% for issue in desc_issues %}
+              <li>{{issue}}</li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% endif %}
+          
+          <!-- ✅ NEW: AI Recommendations -->
+          {% if desc_eeat_recommendations %}
+          <div class="recommendations-container">
+            <h4 class="recommendations-heading">
+              <i class="fas fa-lightbulb" aria-hidden="true"></i>
+              AI Recommendations
+            </h4>
+            <ul class="recommendations-list">
+              {% for rec in desc_eeat_recommendations %}
+              <li>{{rec}}</li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% endif %}
+        </div>
+      </article>
+
+      <!-- ========================================
+           HEADINGS STRUCTURE CARD - Enhanced with E-E-A-T
+           ======================================== -->
+      <article class="analysis-card" aria-labelledby="headings-heading">
+        <header class="card-header">
+          <h3 id="headings-heading">
+            <i class="fas fa-list-ol" aria-hidden="true"></i>
+            Headings Structure
+          </h3>
+          <!-- ✅ NEW: Display E-E-A-T Score -->
+          <span class="eeat-score-badge" data-score="{{heading_eeat_score}}">
+            E-E-A-T: {{heading_eeat_score}}/100
+          </span>
+        </header>
+        
+        <div class="card-body">
+          <!-- H1 Text -->
+          <p class="result-text">
+            <strong>{{heading_type}}:</strong> {{heading}}
+          </p>
+          
+          <!-- ✅ NEW: Heading Count Breakdown -->
+          <div class="heading-structure">
+            <div class="heading-counts">
+              <span class="heading-count-badge" data-valid="{% if h1_count == 1 %}true{% else %}false{% endif %}">
+                <i class="fas fa-h1" aria-hidden="true"></i>
+                H1: {{h1_count}}
+              </span>
+              <span class="heading-count-badge">
+                <i class="fas fa-h2" aria-hidden="true"></i>
+                H2: {{h2_count}}
+              </span>
+              <span class="heading-count-badge">
+                <i class="fas fa-h3" aria-hidden="true"></i>
+                H3: {{h3_count}}
+              </span>
+              <span class="heading-count-badge">
+                <i class="fas fa-heading" aria-hidden="true"></i>
+                H4: {{h4_count}}
+              </span>
+            </div>
+          </div>
+          
+          <!-- Length Info -->
+          <div class="meta-info">
+            <span class="meta-badge">
+              <i class="fas fa-ruler-horizontal" aria-hidden="true"></i>
+              {{heading_length}} characters
+            </span>
+          </div>
+          
+          <!-- Verdict -->
+          <span class="verdict-badge">{{head_verdict}}</span>
+          
+          <!-- ✅ NEW: E-E-A-T Signals -->
+          {% if heading_eeat_signals %}
+          <div class="eeat-signals">
+            <h4 class="signals-heading">
+              <i class="fas fa-check-circle" aria-hidden="true"></i>
+              E-E-A-T Signals & Structure
+            </h4>
+            <ul class="signals-list">
+              {% for signal in heading_eeat_signals %}
+              <li>{{signal}}</li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% endif %}
+          
+          <!-- ✅ NEW: Issues List -->
+          {% if heading_issues and heading_issues.0 != '✅ No issues detected' %}
+          <div class="issues-container">
+            <h4 class="issues-heading">
+              <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
+              Issues Found
+            </h4>
+            <ul class="issues-list">
+              {% for issue in heading_issues %}
+              <li>{{issue}}</li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% endif %}
+          
+          <!-- ✅ NEW: AI Recommendations -->
+          {% if heading_eeat_recommendations %}
+          <div class="recommendations-container">
+            <h4 class="recommendations-heading">
+              <i class="fas fa-lightbulb" aria-hidden="true"></i>
+              AI Recommendations
+            </h4>
+            <ul class="recommendations-list">
+              {% for rec in heading_eeat_recommendations %}
+              <li>{{rec}}</li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% endif %}
+        </div>
+      </article>
+
+      <!-- ========================================
+           GOOGLE PREVIEW SCORE - Full Width Card
+           ======================================== -->
+      <article class="analysis-card featured-card full-width" aria-labelledby="google-preview-heading">
+        <header class="card-header">
+          <h3 id="google-preview-heading">
+            <i class="fab fa-google" aria-hidden="true"></i>
+            Google SERP Optimization Score
+          </h3>
+          <div class="score-display">
+            <span class="overall-score">{{avg_score}}/100</span>
+          </div>
+        </header>
+        
+        <div class="card-body">
+          <!-- Main Verdict -->
+          <div class="google-verdict-display">
+            <span class="verdict-badge verdict-large">{{google_verdict}}</span>
+            <span class="optimization-level">{{optimization_level}}</span>
+          </div>
+          
+          <!-- ✅ NEW: E-E-A-T Breakdown -->
+          <div class="eeat-breakdown-section">
+            <h4 class="breakdown-heading">
+              <i class="fas fa-shield-alt" aria-hidden="true"></i>
+              E-E-A-T Trust Analysis (2026 Standards)
+            </h4>
+            
+            <div class="eeat-metrics">
+              <div class="eeat-metric">
+                <span class="metric-label">Title E-E-A-T</span>
+                <div class="metric-bar">
+                  <div class="metric-fill" style="width: {{eeat_breakdown.title_eeat}}%"></div>
+                </div>
+                <span class="metric-value">{{eeat_breakdown.title_eeat}}/100</span>
+              </div>
+              
+              <div class="eeat-metric">
+                <span class="metric-label">Description E-E-A-T</span>
+                <div class="metric-bar">
+                  <div class="metric-fill" style="width: {{eeat_breakdown.description_eeat}}%"></div>
+                </div>
+                <span class="metric-value">{{eeat_breakdown.description_eeat}}/100</span>
+              </div>
+              
+              <div class="eeat-metric">
+                <span class="metric-label">Heading E-E-A-T</span>
+                <div class="metric-bar">
+                  <div class="metric-fill" style="width: {{eeat_breakdown.heading_eeat}}%"></div>
+                </div>
+                <span class="metric-value">{{eeat_breakdown.heading_eeat}}/100</span>
+              </div>
+              
+              <div class="eeat-metric average-metric">
+                <span class="metric-label">Average E-E-A-T</span>
+                <div class="metric-bar">
+                  <div class="metric-fill" style="width: {{eeat_breakdown.average_eeat}}%"></div>
+                </div>
+                <span class="metric-value">{{eeat_breakdown.average_eeat}}/100</span>
+              </div>
+            </div>
+            
+            <!-- Trust Level Badge -->
+            <div class="trust-level-display">
+              <span class="trust-badge trust-{{eeat_breakdown.trust_level}}">
+                <i class="fas fa-certificate" aria-hidden="true"></i>
+                Trust Level: {{eeat_breakdown.trust_level|upper}}
+              </span>
+              
+              {% if eeat_breakdown.helpful_content_ready %}
+              <span class="helpful-content-badge">
+                <i class="fas fa-check-double" aria-hidden="true"></i>
+                Helpful Content Ready
+              </span>
+              {% else %}
+              <span class="helpful-content-badge not-ready">
+                <i class="fas fa-exclamation-circle" aria-hidden="true"></i>
+                Below Helpful Content Threshold
+              </span>
+              {% endif %}
+            </div>
+          </div>
+          
+          <!-- ✅ NEW: Mobile & Accessibility Status -->
+          <div class="optimization-status">
+            <div class="status-item">
+              <i class="fas fa-mobile-alt" aria-hidden="true"></i>
+              <span>Mobile Optimized:</span>
+              {% if mobile_optimized %}
+              <span class="status-yes">✅ Yes</span>
+              {% else %}
+              <span class="status-no">❌ No</span>
+              {% endif %}
+            </div>
+            
+            <div class="status-item">
+              <i class="fas fa-universal-access" aria-hidden="true"></i>
+              <span>Accessibility Ready:</span>
+              {% if accessibility_ready %}
+              <span class="status-yes">✅ Yes</span>
+              {% else %}
+              <span class="status-no">❌ No</span>
+              {% endif %}
+            </div>
+          </div>
+          
+          <!-- ✅ NEW: Recommendations -->
+          {% if recommendations %}
+          <div class="recommendations-container priority-recommendations">
+            <h4 class="recommendations-heading">
+              <i class="fas fa-tasks" aria-hidden="true"></i>
+              Priority Action Items
+            </h4>
+            <ol class="recommendations-list priority-list">
+              {% for rec in recommendations %}
+              <li>{{rec}}</li>
+              {% endfor %}
+            </ol>
+          </div>
+          {% endif %}
+        </div>
+      </article>
+
     </div>
   </div>
-</nav>
-        <!-- Sidebar -->
-
-        <!-- Navbar -->
-        <nav id="main-navbar" class="navbar navbar-expand-lg navbar-light bg-white fixed-top" style="background-image: linear-gradient(to right,#023761,#02569b,#80aacd) !important;">
-    <!-- Container wrapper -->
-
-   <!-- Search form -->
-<div style="width: 100%;">
-        <div class="row" style="width: 100%;">
-            <form name="myForm" id="myForm" action="/show" method="post" required class="d-none d-flex input-group w-auto my-auto">
-                {% csrf_token %}
-                <div class="col-md-1" style="width: 65px !important;">
-                    <button class="navbar-toggler" id="navbar-toggle" type="button" data-mdb-toggle="collapse" data-mdb-target="#sidebarMenu" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle navigation" style="color: white; margin: 0px;" onclick="navbar()">
-                        <i class="fas fa-bars"></i>
-                    </button>
-                </div>
-
-                <div id="mylogo" style="position: absolute; left: 0; top: 0;">
-                    <img src="{% static 'logo.png'%}" style="margin-right: 5px; width: 40px; height: auto; display: inline-block;" />
-                    <h4 style="color: white; display: inline-block;" class="logo">Smart Web Analyzer</h4>
-                </div>
-
-                <div class="col" id="searchdiv" style="width: 100%;">
-                    <div style="display: flex; align-items: center; justify-content: flex-start;">
-                        <input placeholder="Enter URL" name="fname" autocomplete="on" type="search" id="id_url" class="form-control rounded" style="width: 500px; min-height: 25px; display: inline-block; margin-left: 350px;"
-                        {% if url %}
-                               value={{url}}
-                        {% endif %}
-                        />
-
-                        <button id="myButton" onclick="myFunction()" class="btn" value="Checkup" type="submit" style=" flex: 0 0 107px; background-image: linear-gradient(to bottom,#2670ac,#023761) !important; color: white; margin-left: 20px; margin-right: 20px; padding-right: 15px; display: inline-block;"disabled>
-                            <a style="color: white;">Check up</a>
-                        </button>
-                        </form>
-
-                        <button class="btn" id="try" type="submit" style="flex: 0 0 130px; width: auto; background-image: linear-gradient(to bottom,#2670ac,#023761) !important; padding-left: 15px; padding-right: 15px;">
-                            <a style="color: white;text-decoration:none;" href="{% url 'Home' %}">Try New URL!</a>
-                        </button>
-                    </div>
-                </div>
-                <div class="col"></div>
-                <div class="col" id="logoutdiv">
-                    <button class="btn" id="logout" type="submit" style="flex: 0 0 130px; width: auto;background-image: linear-gradient(to bottom,#2670ac,#023761) !important; float: right !important; padding-left: 20px; padding-right: 20px;">
-                        <a style="color: white;text-decoration:none;" href="{% url 'logout' %}">Logout</a>
-                    </button>
-                </div>
-
+</section>
+<div class="analysis-card full-width">
+  <div class="card-header">
+    <h3>Spelling & Grammar Analysis</h3>
+    <i class="fas fa-spell-check card-icon"></i>
+  </div>
+  <div class="card-body">
+    
+    <!-- Top Summary Section -->
+    <div class="row mb-4">
+      <!-- Overall Verdict -->
+      <div class="col-md-6 mb-3">
+        <h6 class="section-title mb-3">
+    <i class="fas fa-award {% if overall_quality %}text-success{% else %}text-muted{% endif %} mr-2"></i>
+    Overall Quality
+</h6><div class="alert alert-{% if grammar_score >= 90 %}success{% elif grammar_score >= 75 %}info{% elif grammar_score >= 60 %}warning{% else %}danger{% endif %} mb-0">
+          <h6 class="section-title mb-0">{{ grammar_verdict }}</h6>
         </div>
+      </div>
+      
+      <!-- Score Indicator -->
+      <div class="col-md-6 mb-3">
+        <div class="score-section">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="section-title mb-0">Writing Quality Score</h6>
+            <span class="badge badge-lg {% if grammar_score >= 90 %}badge-success{% elif grammar_score >= 75 %}badge-info{% elif grammar_score >= 60 %}badge-warning{% else %}badge-danger{% endif %}">
+              {{ grammar_score }}/100
+            </span>
+          </div>
+          <div class="progress" style="height: 25px;">
+            <div class="progress-bar {% if grammar_score >= 90 %}bg-success{% elif grammar_score >= 75 %}bg-info{% elif grammar_score >= 60 %}bg-warning{% else %}bg-danger{% endif %}" 
+                 role="progressbar" 
+                 style="width: {{ grammar_score }}%;" 
+                 aria-valuenow="{{ grammar_score }}" 
+                 aria-valuemin="0" 
+                 aria-valuemax="100">
+              {{ grammar_score }}%
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
-</nav>
-            <!-- Navbar -->
-        </header>
 
+    <!-- Main Content - Two Columns -->
+    <div class="row">
+      
+      <!-- LEFT COLUMN: Spelling & Grammar Issues -->
+      <div class="col-md-6">
+        
+        <!-- Spelling Errors with "Not a Mistake" Button -->
+        {% if spelling_errors %}
+<div class="spelling-section mb-4">
+  <h6 class="section-title mb-3">
+    <i class="fas fa-exclamation-circle {% if spelling_errors.0.word %}text-danger{% else %}text-success{% endif %} mr-2"></i>
+    Spelling & Grammar Issues
+  </h6>
+  <ul class="list-group" id="spelling-issues-list">
+    {% for error in spelling_errors %}
+    {% if error.word or 'No spelling' in error.display or '✓' in error.display %}
+    <li class="list-group-item {% if 'No spelling' in error.display or '✓' in error.display %}list-group-item-success{% else %}list-group-item-danger{% endif %}" 
+        data-word="{{ error.word }}" 
+        id="spelling-item-{{ forloop.counter }}">
+      <div class="d-flex justify-content-between align-items-start">
+        <div class="flex-grow-1">
+          {% if 'No spelling' in error.display or '✓' in error.display %}
+          <i class="fas fa-check-circle text-success mr-2"></i>
+          {% else %}
+          <i class="fas fa-times-circle text-danger mr-2"></i>
+          {% endif %}
+          <span class="error-text">{{ error.display }}</span>
+          <div class="saving-message text-success mt-1" style="display:none;">
+            <small><i class="fas fa-check-circle"></i> Saved to dictionary</small>
+          </div>
+        </div>
+        {% if error.word %}
+        <button 
+          class="btn btn-sm btn-outline-success ignore-word-btn ml-2" 
+          data-word="{{ error.word }}"
+          data-item-id="spelling-item-{{ forloop.counter }}"
+          title="Mark '{{ error.word }}' as correct"
+        > 
+          <i class="fas fa-check"></i> Not a mistake
+        </button>
+        {% endif %}
+      </div>
+    </li>
+    {% endif %}
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
 
-        <script>
+        <!-- Grammar Issues (Combined) -->
+        {% if grammar_issues %}
+        <div class="grammar-section mb-4">
+          <h6 class="section-title mb-3">
+            <i class="fas fa-paragraph text-warning mr-2"></i>Writing Style Issues
+          </h6>
+          <ul class="list-group">
+            {% for issue in grammar_issues %}
+            <li class="list-group-item {% if 'No grammar' in issue %}list-group-item-success{% else %}list-group-item-warning{% endif %}">
+              {% if 'No grammar' in issue %}
+              <i class="fas fa-check-circle text-success mr-2"></i>
+              {% else %}
+              <i class="fas fa-info-circle text-warning mr-2"></i>
+              {% endif %}
+              {{ issue }}
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
+      </div>
 
-         const toggler= document.getElementById("sidebarMenu");
-                                        function navbar(){
+      <!-- RIGHT COLUMN: Readability & Recommendations -->
+      <div class="col-md-6">
+        
+        <!-- Readability Score -->
+        {% if readability_score %}
+        <div class="readability-section mb-4">
+          <h6 class="section-title mb-3">
+            <i class="fas fa-book-reader text-info mr-2"></i>Readability Analysis
+          </h6>
+          <div class="alert {% if readability_score >= 70 %}alert-success{% elif readability_score >= 50 %}alert-info{% else %}alert-warning{% endif %}">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <h5 class="mb-2">{{ readability_score }}/100</h5>
+                <small class="text-muted">
+                  {% if readability_score >= 70 %}
+                    <i class="fas fa-check-circle"></i> Easy to read - Great for broad audiences
+                  {% elif readability_score >= 50 %}
+                    <i class="fas fa-info-circle"></i> Average readability - Suitable for most readers
+                  {% else %}
+                    <i class="fas fa-exclamation-triangle"></i> Complex text - May be difficult for some readers
+                  {% endif %}
+                </small>
+              </div>
+              <div>
+                <i class="fas fa-book-reader fa-3x opacity-50"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endif %}
 
-            if (toggler.style.display === 'block') {
-              toggler.style.display = 'none';
-            } else {
-              toggler.style.display = 'block';
-            }
-            }
+        <!-- SEO Writing Recommendations -->
+        {% if grammar_recommendations %}
+        <div class="recommendations-section">
+          <h6 class="section-title mb-3">
+            <i class="fas fa-lightbulb text-info mr-2"></i>SEO Writing Recommendations
+          </h6>
+          <ul class="list-group">
+            {% for recommendation in grammar_recommendations %}
+            <li class="list-group-item {% if '✓' in recommendation %}list-group-item-success{% else %}list-group-item-info{% endif %}">
+              {% if '✓' in recommendation %}
+              <i class="fas fa-check-circle text-success mr-2"></i>
+              {% else %}
+              <i class="fas fa-arrow-right text-info mr-2"></i>
+              {% endif %}
+              {{ recommendation }}
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
 
-      $(document).ready(function() {
+              <!-- Keyword Density -->
+              <div class="analysis-card full-width">
+                <div class="card-header">
+                  <h3>Keyword Density</h3>
+                  <i class="fas fa-key card-icon"></i>
+                </div>
+                <div class="card-body">
+                  <!-- ✅ Main Keyword Density Table -->
+                  {% if density_dict %}
+                  <div class="keyword-analysis-section">
+                    <h6 class="section-title mb-3">Top Keywords Analysis</h6>
+
+                    <div class="table-responsive">
+                      <table class="table table-hover keyword-density-table">
+                        <thead>
+                          <tr>
+                            <th>Rank</th>
+                            <th>Keyword</th>
+                            <th>Count</th>
+                            <th>Density</th>
+                            <th>Usage Assessment</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {% for keyword, data in density_dict.items %}
+                          <tr class="keyword-row">
+                            <td class="rank-badge">
+                              <span class="badge badge-primary"
+                                >#{{ data.rank }}</span
+                              >
+                            </td>
+                            <td class="keyword-text">
+                              <strong>{{ keyword }}</strong>
+                            </td>
+                            <td class="count-value">{{ data.count }}</td>
+                            <td class="density-value">{{ data.density }}</td>
+                            <td class="usage-verdict">
+                              {% if '✓ Optimal' in data.usage %}
+                              <span class="badge badge-success"
+                                >{{ data.usage }}</span
+                              >
+                              {% elif '✓ Good' in data.usage %}
+                              <span class="badge badge-info"
+                                >{{ data.usage }}</span
+                              >
+                              {% elif '⚠️ High' in data.usage or '⚠️ Overused' in data.usage %}
+                              <span class="badge badge-warning"
+                                >{{ data.usage }}</span
+                              >
+                              {% else %}
+                              <span class="badge badge-secondary"
+                                >{{ data.usage }}</span
+                              >
+                              {% endif %}
+                            </td>
+                          </tr>
+                          {% endfor %}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                  {% endif %}
+
+                  <!-- ✅ Content Metrics Summary -->
+                  {% if total_words or meaningful_words %}
+                  <div class="content-metrics-section mt-4">
+                    <h6 class="section-title mb-3">Content Metrics</h6>
+                    <div class="row">
+                      <div class="col-md-3 col-6 mb-3">
+                        <div class="metric-card">
+                          <div class="metric-label">Total Words</div>
+                          <div class="metric-value">
+                            {{ total_words|default:"N/A" }}
+                          </div>
+                        </div>
+                      </div>
+                      <div class="col-md-3 col-6 mb-3">
+                        <div class="metric-card">
+                          <div class="metric-label">Meaningful Words</div>
+                          <div class="metric-value">
+                            {{ meaningful_words|default:"N/A" }}
+                          </div>
+                        </div>
+                      </div>
+                      <div class="col-md-3 col-6 mb-3">
+                        <div class="metric-card">
+                          <div class="metric-label">Unique Keywords</div>
+                          <div class="metric-value">
+                            {{ unique_keywords|default:"N/A" }}
+                          </div>
+                        </div>
+                      </div>
+                      <div class="col-md-3 col-6 mb-3">
+                        <div class="metric-card">
+                          <div class="metric-label">Keyword Diversity</div>
+                          <div class="metric-value">
+                            {{ keyword_diversity|default:"N/A" }}%
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  {% endif %}
+
+                  <!-- ✅ Topic Concentration Analysis -->
+                  {% if topic_concentration %}
+                  <div class="topic-analysis-section mt-4">
+                    <h6 class="section-title mb-3">Topic Concentration</h6>
+                    <div class="alert alert-info">
+                      <div
+                        class="d-flex justify-content-between align-items-center"
+                      >
+                        <div>
+                          <strong>Concentration Score:</strong>
+                          {{topic_concentration }}
+                        </div>
+                        <div class="concentration-verdict">
+                          {% if '✓ Good' in topic_concentration_verdict %}
+                          <span class="badge badge-success"
+                            >{{ topic_concentration_verdict }}</span
+                          >
+                          {% elif '⚠️' in topic_concentration_verdict %}
+                          <span class="badge badge-warning"
+                            >{{ topic_concentration_verdict }}</span
+                          >
+                          {% else %}
+                          <span class="badge badge-secondary"
+                            >{{ topic_concentration_verdict }}</span
+                          >
+                          {% endif %}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  {% endif %}
+
+                  <!-- ✅ Content Quality Assessment -->
+                  {% if content_quality %}
+                  <div class="content-quality-section mt-4">
+                    <h6 class="section-title mb-3">Content Quality</h6>
+                    <div
+                      class="alert {% if 'Excellent' in content_quality or 'Good' in content_quality %}alert-success{% elif 'Thin' in content_quality or 'Short' in content_quality %}alert-danger{% else %}alert-info{% endif %}"
+                    >
+                      <i class="fas fa-file-alt mr-2"></i>{{ content_quality }}
+                    </div>
+                  </div>
+                  {% endif %}
+
+                  <!-- ✅ Keyword Stuffing Risk -->
+                  {% if keyword_stuffing_risk %}
+                  <div class="stuffing-risk-section mt-4">
+                    <h6 class="section-title mb-3">
+                      Keyword Stuffing Analysis
+                    </h6>
+                    <div
+                      class="alert {% if '✓ Low' in keyword_stuffing_risk %}alert-success{% elif '⚠️ HIGH' in keyword_stuffing_risk %}alert-danger{% else %}alert-warning{% endif %}"
+                    >
+                      <i class="fas fa-exclamation-triangle mr-2"></i>{{ keyword_stuffing_risk }}
+                    </div>
+                  </div>
+                  {% endif %}
+
+                  <!-- ✅ SEO Recommendations -->
+                  {% if seo_recommendations %}
+                  <div class="recommendations-section mt-4">
+                    <h6 class="section-title mb-3">SEO Recommendations</h6>
+                    <ul class="list-group">
+                      {% for recommendation in seo_recommendations %}
+                      <li
+                        class="list-group-item {% if '✓' in recommendation %}list-group-item-success{% else %}list-group-item-warning{% endif %}"
+                      >
+                        {% if '✓' in recommendation %}
+                        <i class="fas fa-check-circle text-success mr-2"></i>
+                        {% else %}
+                        <i class="fas fa-lightbulb text-warning mr-2"></i>
+                        {% endif %} {{ recommendation }}
+                      </li>
+                      {% endfor %}
+                    </ul>
+                  </div>
+                  {% endif %}
+
+                  <!-- ✅ Meta Keywords Warning (if present) -->
+                  {% if meta_keywords_warning %}
+                  <div class="meta-warning-section mt-4">
+                    <div class="alert alert-warning">
+                      <i class="fas fa-info-circle mr-2"></i>
+                      <strong>Deprecated Tag Detected:</strong>
+                      {{meta_keywords_warning }}
+                    </div>
+                  </div>
+                  {% endif %}
+
+                  <!-- ✅ Main Density Summary -->
+                  {% if density %}
+                  <div class="density-summary-section mt-4">
+                    <div
+                      class="alert {% if '✓ Excellent' in density %}alert-success{% elif '✓ Good' in density %}alert-info{% elif '⚠️' in density %}alert-warning{% else %}alert-secondary{% endif %}"
+                    >
+                      <h6 class="mb-2">
+                        <i class="fas fa-chart-line mr-2"></i>Overall Assessment
+                      </h6>
+                      <p class="mb-0">{{ density }}</p>
+                    </div>
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+
+              <!-- Image Alt Check -->
+              <!-- Image Alt Attributes -->
+              <div class="analysis-card full-width">
+                <div class="card-header">
+                  <h3>
+                    Image Alt Attributes
+                    <i
+                      class=""
+                      data-toggle="popover"
+                      data-content="Alt attribute is an HTML attribute applied to image tags to provide a text alternative when image is not loaded for search engines."
+                    ></i>
+                  </h3>
+                  <i class="fas fa-image card-icon"></i>
+                </div>
+                <div class="card-body">
+                  <!-- ✅ Modern metrics display -->
+                  {% if alt_check is not None %}
+                  <div class="metric-summary mb-3">
+                    <div class="row">
+                      <div class="col-md-3 col-6">
+                        <div class="mini-metric">
+                          <div class="mini-metric-value">{{ alt_check }}</div>
+                          <div class="mini-metric-label">Missing Alt</div>
+                        </div>
+                      </div>
+                      {% if total_images %}
+                      <div class="col-md-3 col-6">
+                        <div class="mini-metric">
+                          <div class="mini-metric-value">
+                            {{ total_images }}
+                          </div>
+                          <div class="mini-metric-label">Total Images</div>
+                        </div>
+                      </div>
+                      {% endif %} {% if image_optimization %}
+                      <div class="col-md-3 col-6">
+                        <div class="mini-metric">
+                          <div class="mini-metric-value">
+                            {{ image_optimization }}%
+                          </div>
+                          <div class="mini-metric-label">Optimized</div>
+                        </div>
+                      </div>
+                      {% endif %}
+                    </div>
+                  </div>
+
+                  <!-- ✅ Verdict badge -->
+                  {% if alt_verdict %}
+                  <div
+                    class="alert {% if '✓' in alt_verdict %}alert-success{% elif '❌' in alt_verdict %}alert-danger{% else %}alert-warning{% endif %} mb-3"
+                  >
+                    {{ alt_verdict }}
+                  </div>
+                  {% endif %} {% else %}
+                  <p class="result-text">No image data available</p>
+                  {% endif %}
+
+                  <button
+                    onclick="toggleDetails('link2-container')"
+                    class="btn-details"
+                  >
+                    <i class="fas fa-chevron-down"></i>
+                    <span>View Missing Alt Images</span>
+                  </button>
+                  <div id="link2-container" class="details-container">
+                    <textarea readonly class="details-textarea">
+{{ alt_links }}</textarea
+                    >
+                  </div>
+                </div>
+              </div>
+
+              <!-- Internal Links -->
+              <div class="analysis-card">
+                <div class="card-header">
+                  <h3>Internal Links</h3>
+                  <i class="fas fa-link card-icon"></i>
+                </div>
+                <div class="card-body">
+                  <!-- ✅ Fixed: Was showing External_links count for Internal -->
+                  <div class="link-count-display">
+                    <span class="count-number"
+                      >{{ Internal_links|default:"0" }}</span
+                    >
+                    <span class="count-label">Internal Links Found</span>
+                  </div>
+
+                  {% if links_verdict %}
+                  <div
+                    class="alert {% if '✓' in links_verdict %}alert-success{% elif '❌' in links_verdict %}alert-danger{% else %}alert-info{% endif %} mt-3"
+                  >
+                    {{ links_verdict }}
+                  </div>
+                  {% endif %}
+
+                  <button
+                    onclick="toggleDetails('link-container')"
+                    class="btn-details mt-2"
+                  >
+                    <i class="fas fa-chevron-down"></i>
+                    <span>View Internal Links</span>
+                  </button>
+                  <div id="link-container" class="details-container">
+                    <textarea readonly class="details-textarea">
+{{ i_url }}</textarea
+                    >
+                  </div>
+                </div>
+              </div>
+
+              <!-- External Links -->
+              <div class="analysis-card">
+                <div class="card-header">
+                  <h3>External Links</h3>
+                  <i class="fas fa-external-link-alt card-icon"></i>
+                </div>
+                <div class="card-body">
+                  <!-- ✅ Fixed: Was showing Internal_links count for External -->
+                  <div class="link-count-display">
+                    <span class="count-number"
+                      >{{ External_links|default:"0" }}</span
+                    >
+                    <span class="count-label">External Links Found</span>
+                  </div>
+
+                  <!-- ✅ Additional metrics -->
+                  {% if total_links %}
+                  <div class="link-stats mt-3">
+                    <small class="text-muted">
+                      Total Links: {{ total_links }} {% if nofollow_links %} |
+                      Nofollow: {{ nofollow_links }} {% endif %}
+                    </small>
+                  </div>
+                  {% endif %}
+
+                  <button
+                    onclick="toggleDetails('link1-container')"
+                    class="btn-details mt-2"
+                  >
+                    <i class="fas fa-chevron-down"></i>
+                    <span>View External Links</span>
+                  </button>
+                  <div id="link1-container" class="details-container">
+                    <textarea readonly class="details-textarea">
+{{ e_url }}</textarea
+                    >
+                  </div>
+                </div>
+              </div>
+
+              <!-- Status Code -->
+              <div class="analysis-card">
+                <div class="card-header">
+                  <h3>HTTP Status Code</h3>
+                  <i class="fas fa-server card-icon"></i>
+                </div>
+                <div class="card-body">
+                  <span
+                    class="status-code {% if status_code == 200 %}status-success{% elif status_code >= 400 %}status-error{% elif status_code >= 300 %}status-warning{% endif %}"
+                  >
+                    {{ status }}
+                  </span>
+
+                  <!-- ✅ Status verdict -->
+                  {% if status_verdict %}
+                  <div
+                    class="alert {% if '✓' in status_verdict %}alert-success{% elif '❌' in status_verdict %}alert-danger{% else %}alert-warning{% endif %} mt-3"
+                  >
+                    {{ status_verdict }}
+                  </div>
+                  {% endif %}
+
+                  <!-- ✅ Redirect info -->
+                  {% if redirected_to %}
+                  <div class="redirect-info mt-2">
+                    <small class="text-muted">
+                      <i class="fas fa-arrow-right"></i> Redirected to: {{
+                      redirected_to }}
+                    </small>
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Structured Analysis Section -->
+        <section class="analysis-section">
+          <div
+            class="section-header"
+            data-toggle="collapse"
+            data-target="#collapseTwo"
+          >
+            <div class="section-title">
+              <i class="fas fa-sitemap section-icon"></i>
+              <h2>Structured Data Analysis</h2>
+            </div>
+            <i class="fas fa-chevron-down collapse-icon"></i>
+          </div>
+
+          <div id="collapseTwo" class="collapse show section-content">
+            <div class="analysis-grid">
+              <!-- Robot.txt -->
+              <div class="analysis-card">
+                <div class="card-header">
+                  <h3>
+                    Robot.txt
+                    <i
+                      class=""
+                      data-toggle="popover"
+                      data-content="The robots.txt file tells web robots which pages on your site to crawl and which pages not to crawl."
+                    ></i>
+                  </h3>
+                  <i class="fas fa-robot card-icon"></i>
+                </div>
+                <div class="card-body">
+                  <span
+                    class="verdict-badge {% if '✓' in robot %}badge-success{% else %}badge-warning{% endif %}"
+                  >
+                    {{ robot }}
+                  </span>
+
+                  <!-- ✅ Show robots.txt URL -->
+                  {% if robots_url %}
+                  <div class="mt-3">
+                    <small class="text-muted">
+                      <a
+                        href="{{ robots_url }}"
+                        target="_blank"
+                        class="external-link"
+                      >
+                        <i class="fas fa-external-link-alt"></i> View robots.txt
+                      </a>
+                    </small>
+                  </div>
+                  {% endif %}
+
+                  <!-- ✅ Show if sitemap is referenced in robots.txt -->
+                  {% if robots_has_sitemap %}
+                  <div class="mt-2">
+                    <small class="text-success">
+                      <i class="fas fa-check-circle"></i> Sitemap referenced in
+                      robots.txt
+                    </small>
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+
+              <!-- Sitemap -->
+              <div class="analysis-card">
+                <div class="card-header">
+                  <h3>
+                    XML Sitemap
+                    <i
+                      class=""
+                      data-toggle="popover"
+                      data-content="XML sitemap is a list of your website's URLs. It acts as a roadmap to tell search engines what content is available."
+                    ></i>
+                  </h3>
+                  <i class="fas fa-map card-icon"></i>
+                </div>
+                <div class="card-body">
+                  <span
+                    class="verdict-badge {% if '✓' in sitemap %}badge-success{% else %}badge-warning{% endif %}"
+                  >
+                    {{ sitemap }}
+                  </span>
+
+                  <!-- ✅ Show sitemap location if found -->
+                  {% if sitemap_location %}
+                  <div class="mt-3">
+                    <small class="text-muted">
+                      <a
+                        href="{{ sitemap_location }}"
+                        target="_blank"
+                        class="external-link"
+                      >
+                        <i class="fas fa-external-link-alt"></i> View sitemap
+                      </a>
+                    </small>
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+
+              <!-- Broken Links -->
+              <div class="analysis-card full-width">
+                <div class="card-header">
+                  <h3>Broken Links Analysis</h3>
+                  <i class="fas fa-unlink card-icon"></i>
+                </div>
+                <div class="card-body">
+                  <!-- ✅ Enhanced broken links display -->
+                  <div class="broken-links-summary mb-3">
+                    <div class="row">
+                      <div class="col-md-2 col-6">
+                        <div
+                          class="mini-metric {% if b_links == 0 %}metric-success{% elif b_links > 5 %}metric-danger{% else %}metric-warning{% endif %}"
+                        >
+                          <div class="mini-metric-value">
+                            {{ b_links|default:"0" }}
+                          </div>
+                          <div class="mini-metric-label">Broken</div>
+                        </div>
+                      </div>
+                      {% if working_links is not None %}
+                      <div class="col-md-2 col-6">
+                        <div class="mini-metric metric-success">
+                          <div class="mini-metric-value">
+                            {{ working_links }}
+                          </div>
+                          <div class="mini-metric-label">Working</div>
+                        </div>
+                      </div>
+                      {% endif %} {% if internal_broken is not None %}
+                      <div class="col-md-2 col-6">
+                        <div
+                          class="mini-metric {% if internal_broken > 0 %}metric-danger{% else %}metric-success{% endif %}"
+                        >
+                          <div class="mini-metric-value">
+                            {{ internal_broken }}
+                          </div>
+                          <div class="mini-metric-label">Internal Broken</div>
+                        </div>
+                      </div>
+                      {% endif %} {% if external_broken is not None %}
+                      <div class="col-md-2 col-6">
+                        <div
+                          class="mini-metric {% if external_broken > 0 %}metric-warning{% else %}metric-success{% endif %}"
+                        >
+                          <div class="mini-metric-value">
+                            {{ external_broken }}
+                          </div>
+                          <div class="mini-metric-label">External Broken</div>
+                        </div>
+                      </div>
+                      {% endif %} {% if link_health_score is not None %}
+                      <div class="col-md-2 col-6">
+                        <div
+                          class="mini-metric {% if link_health_score >= 90 %}metric-success{% elif link_health_score >= 70 %}metric-warning{% else %}metric-danger{% endif %}"
+                        >
+                          <div class="mini-metric-value">
+                            {{ link_health_score }}%
+                          </div>
+                          <div class="mini-metric-label">Health Score</div>
+                        </div>
+                      </div>
+                      {% endif %} {% if total_links_checked %}
+                      <div class="col-md-2 col-6">
+                        <div class="mini-metric">
+                          <div class="mini-metric-value">
+                            {{ total_links_checked }}
+                          </div>
+                          <div class="mini-metric-label">Checked</div>
+                        </div>
+                      </div>
+                      {% endif %}
+                    </div>
+                  </div>
+
+                  <!-- ✅ Verdict -->
+                  {% if b_verdict %}
+                  <div
+                    class="alert {% if '✓' in b_verdict %}alert-success{% elif '❌' in b_verdict %}alert-danger{% else %}alert-warning{% endif %} mb-3"
+                  >
+                    {{ b_verdict }}
+                  </div>
+                  {% endif %}
+
+                  <!-- ✅ Error breakdown -->
+                  {% if broken_summary %}
+                  <div class="error-breakdown mb-3">
+                    <h6 class="text-muted mb-2">Error Breakdown:</h6>
+                    <div class="row">
+                      {% for error_type, count in broken_summary.items %} {% if count > 0 %}
+                      <div class="col-md-4 col-6 mb-2">
+                        <span class="badge badge-secondary"
+                          >{{ error_type }}: {{ count }}</span
+                        >
+                      </div>
+                      {% endif %} {% endfor %}
+                    </div>
+                  </div>
+                  {% endif %}
+
+                  <!-- ✅ Restricted links info -->
+                  {% if restricted_links_count and restricted_links_count > 0 %}
+                  <div class="alert alert-info mb-3">
+                    <i class="fas fa-shield-alt"></i> {{ restricted_links_count}} link(s) are access-restricted (403)
+                    but not broken
+                  </div>
+                  {% endif %}
+
+                  <button
+                    onclick="toggleDetails('list-container')"
+                    class="btn-details"
+                  >
+                    <i class="fas fa-chevron-down"></i>
+                    <span>View Broken Links Details</span>
+                  </button>
+                  <div id="list-container" class="details-container">
+                    <textarea readonly class="details-textarea">
+{{ b_url }}</textarea
+                    >
+                  </div>
+
+                  <!-- ✅ Show restricted links if any -->
+                  {% if restricted_links and restricted_links_count > 0 %}
+                  <button
+                    onclick="toggleDetails('restricted-container')"
+                    class="btn-details mt-2"
+                  >
+                    <i class="fas fa-chevron-down"></i>
+                    <span>View Restricted Links (403)</span>
+                  </button>
+                  <div id="restricted-container" class="details-container">
+                    <textarea readonly class="details-textarea">
+{{ restricted_links }}</textarea
+                    >
+                  </div>
+                  {% endif %}
+
+                  <!-- ✅ Check time -->
+                  {% if checked_at %}
+                  <div class="mt-3">
+                    <small class="text-muted">
+                      <i class="fas fa-clock"></i> Last checked: {{ checked_at }}
+                    </small>
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+
+              <!-- Schema -->
+              <div class="analysis-card">
+                <div class="card-header">
+                  <h3>
+                    Schema Markup
+                    <i
+                      class=""
+                      data-toggle="popover"
+                      data-content="Schema markup helps search engines return more informative results for users."
+                    ></i>
+                  </h3>
+                  <i class="fas fa-code card-icon"></i>
+                </div>
+                <div class="card-body">
+                  <span
+                    class="verdict-badge {% if '✓' in schema %}badge-success{% else %}badge-warning{% endif %}"
+                  >
+                    {{ schema }}
+                  </span>
+
+                  <!-- ✅ Schema types found -->
+                  {% if schema_types %}
+                  <div class="mt-3">
+                    <h6 class="text-muted mb-2">Schema Types Detected:</h6>
+                    <div class="schema-types">
+                      {% for schema_type in schema_types %}
+                      <span class="badge badge-info mr-1 mb-1"
+                        >{{ schema_type }}</span
+                      >
+                      {% endfor %}
+                    </div>
+                  </div>
+                  {% endif %}
+
+                  <!-- ✅ Schema format -->
+                  {% if schema_format %}
+                  <div class="mt-2">
+                    <small class="text-muted">
+                      Format: {% for format in schema_format %}
+                      <span class="badge badge-secondary">{{ format }}</span>
+                      {% endfor %}
+                    </small>
+                  </div>
+                  {% endif %}
+
+                  <!-- ✅ Schema recommendations -->
+                  {% if schema_recommendations %}
+                  <button
+                    onclick="toggleDetails('schema-rec-container')"
+                    class="btn-details mt-3"
+                  >
+                    <i class="fas fa-lightbulb"></i>
+                    <span>View Recommendations</span>
+                  </button>
+                  <div id="schema-rec-container" class="details-container">
+                    <ul class="recommendation-list">
+                      {% for rec in schema_recommendations %}
+                      <li>{{ rec }}</li>
+                      {% endfor %}
+                    </ul>
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+
+              <!-- Open Graph -->
+              <div class="analysis-card">
+                <div class="card-header">
+                  <h3>
+                    Open Graph Protocol
+                    <i
+                      class=""
+                      data-toggle="popover"
+                      data-content="Open Graph Protocol helps increase website visibility and engagement on social media platforms."
+                    ></i>
+                  </h3>
+                  <i class="fas fa-share-alt card-icon"></i>
+                </div>
+                <div class="card-body">
+                  <span
+                    class="verdict-badge {% if '✓' in open_gp %}badge-success{% elif '❌' in open_gp %}badge-danger{% else %}badge-warning{% endif %}"
+                  >
+                    {{ open_gp }}
+                  </span>
+
+                  <!-- ✅ OG tags found -->
+                  {% if og_tags_found %}
+                  <div class="mt-3">
+                    <h6 class="text-muted mb-2">
+                      Tags Found ({{ og_tags_found|length }}):
+                    </h6>
+                    <div class="og-tags-list">
+                      {% for tag in og_tags_found %}
+                      <span class="badge badge-success mr-1 mb-1"
+                        >{{ tag }}</span
+                      >
+                      {% endfor %}
+                    </div>
+                  </div>
+                  {% endif %}
+
+                  <!-- ✅ Missing OG tags -->
+                  {% if og_tags_missing and og_tags_missing|length > 0 %}
+                  <div class="mt-2">
+                    <h6 class="text-muted mb-2">
+                      Missing Tags ({{ og_tags_missing|length }}):
+                    </h6>
+                    <div class="og-tags-list">
+                      {% for tag in og_tags_missing %}
+                      <span class="badge badge-secondary mr-1 mb-1"
+                        >{{ tag }}</span
+                      >
+                      {% endfor %}
+                    </div>
+                  </div>
+                  {% endif %}
+
+                  <!-- ✅ OG values preview -->
+                  {% if og_values %}
+                  <button
+                    onclick="toggleDetails('og-values-container')"
+                    class="btn-details mt-3"
+                  >
+                    <i class="fas fa-eye"></i>
+                    <span>View OG Tag Values</span>
+                  </button>
+                  <div id="og-values-container" class="details-container">
+                    <div class="og-values-display">
+                      {% for tag, value in og_values.items %}
+                      <div class="og-value-item">
+                        <strong>{{ tag }}:</strong> {{ value }}
+                      </div>
+                      {% endfor %}
+                    </div>
+                  </div>
+                  {% endif %}
+
+                  <!-- ✅ OG recommendations -->
+                  {% if og_recommendations %}
+                  <button
+                    onclick="toggleDetails('og-rec-container')"
+                    class="btn-details mt-3"
+                  >
+                    <i class="fas fa-lightbulb"></i>
+                    <span>View Recommendations</span>
+                  </button>
+                  <div id="og-rec-container" class="details-container">
+                    <ul class="recommendation-list">
+                      {% for rec in og_recommendations %}
+                      <li>{{ rec }}</li>
+                      {% endfor %}
+                    </ul>
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+
+              <!-- Favicon -->
+              <div class="analysis-card">
+                <div class="card-header">
+                  <h3>Favicon</h3>
+                  <i class="fas fa-image card-icon"></i>
+                </div>
+                <div class="card-body">
+                  <span
+                    class="verdict-badge {% if '✓' in Favicon %}badge-success{% else %}badge-warning{% endif %}"
+                  >
+                    {{ Favicon }}
+                  </span>
+
+                  <!-- ✅ Favicon details -->
+                  <div class="favicon-details mt-3">
+                    {% if favicon_url %}
+                    <div class="favicon-preview mb-2">
+                      <img
+                        src="{{ favicon_url }}"
+                        alt="Favicon"
+                        class="favicon-image"
+                        onerror="this.style.display = 'none'"
+                      />
+                    </div>
+                    <small class="text-muted d-block">
+                      <a
+                        href="{{ favicon_url }}"
+                        target="_blank"
+                        class="external-link"
+                      >
+                        <i class="fas fa-external-link-alt"></i> View favicon
+                      </a>
+                    </small>
+                    {% endif %} {% if favicon_size %}
+                    <small class="text-muted d-block mt-1">
+                      Size: {{ favicon_size }}
+                    </small>
+                    {% endif %} {% if favicon_format %}
+                    <small class="text-muted d-block">
+                      Format: {{ favicon_format }}
+                    </small>
+                    {% endif %}
+                  </div>
+
+                  <!-- ✅ Favicon recommendations -->
+                  {% if favicon_recommendations %}
+                  <button
+                    onclick="toggleDetails('favicon-rec-container')"
+                    class="btn-details mt-3"
+                  >
+                    <i class="fas fa-lightbulb"></i>
+                    <span>View Recommendations</span>
+                  </button>
+                  <div id="favicon-rec-container" class="details-container">
+                    <ul class="recommendation-list">
+                      {% for rec in favicon_recommendations %}
+                      <li>{{ rec }}</li>
+                      {% endfor %}
+                    </ul>
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Technology Analysis Section -->
+        <!-- Technology Stack Section -->
+        <section class="analysis-section">
+          <div
+            class="section-header"
+            data-toggle="collapse"
+            data-target="#collapseThree"
+          >
+            <div class="section-title">
+              <i class="fas fa-cogs section-icon"></i>
+              <h2>Technology Stack</h2>
+            </div>
+            <i class="fas fa-chevron-down collapse-icon"></i>
+          </div>
+
+          <div id="collapseThree" class="collapse show section-content">
+            <div class="analysis-grid">
+              <!-- Server IP -->
+              <div class="analysis-card">
+                <div class="card-header">
+                  <h3>Server IP</h3>
+                  <i class="fas fa-server card-icon"></i>
+                </div>
+                <div class="card-body">
+                  <p class="result-text">{{s_ip}}</p>
+                </div>
+              </div>
+
+              <!-- Server Location -->
+              <div class="analysis-card">
+                <div class="card-header">
+                  <h3>Server Location</h3>
+                  <i class="fas fa-map-marker-alt card-icon"></i>
+                </div>
+                <div class="card-body">
+                  <p class="result-text">{{s_loc}}</p>
+                </div>
+              </div>
+
+              <!-- Hostname -->
+              <div class="analysis-card">
+                <div class="card-header">
+                  <h3>Hostname</h3>
+                  <i class="fas fa-network-wired card-icon"></i>
+                </div>
+                <div class="card-body">
+                  <p class="result-text">{{hostname}}</p>
+                </div>
+              </div>
+
+              <!-- Technology -->
+              <div class="analysis-card">
+                <div class="card-header">
+                  <h3>Technology Stack</h3>
+                  <i class="fas fa-layer-group card-icon"></i>
+                </div>
+                <div class="card-body">
+                  <p class="result-text">{{technology}}</p>
+                </div>
+              </div>
+
+              <!-- Google Analytics -->
+              <div class="analysis-card">
+                <div class="card-header">
+                  <h3>
+                    Google Analytics
+                    <i
+                      class=""
+                      data-toggle="popover"
+                      data-content="Analytics helps track and analyze your marketing data to grow organic traffic."
+                    ></i>
+                  </h3>
+                  <i class="fas fa-chart-line card-icon"></i>
+                </div>
+                <div class="card-body">
+                  <span class="verdict-badge">{{analytics}}</span>
+                </div>
+              </div>
+
+              <!-- DocType -->
+              <div class="analysis-card">
+                <div class="card-header">
+                  <h3>Document Type</h3>
+                  <i class="fas fa-file-code card-icon"></i>
+                </div>
+                <div class="card-body">
+                  <p class="result-text">{{doctype}}</p>
+                </div>
+              </div>
+
+              <!-- Encoding -->
+              <div class="analysis-card">
+                <div class="card-header">
+                  <h3>
+                    Character Encoding
+                    <i
+                      class=""
+                      data-toggle="popover"
+                      data-content="Character encoding ensures content is properly displayed across different browsers and devices."
+                    ></i>
+                  </h3>
+                  <i class="fas fa-font card-icon"></i>
+                </div>
+                <div class="card-body">
+                  <p class="result-text">{{encoding}}</p>
+                </div>
+              </div>
+
+              <!-- W3C Validation -->
+              <div class="analysis-card">
+                <div class="card-header">
+                  <h3>
+                    W3C Validation
+                    <i
+                      class=""
+                      data-toggle="popover"
+                      data-content="W3C validation checks if your code follows correct formatting standards for better performance."
+                    ></i>
+                  </h3>
+                  <i class="fas fa-check-circle card-icon"></i>
+                </div>
+                <div class="card-body">
+                  <span class="verdict-badge">{{w3c}}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Security Analysis Section -->
+        <section class="analysis-section">
+          <div
+            class="section-header"
+            data-toggle="collapse"
+            data-target="#collapseFour"
+          >
+            <div class="section-title">
+              <i class="fas fa-shield-alt section-icon"></i>
+              <h2>Security Analysis</h2>
+            </div>
+            <i class="fas fa-chevron-down collapse-icon"></i>
+          </div>
+
+          <div id="collapseFour" class="collapse show section-content">
+            <div class="analysis-grid">
+              <!-- SSL Name -->
+              <div class="analysis-card">
+                <div class="card-header">
+                  <h3>SSL Certificate Name</h3>
+                  <i class="fas fa-certificate card-icon"></i>
+                </div>
+                <div class="card-body">
+                  <p class="result-text">{{ssl_name}}</p>
+                </div>
+              </div>
+
+              <!-- SSL Organization -->
+              <div class="analysis-card">
+                <div class="card-header">
+                  <h3>SSL Organization</h3>
+                  <i class="fas fa-building card-icon"></i>
+                </div>
+                <div class="card-body">
+                  <p class="result-text">{{ssl_organ}}</p>
+                </div>
+              </div>
+
+              <!-- SSL Expiry -->
+              <div class="analysis-card">
+                <div class="card-header">
+                  <h3>SSL Expiry Date</h3>
+                  <i class="fas fa-calendar-alt card-icon"></i>
+                </div>
+                <div class="card-body">
+                  <p class="result-text">{{ssl_expiry}}</p>
+                </div>
+              </div>
+
+              <!-- HTTPS Redirection -->
+              <div class="analysis-card">
+                <div class="card-header">
+                  <h3>
+                    HTTPS Redirection
+                    <i
+                      class=""
+                      data-toggle="popover"
+                      data-content="HTTPS redirection ensures data transmitted between users and your website is encrypted and protected."
+                    ></i>
+                  </h3>
+                  <i class="fas fa-exchange-alt card-icon"></i>
+                </div>
+                <div class="card-body">
+                  <span class="verdict-badge">{{http_redir}}</span>
+                </div>
+              </div>
+
+              <!-- DMCA -->
+              <div class="analysis-card">
+                <div class="card-header">
+                  <h3>
+                    DMCA Protection
+                    <i
+                      class=""
+                      data-toggle="popover"
+                      data-content="The Digital Millennium Copyright Act is one of the most important laws affecting the Internet."
+                    ></i>
+                  </h3>
+                  <i class="fas fa-copyright card-icon"></i>
+                </div>
+                <div class="card-body">
+                  <span class="verdict-badge">{{dmca}}</span>
+                </div>
+              </div>
+
+              <!-- SSL Verdict -->
+              <div class="analysis-card">
+                <div class="card-header">
+                  <h3>Overall SSL Status</h3>
+                  <i class="fas fa-lock card-icon"></i>
+                </div>
+                <div class="card-body">
+                  <span class="verdict-badge verdict-large"
+                    >{{ssl_verdict}}</span
+                  >
+                </div>
+              </div>
+
+              <!-- NEW: HTTPS Status (from security_signals) -->
+              {% if security_signals %}
+              <div class="analysis-card">
+                <div class="card-header">
+                  <h3>
+                    HTTPS Security
+                    <i
+                      class=""
+                      data-toggle="popover"
+                      data-content="HTTPS encryption is essential for SEO rankings and user trust."
+                    ></i>
+                  </h3>
+                  <i class="fas fa-shield-check card-icon"></i>
+                </div>
+                <div class="card-body">
+                  <p class="result-text">{{security_signals.https_status}}</p>
+                </div>
+              </div>
+
+              <!-- NEW: Mixed Content Status -->
+              {% if security_signals.mixed_content_status %}
+              <div class="analysis-card">
+                <div class="card-header">
+                  <h3>
+                    Mixed Content Check
+                    <i
+                      class=""
+                      data-toggle="popover"
+                      data-content="Mixed content (HTTP resources on HTTPS pages) can trigger browser warnings and hurt SEO."
+                    ></i>
+                  </h3>
+                  <i class="fas fa-exclamation-triangle card-icon"></i>
+                </div>
+                <div class="card-body">
+                  <span class="verdict-badge"
+                    >{{security_signals.mixed_content_status}}</span
+                  >
+                </div>
+              </div>
+              {% endif %} {% endif %}
+            </div>
+          </div>
+        </section>
+
+        <!-- Social Analysis Section -->
+        <section class="analysis-section">
+          <div
+            class="section-header"
+            data-toggle="collapse"
+            data-target="#collapseFive"
+          >
+            <div class="section-title">
+              <i class="fas fa-share-alt-square section-icon"></i>
+              <h2>Social Media Presence</h2>
+            </div>
+            <i class="fas fa-chevron-down collapse-icon"></i>
+          </div>
+
+          <div id="collapseFive" class="collapse show section-content">
+            <div class="analysis-grid">
+              <!-- Facebook -->
+              <div class="analysis-card">
+                <div class="card-header">
+                  <h3>
+                    <i class="fab fa-facebook-f" style="color: #1877f2"></i>
+                    Facebook
+                  </h3>
+                </div>
+                <div class="card-body">
+                  <p class="result-text">{{ facebook }}</p>
+                  {% if social_links.facebook %}
+                  <ul class="social-links-list">
+                    {% for link in social_links.facebook %}
+                    <li>
+                      <a href="{{ link }}" target="_blank" rel="noopener"
+                        >{{ link }}</a
+                      >
+                    </li>
+                    {% endfor %}
+                  </ul>
+                  {% endif %}
+                </div>
+              </div>
+
+              <!-- Instagram -->
+              <div class="analysis-card">
+                <div class="card-header">
+                  <h3>
+                    <i class="fab fa-instagram" style="color: #e4405f"></i>
+                    Instagram
+                  </h3>
+                </div>
+                <div class="card-body">
+                  <p class="result-text">{{ instagram }}</p>
+                  {% if social_links.instagram %}
+                  <ul class="social-links-list">
+                    {% for link in social_links.instagram %}
+                    <li>
+                      <a href="{{ link }}" target="_blank" rel="noopener"
+                        >{{ link }}</a
+                      >
+                    </li>
+                    {% endfor %}
+                  </ul>
+                  {% endif %}
+                </div>
+              </div>
+
+              <!-- Twitter -->
+              <div class="analysis-card">
+                <div class="card-header">
+                  <h3>
+                    <i class="fab fa-twitter" style="color: #1da1f2"></i>
+                    Twitter
+                  </h3>
+                </div>
+                <div class="card-body">
+                  <p class="result-text">{{ twitter }}</p>
+                  {% if social_links.twitter %}
+                  <ul class="social-links-list">
+                    {% for link in social_links.twitter %}
+                    <li>
+                      <a href="{{ link }}" target="_blank" rel="noopener"
+                        >{{ link }}</a
+                      >
+                    </li>
+                    {% endfor %}
+                  </ul>
+                  {% endif %}
+                </div>
+              </div>
+
+              <!-- LinkedIn -->
+              <div class="analysis-card">
+                <div class="card-header">
+                  <h3>
+                    <i class="fab fa-linkedin-in" style="color: #0077b5"></i>
+                    LinkedIn
+                  </h3>
+                </div>
+                <div class="card-body">
+                  <p class="result-text">{{ linkedin }}</p>
+                  {% if social_links.linkedin %}
+                  <ul class="social-links-list">
+                    {% for link in social_links.linkedin %}
+                    <li>
+                      <a href="{{ link }}" target="_blank" rel="noopener"
+                        >{{ link }}</a
+                      >
+                    </li>
+                    {% endfor %}
+                  </ul>
+                  {% endif %}
+                </div>
+              </div>
+
+              <!-- Social Verdict -->
+              <div class="analysis-card full-width social-summary">
+                <div class="card-body">
+                  <div class="social-verdict-content">
+                    <div>
+                      <h4>Overall Social Presence</h4>
+                      <p class="social-count">
+                        {{ social_accounts_found }} platform(s) connected
+                      </p>
+                    </div>
+                    <span class="verdict-badge verdict-large"
+                      >{{ social_verdict }}</span
+                    >
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Performance Analysis Section - ENHANCED -->
+        <section class="analysis-section">
+          <div
+            class="section-header"
+            data-toggle="collapse"
+            data-target="#collapseSix"
+          >
+            <div class="section-title">
+              <i class="fas fa-tachometer-alt section-icon"></i>
+              <h2>Performance Metrics</h2>
+            </div>
+            <i class="fas fa-chevron-down collapse-icon"></i>
+          </div>
+
+          <div id="collapseSix" class="collapse show section-content">
+            <!-- PageSpeed Scores Overview -->
+            {% if performance_score or seo_score %} {% comment %}
+            <div class="scores-overview">
+              <h3 class="subsection-title">
+                <i class="fas fa-chart-bar"></i> Google PageSpeed Insights
+                Scores
+              </h3>
+              <div class="score-grid">
+                {% if performance_score %}
+                <div class="score-card">
+                  <div class="score-icon performance-icon">
+                    <i class="fas fa-bolt"></i>
+                  </div>
+                  <div class="score-details">
+                    <span class="score-label">Performance</span>
+                    <span
+                      class="score-value {% if performance_score >= 90 %}score-excellent{% elif performance_score >= 70 %}score-good{% elif performance_score >= 50 %}score-fair{% else %}score-poor{% endif %}"
+                    >
+                      {{performance_score}}
+                    </span>
+                  </div>
+                </div>
+                {% endif %} {% if seo_score %}
+                <div class="score-card">
+                  <div class="score-icon seo-icon">
+                    <i class="fas fa-search"></i>
+                  </div>
+                  <div class="score-details">
+                    <span class="score-label">SEO</span>
+                    <span
+                      class="score-value {% if seo_score >= 90 %}score-excellent{% elif seo_score >= 70 %}score-good{% elif seo_score >= 50 %}score-fair{% else %}score-poor{% endif %}"
+                    >
+                      {{seo_score}}
+                    </span>
+                  </div>
+                </div>
+                {% endif %} {% if accessibility_score %}
+                <div class="score-card">
+                  <div class="score-icon accessibility-icon">
+                    <i class="fas fa-universal-access"></i>
+                  </div>
+                  <div class="score-details">
+                    <span class="score-label">Accessibility</span>
+                    <span
+                      class="score-value {% if accessibility_score >= 90 %}score-excellent{% elif accessibility_score >= 70 %}score-good{% elif accessibility_score >= 50 %}score-fair{% else %}score-poor{% endif %}"
+                    >
+                      {{accessibility_score}}
+                    </span>
+                  </div>
+                </div>
+                {% endif %} {% if best_practices_score %}
+                <div class="score-card">
+                  <div class="score-icon practices-icon">
+                    <i class="fas fa-check-double"></i>
+                  </div>
+                  <div class="score-details">
+                    <span class="score-label">Best Practices</span>
+                    <span
+                      class="score-value {% if best_practices_score >= 90 %}score-excellent{% elif best_practices_score >= 70 %}score-good{% elif best_practices_score >= 50 %}score-fair{% else %}score-poor{% endif %}"
+                    >
+                      {{best_practices_score}}
+                    </span>
+                  </div>
+                </div>
+                {% endif %}
+              </div>
+            </div>
+            {% endcomment %} {% endif %}
+
+            <!-- Core Web Vitals Section -->
+            <div class="vitals-section">
+              {% comment %}
+              <h3 class="subsection-title">
+                <i class="fas fa-heartbeat"></i> Core Web Vitals
+              </h3>
+              {% endcomment %}
+              <div class="analysis-grid"></div>
+
+              <div class="analysis-grid">
+                <div class="analysis-card featured-card">
+                  <div class="card-header">
+                    <h3>Server Response Time</h3>
+                    <i class="fas fa-server card-icon"></i>
+                  </div>
+                  <div class="card-body">
+                    <div class="speed-metric">
+                      <span class="speed-value">{{website_speed}}s</span>
+                      <span class="speed-range">(Target: <1.0s>)</span>
+                    </div>
+                    <span class="verdict-badge">{{speed_verdict}}</span>
+                  </div>
+                </div>
+                <!-- LCP -->
+                <div class="analysis-card vital-card">
+                  <div class="card-header">
+                    <h3>
+                      Largest Contentful Paint (LCP)
+                      <i
+                        class=""
+                        data-toggle="popover"
+                        data-content="Measures loading performance. Good: ≤2.5s, Needs work: 2.5-4s, Poor: >4s"
+                      ></i>
+                    </h3>
+                    <i class="fas fa-image card-icon"></i>
+                  </div>
+                  <div class="card-body">
+                    <div class="vital-metric">
+                      <span
+                        class="metric-value {% if lcp <= 2.5 %}vital-good{% elif lcp <= 4.0 %}vital-fair{% else %}vital-poor{% endif %}"
+                      >
+                        {{lcp}}s
+                      </span>
+                      <span class="metric-label">Good: ≤2.5s</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- CLS -->
+                <div class="analysis-card vital-card">
+                  <div class="card-header">
+                    <h3>
+                      Cumulative Layout Shift (CLS)
+                      <i
+                        class=""
+                        data-toggle="popover"
+                        data-content="Measures visual stability. Good: ≤0.1, Needs work: 0.1-0.25, Poor: >0.25"
+                      ></i>
+                    </h3>
+                    <i class="fas fa-arrows-alt card-icon"></i>
+                  </div>
+                  <div class="card-body">
+                    <div class="vital-metric">
+                      <span
+                        class="metric-value {% if cls <= 0.1 %}vital-good{% elif cls <= 0.25 %}vital-fair{% else %}vital-poor{% endif %}"
+                      >
+                        {{cls}}
+                      </span>
+                      <span class="metric-label">Good: ≤0.1</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- FCP -->
+                {% if fcp %}
+                <div class="analysis-card vital-card">
+                  <div class="card-header">
+                    <h3>
+                      First Contentful Paint (FCP)
+                      <i
+                        class=""
+                        data-toggle="popover"
+                        data-content="Time until first content appears. Good: ≤1.8s, Needs work: 1.8-3s, Poor: >3s"
+                      ></i>
+                    </h3>
+                    <i class="fas fa-paint-brush card-icon"></i>
+                  </div>
+                  <div class="card-body">
+                    <div class="vital-metric">
+                      <span
+                        class="metric-value {% if fcp <= 1.8 %}vital-good{% elif fcp <= 3.0 %}vital-fair{% else %}vital-poor{% endif %}"
+                      >
+                        {{fcp}}s
+                      </span>
+                      <span class="metric-label">Good: ≤1.8s</span>
+                    </div>
+                  </div>
+                </div>
+                {% endif %}
+
+                <!-- INP -->
+                {% if inp != 'N/A' %}
+                <div class="analysis-card vital-card">
+                  <div class="card-header">
+                    <h3>
+                      Interaction to Next Paint (INP)
+                      <i
+                        class=""
+                        data-toggle="popover"
+                        data-content="Measures responsiveness. Good: ≤200ms, Needs work: 200-500ms, Poor: >500ms"
+                      ></i>
+                    </h3>
+                    <i class="fas fa-hand-pointer card-icon"></i>
+                  </div>
+                  <div class="card-body">
+                    <div class="vital-metric">
+                      <span class="metric-value">{{inp}}s</span>
+                      <span class="vital-label">Good: ≤0.2s</span>
+                    </div>
+                  </div>
+                </div>
+                {% endif %}
+
+                <!-- TTI -->
+                {% if tti %}
+                <div class="analysis-card">
+                  <div class="card-header">
+                    <h3>
+                      Time to Interactive (TTI)
+                      <i
+                        class=""
+                        data-toggle="popover"
+                        data-content="Time until page is fully interactive. Lower is better."
+                      ></i>
+                    </h3>
+                    <i class="fas fa-mouse-pointer card-icon"></i>
+                  </div>
+                  <div class="card-body">
+                    <p class="metric-value">{{tti}}s</p>
+                  </div>
+                </div>
+                {% endif %}
+
+                <!-- TBT -->
+                {% if tbt %}
+                <div class="analysis-card">
+                  <div class="card-header">
+                    <h3>
+                      Total Blocking Time (TBT)
+                      <i
+                        class=""
+                        data-toggle="popover"
+                        data-content="Total time the page is blocked from responding. Lower is better."
+                      ></i>
+                    </h3>
+                    <i class="fas fa-stopwatch card-icon"></i>
+                  </div>
+                  <div class="card-body">
+                    <p class="metric-value">{{tbt}}ms</p>
+                  </div>
+                </div>
+                {% endif %}
+
+                <!-- Speed Index -->
+                <div class="analysis-card">
+                  <div class="card-header">
+                    <h3>
+                      Speed Index
+                      <i
+                        class=""
+                        data-toggle="popover"
+                        data-content="How quickly content is visually displayed. Lower is better."
+                      ></i>
+                    </h3>
+                    <i class="fas fa-gauge card-icon"></i>
+                  </div>
+                  <div class="card-body">
+                    <p class="metric-value">{{full_page_load}}s</p>
+                  </div>
+                </div>
+
+                <!-- CSS Minification - Enhanced -->
+                <div class="analysis-card">
+                  <div class="card-header">
+                    <h3>
+                      CSS Minification
+                      <i
+                        class=""
+                        data-toggle="popover"
+                        data-content="Minifying CSS files reduces file sizes by removing comments, white spaces, and redundant code."
+                      ></i>
+                    </h3>
+                    <i class="fab fa-css3-alt card-icon"></i>
+                  </div>
+                  <div class="card-body">
+                    <span class="verdict-badge">{{css_minified}}</span>
+                    {% comment %} {% if inline_css_count is defined %}
+                    <div class="resource-details">
+                      <small>
+                        <i class="fas fa-file-code"></i> Inline styles:
+                        {{inline_css_count}} {% if external_css_count is defined
+                        %} | <i class="fas fa-link"></i> External:
+                        {{external_css_count}} {% endif %}
+                      </small>
+                    </div>
+                    {% endif %} {% endcomment %}
+                  </div>
+                </div>
+
+                <!-- JavaScript Minification - Enhanced -->
+                <div class="analysis-card">
+                  <div class="card-header">
+                    <h3>
+                      JavaScript Minification
+                      <i
+                        class=""
+                        data-toggle="popover"
+                        data-content="Minifying JS files decreases page load time, providing a better user experience."
+                      ></i>
+                    </h3>
+                    <i class="fab fa-js-square card-icon"></i>
+                  </div>
+                  <div class="card-body">
+                    <span class="verdict-badge">{{jss_minified}}</span>
+                    {% if inline_js_count is defined %}
+                    <div class="resource-details">
+                      <small>
+                        <i class="fas fa-file-code"></i> Inline scripts:
+                        {{inline_js_count}} {% if external_js_count is defined %} | <i class="fas fa-link"></i> External:
+                        {{external_js_count}} {% endif %}
+                      </small>
+                    </div>
+                    {% endif %} {% if render_blocking_js is defined and render_blocking_js > 0 %}
+                    <div class="warning-notice">
+                      <i class="fas fa-exclamation-triangle"></i>
+                      <small
+                        >{{render_blocking_js}} render-blocking script(s)
+                        detected</small
+                      >
+                    </div>
+                    {% endif %}
+                  </div>
+                </div>
+
+                <!-- Performance Optimizations - Enhanced -->
+                <div class="analysis-card">
+                  <div class="card-header">
+                    <h3>
+                      Performance Optimizations
+                      <i
+                        class=""
+                        data-toggle="popover"
+                        data-content="Modern optimization techniques like preload, prefetch, lazy loading, and async scripts improve page speed."
+                      ></i>
+                    </h3>
+                    <i class="fas fa-rocket card-icon"></i>
+                  </div>
+                  <div class="card-body">
+                    <span class="verdict-badge">{{opt_plugins}}</span>
+                    {% if optimization_count is defined %}
+                    <div class="optimization-details">
+                      <div class="optimization-count-badge">
+                        <i class="fas fa-check-circle"></i>
+                        {{optimization_count}} optimization(s) found
+                      </div>
+                      {% if optimization_techniques %}
+                      <small class="techniques-list"
+                        >{{optimization_techniques}}</small
+                      >
+                      {% endif %}
+                    </div>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Resource Optimization Section -->
+            <div class="optimization-section">
+              {% comment %}
+              <h3 class="subsection-title">
+                <i class="fas fa-tools"></i> Resource Optimization
+              </h3>
+              {% endcomment %}
+              <div class="analysis-grid">
+                <!-- Server Response Time -->
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Download Report Button -->
+        <div class="report-action">
+          <a href="{% url 'report' %}" class="btn btn-download">
+            <i class="fas fa-file-pdf"></i>
+            <span>Download PDF Report</span>
+          </a>
+        </div>
+      </div>
+    </main>
+
+    <!-- JavaScript -->
+    <script
+      src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
+      integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"
+      integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
+      integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
+      crossorigin="anonymous"
+    ></script>
+
+    <script>
+      // Sidebar Toggle
+      function navbar() {
+        const toggler = document.getElementById("sidebarMenu");
+        toggler.classList.toggle("show");
+      }
+
+      // Toggle Details Function
+      function toggleDetails(containerId) {
+        const container = document.getElementById(containerId);
+        const btn = event.target.closest(".btn-details");
+
+        if (
+          container.style.display === "none" ||
+          container.style.display === ""
+        ) {
+          container.style.display = "block";
+          btn
+            .querySelector("i")
+            .classList.replace("fa-chevron-down", "fa-chevron-up");
+          btn.querySelector("span").textContent = "Hide Details";
+        } else {
+          container.style.display = "none";
+          btn
+            .querySelector("i")
+            .classList.replace("fa-chevron-up", "fa-chevron-down");
+          btn.querySelector("span").textContent = "View Details";
+        }
+      }
+
+      // Loader Function
+      function myFunction() {
+        document.getElementById("loader").style.display = "flex";
+      }
+
+      // Hide Loader on Page Load
+      window.addEventListener("load", () => {
+        document.getElementById("loader").style.display = "none";
+      });
+
+      // Auto-hide Alerts
+      setTimeout(() => {
+        const alerts = document.querySelectorAll(".alert-modern");
+        alerts.forEach((alert) => {
+          alert.style.animation = "slideOut 0.3s ease forwards";
+          setTimeout(() => alert.remove(), 300);
+        });
+      }, 4000);
+
+      // Initialize Popovers
+      $(document).ready(function () {
         $('[data-toggle="popover"]').popover({
-          trigger: 'hover'
+          trigger: "hover",
+          placement: "top",
+        });
+
+        // Smooth scroll animation for collapse sections
+        $(".section-header").on("click", function () {
+          $(this).find(".collapse-icon").toggleClass("rotated");
         });
       });
 
-        setTimeout(function(){
-        if ($('#msg').length > 0) {
-        $('#msg').remove();
-        }
-        }, 4000)
+      // Add animation to cards on scroll
+      const observerOptions = {
+        threshold: 0.1,
+        rootMargin: "0px 0px -50px 0px",
+      };
 
-    setTimeout(function(){
-      if ($('#msg1').length > 0) {
-        $('#msg1').remove();
-      }
-    }, 4000)
-        function myclick() {
-        var listContainer = document.getElementById("list-container");
-        if (listContainer.style.display === "none") {
-          listContainer.style.display = "block";
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.style.animation = "fadeInUp 0.6s ease forwards";
+          }
+        });
+      }, observerOptions);
+
+      document.querySelectorAll(".analysis-card").forEach((card) => {
+        observer.observe(card);
+      });
+      document.addEventListener('DOMContentLoaded', function() {
+  // Handle "Not a mistake" button clicks
+  document.querySelectorAll('.ignore-word-btn').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+      e.preventDefault();
+      
+      const word = this.dataset.word;
+      const itemId = this.dataset.itemId;
+      const listItem = document.getElementById(itemId);
+      const button = this;
+      
+      if (!word || !listItem) return;
+      
+      // Show loading state
+      button.disabled = true;
+      button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+      
+      // Send AJAX request to add word to dictionary
+      fetch('/add-to-dictionary/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({ word: word })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          // Update UI to show success
+          listItem.classList.remove('list-group-item-danger');
+          listItem.classList.add('list-group-item-success');
+          
+          // Update icon
+          const icon = listItem.querySelector('.fas');
+          icon.classList.remove('fa-times-circle', 'text-danger');
+          icon.classList.add('fa-check-circle', 'text-success');
+          
+          // Show saving message
+          const savingMsg = listItem.querySelector('.saving-message');
+          if (savingMsg) {
+            savingMsg.style.display = 'block';
+          }
+          
+          // Update button
+          button.innerHTML = '<i class="fas fa-check-double"></i> Saved';
+          button.classList.remove('btn-outline-success');
+          button.classList.add('btn-success');
+          
+          // Optional: Auto-hide after 2 seconds
+          setTimeout(() => {
+            button.style.display = 'none';
+          }, 2000);
         } else {
-          // Hide the list container
-          listContainer.style.display = "none";
+          // Handle error
+          button.innerHTML = '<i class="fas fa-times"></i> Error';
+          button.classList.add('btn-danger');
+          setTimeout(() => {
+            button.disabled = false;
+            button.innerHTML = '<i class="fas fa-check"></i> Not a mistake';
+            button.classList.remove('btn-danger');
+          }, 2000);
         }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        button.innerHTML = '<i class="fas fa-times"></i> Error';
+        button.classList.add('btn-danger');
+        setTimeout(() => {
+          button.disabled = false;
+          button.innerHTML = '<i class="fas fa-check"></i> Not a mistake';
+          button.classList.remove('btn-danger');
+        }, 2000);
+      });
+    });
+  });
+});
+
+function getCookie(name) {
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== '') {
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      if (cookie.substring(0, name.length + 1) === (name + '=')) {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
       }
+    }
+  }
+  return cookieValue;
+}
+    </script>
+    <style>
+.badge-lg {
+  font-size: 1.1rem;
+  padding: 0.5rem 1rem;
+}
 
-      function myclick1() {
-        var listContainer = document.getElementById("link-container");
-        if (listContainer.style.display === "none") {
-          listContainer.style.display = "block";
-        } else {
-          // Hide the list container
-          listContainer.style.display = "none";
-        }
-      }
+.opacity-50 {
+  opacity: 0.5;
+}
 
-      function myclick2() {
-        var listContainer = document.getElementById("link1-container");
-        if (listContainer.style.display === "none") {
-          listContainer.style.display = "block";
-        } else {
-          // Hide the list container
-          listContainer.style.display = "none";
-        }
-      }
+.ignore-word-btn {
+  white-space: nowrap;
+  transition: all 0.3s ease;
+}
 
-      function myclick3() {
-        var listContainer = document.getElementById("link2-container");
-        if (listContainer.style.display === "none") {
-          listContainer.style.display = "block";
-        } else {
-          // Hide the list container
-          listContainer.style.display = "none";
-        }
-      }
+.ignore-word-btn:hover {
+  transform: scale(1.05);
+}
 
-            const button = document.getElementById('myButton');
-            const loader = document.getElementById('loader');
+.saving-message {
+  font-size: 0.85rem;
+  animation: fadeIn 0.3s ease-in;
+}
 
-            button.addEventListener('click', () => {
-            loader.style.display = 'flex';
-            });
-
-            window.addEventListener('load', () => {
-            loader.style.display = 'none';
-            });
-</script>
-
-    </main>
-    <!--Main layout-->
-    <!-- Optional JavaScript -->
-    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
-    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
-</body>
-
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+</style>
+  </body>
 </html>

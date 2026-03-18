@@ -1,0 +1,530 @@
+<!doctype html>
+<html lang="en">
+  {% load static %}
+  <head>
+    <title>WEB LIFT - Sentiment Analysis</title>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, shrink-to-fit=no"
+    />
+    <link rel="icon" type="image/ico" href="{% static 'favicon-1.ico'%}" />
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Bootstrap CSS -->
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+      integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T"
+      crossorigin="anonymous"
+    />
+
+    <!-- Font Awesome CSS -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"
+    />
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{% static 'fyp.css'%}" />
+    <link rel="stylesheet" href="{% static 'modern-style.css'%}" />
+
+    <style>
+      /* ================================================
+         Sentiment Analysis - Page Specific Styles
+         ================================================ */
+
+      /* Hero Section */
+      .tool-hero {
+        background: var(--white);
+        border-radius: var(--radius-xl);
+        box-shadow: var(--shadow-md);
+        padding: var(--spacing-2xl) var(--spacing-xl);
+        margin-bottom: var(--spacing-xl);
+        text-align: center;
+      }
+      .tool-hero .hero-icon {
+        width: 72px;
+        height: 72px;
+        border-radius: 50%;
+        background: var(--primary-gradient);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: var(--spacing-lg);
+      }
+      .tool-hero .hero-icon i {
+        font-size: 2rem;
+        color: var(--white);
+      }
+      .tool-hero h2 {
+        font-family: var(--font-primary);
+        font-size: 1.875rem;
+        font-weight: 700;
+        color: var(--gray-800);
+        margin: 0 0 var(--spacing-sm) 0;
+      }
+      .tool-hero p {
+        color: var(--gray-500);
+        font-size: 1rem;
+        max-width: 620px;
+        margin: 0 auto;
+        line-height: 1.7;
+      }
+
+      /* Form Card */
+      .tool-form-card {
+        background: var(--white);
+        border-radius: var(--radius-xl);
+        box-shadow: var(--shadow-md);
+        padding: var(--spacing-xl);
+        margin-bottom: var(--spacing-xl);
+      }
+      .tool-form-card .form-label {
+        font-family: var(--font-primary);
+        font-weight: 600;
+        color: var(--gray-700);
+        font-size: 0.9375rem;
+        margin-bottom: var(--spacing-sm);
+        display: block;
+      }
+      .tool-form-card .search-input-group {
+        max-width: 100%;
+      }
+      .tool-form-card .form-actions {
+        display: flex;
+        gap: var(--spacing-sm);
+        margin-top: var(--spacing-lg);
+        flex-wrap: wrap;
+      }
+
+      /* Mode Select */
+      .mode-select-group {
+        margin-top: var(--spacing-lg);
+      }
+      .mode-select-group label {
+        font-family: var(--font-primary);
+        font-weight: 600;
+        color: var(--gray-700);
+        font-size: 0.9375rem;
+        margin-bottom: var(--spacing-sm);
+        display: block;
+      }
+      .mode-select {
+        width: 100%;
+        padding: 0.75rem;
+        border: 2px solid var(--gray-200);
+        border-radius: var(--radius-md);
+        font-size: 0.9375rem;
+        color: var(--gray-800);
+        background: var(--white);
+        transition: all var(--transition-base);
+      }
+      .mode-select:focus {
+        outline: none;
+        border-color: var(--primary-mid);
+        box-shadow: 0 0 0 4px rgba(2, 86, 155, 0.1);
+      }
+      .mode-help-text {
+        font-size: 0.8125rem;
+        color: var(--gray-500);
+        margin-top: var(--spacing-xs);
+        line-height: 1.6;
+      }
+      .mode-help-text strong {
+        color: var(--gray-700);
+      }
+
+      /* Error Box */
+      .error-box {
+        background: #fee;
+        border-left: 4px solid var(--error);
+        padding: var(--spacing-md);
+        margin-bottom: var(--spacing-lg);
+        border-radius: var(--radius-md);
+        color: #c33;
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+      }
+      .error-box i {
+        font-size: 1.25rem;
+      }
+
+      /* Info Section */
+      .info-section {
+        margin-top: var(--spacing-2xl);
+      }
+      .info-section h3 {
+        text-align: center;
+        font-family: var(--font-primary);
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--gray-800);
+        margin-bottom: var(--spacing-xl);
+      }
+      .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: var(--spacing-lg);
+      }
+      .info-card {
+        background: var(--white);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-md);
+        padding: var(--spacing-xl);
+        text-align: center;
+        transition: all var(--transition-base);
+        border: 2px solid transparent;
+      }
+      .info-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-lg);
+        border-color: var(--primary-light);
+      }
+      .info-icon {
+        font-size: 2.5rem;
+        margin-bottom: var(--spacing-md);
+        display: block;
+      }
+      .info-card h4 {
+        font-family: var(--font-primary);
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: var(--gray-800);
+        margin-bottom: var(--spacing-sm);
+      }
+      .info-card p {
+        color: var(--gray-600);
+        font-size: 0.9375rem;
+        line-height: 1.6;
+        margin: 0;
+      }
+
+      /* Responsive */
+      @media (max-width: 768px) {
+        .tool-hero h2 {
+          font-size: 1.5rem;
+        }
+        .info-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- Loader -->
+    <div id="loader">
+      <div class="loader-animation">
+        <div class="loader-ring"></div>
+        <div class="loader-ring"></div>
+        <div class="loader-ring"></div>
+        <span class="loader-text">Analyzing...</span>
+      </div>
+    </div>
+
+    <!-- Main Navigation Header -->
+    <header>
+      <!-- Sidebar Navigation -->
+      <nav id="sidebarMenu" class="sidebar" aria-label="Main navigation">
+        <div class="sidebar-header">
+          <div class="sidebar-logo">
+            <img src="{% static 'logo.png'%}" alt="WEB LIFT Logo" />
+            <h5>WEBLIFT</h5>
+          </div>
+          <!-- Close Button - Only visible on mobile -->
+          <button
+            class="sidebar-close"
+            id="sidebar-close"
+            onclick="closeSidebar()"
+            aria-label="Close sidebar"
+          >
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+
+        <div class="sidebar-content">
+          <div class="nav-section">
+            <span class="nav-section-title">Analysis Tools</span>
+            <a href="{% url 'Home' %}" class="sidebar-link">
+              <i class="fas fa-tachometer-alt"></i>
+              <span>Website Audit</span>
+            </a>
+            <a href="{% url 'backlink' %}" class="sidebar-link">
+              <i class="fas fa-link"></i>
+              <span>Backlinks</span>
+            </a>
+            <a href="{% url 'DomainAuthority' %}" class="sidebar-link">
+              <i class="fas fa-chart-pie"></i>
+              <span>Domain Authority</span>
+            </a>
+            <a href="{% url 'pageAuthority' %}" class="sidebar-link">
+              <i class="fas fa-file-alt"></i>
+              <span>Page Authority</span>
+            </a>
+            <a href="{% url 'mobiletest' %}" class="sidebar-link">
+              <i class="fas fa-mobile-alt"></i>
+              <span>Mobile Friendly Test</span>
+            </a>
+            <!-- ⭐ NEW: Sentiment Analysis Link -->
+            <a
+              href="{% url 'sentiment_analysis' %}"
+              class="sidebar-link active"
+              aria-current="page"
+            >
+              <i class="fas fa-smile"></i>
+              <span>Sentiment Analysis</span>
+            </a>
+          </div>
+        </div>
+      </nav>
+
+      <!-- Top Navbar -->
+      <nav
+        id="main-navbar"
+        class="navbar navbar-expand-lg fixed-top"
+        role="navigation"
+      >
+        <div class="navbar-container navbar-no-search">
+          <!-- Mobile Toggle -->
+          <button
+            class="navbar-toggler"
+            id="navbar-toggle"
+            type="button"
+            aria-controls="sidebarMenu"
+            aria-expanded="false"
+            aria-label="Toggle navigation"
+            onclick="toggleSidebar()"
+          >
+            <i class="fas fa-bars"></i>
+          </button>
+
+          <!-- Spacer -->
+          <div style="flex: 1"></div>
+
+          <!-- Navbar Actions -->
+          <div class="navbar-actions">
+            <a href="{% url 'logout' %}" class="btn btn-primary">
+              <i class="fas fa-sign-out-alt"></i>
+              <span>Logout</span>
+            </a>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Alert Messages -->
+      {% if messages %}
+        {% for message in messages %}
+          <div class="alert-modern alert-{{ message.tags }}" id="msg" role="alert">
+            <div class="alert-content">
+              <i
+                class="fas {% if message.tags == 'success' %}fa-check-circle{% else %}fa-exclamation-circle{% endif %}"
+              ></i>
+              <span>{{ message }}</span>
+            </div>
+            <button class="alert-close" onclick="this.parentElement.remove()">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+        {% endfor %}
+      {% endif %}
+
+      <div class="container-fluid content-wrapper">
+        <!-- Hero -->
+        <div class="tool-hero">
+          <div class="hero-icon">
+            <i class="fas fa-smile"></i>
+          </div>
+          <h2>AI-Powered Sentiment Analysis</h2>
+          <p>
+            Analyze the sentiment, tone, and intent of any webpage using
+            advanced AI. Understand how your content resonates with readers and
+            get actionable recommendations to improve engagement.
+          </p>
+        </div>
+
+        <!-- Input Form -->
+        <div class="tool-form-card">
+          <label class="form-label">Enter a URL to Analyze Content Sentiment</label>
+
+          <!-- Error Message -->
+          {% if error %}
+          <div class="error-box">
+            <i class="fas fa-exclamation-triangle"></i>
+            <strong>{{ error }}</strong>
+          </div>
+          {% endif %}
+
+          <form
+            name="sentimentForm"
+            id="sentimentForm"
+            action="{% url 'analyze_sentiment' %}"
+            method="post"
+          >
+            {% csrf_token %}
+
+            <!-- URL Input -->
+            <div class="search-input-group">
+              <i class="fas fa-search search-icon"></i>
+              <input
+                placeholder="e.g. https://example.com/blog-post"
+                name="url"
+                autocomplete="on"
+                type="url"
+                id="id_url"
+                class="search-input"
+                aria-label="Page URL"
+                required
+              />
+            </div>
+
+            <!-- Analysis Mode -->
+            <div class="mode-select-group">
+              <label for="mode">Analysis Mode</label>
+              <select id="mode" name="mode" class="mode-select">
+                <option value="auto">Auto (Smart - Recommended)</option>
+                <option value="fast">Fast (VADER - Instant Results)</option>
+                <option value="deep">Deep (AI - Most Accurate)</option>
+              </select>
+              <div class="mode-help-text">
+                <strong>Auto:</strong> Automatically chooses the best method based on content length<br />
+                <strong>Fast:</strong> Instant results with 75% accuracy (local analysis)<br />
+                <strong>Deep:</strong> AI-powered analysis with 90% accuracy (takes 2-3 seconds)
+              </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="form-actions">
+              <button
+                id="analyzeBtn"
+                onclick="submitForm()"
+                class="btn btn-primary"
+                type="submit"
+              >
+                <i class="fas fa-brain"></i>
+                <span>Analyze Sentiment</span>
+              </button>
+              <a href="{% url 'sentiment_analysis' %}" class="btn btn-outline">
+                <i class="fas fa-redo"></i>
+                <span>Reset Form</span>
+              </a>
+            </div>
+          </form>
+        </div>
+
+        <!-- Info Section -->
+        <div class="info-section">
+          <h3>What This Tool Analyzes</h3>
+          <div class="info-grid">
+            <div class="info-card">
+              <span class="info-icon">😊</span>
+              <h4>Sentiment Detection</h4>
+              <p>
+                Identifies whether your content is positive, neutral, or
+                negative to help you understand emotional impact.
+              </p>
+            </div>
+            <div class="info-card">
+              <span class="info-icon">🎯</span>
+              <h4>Tone Analysis</h4>
+              <p>
+                Detects if your content is promotional, informative, clickbait,
+                or professional to match your brand voice.
+              </p>
+            </div>
+            <div class="info-card">
+              <span class="info-icon">💡</span>
+              <h4>Intent Classification</h4>
+              <p>
+                Determines if content is informational, transactional,
+                navigational, or commercial investigation.
+              </p>
+            </div>
+            <div class="info-card">
+              <span class="info-icon">📈</span>
+              <h4>SEO Recommendations</h4>
+              <p>
+                Get actionable insights and tips to improve content quality and
+                search engine performance.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- JavaScript -->
+    <script
+      src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
+      integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"
+      integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
+      integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
+      crossorigin="anonymous"
+    ></script>
+
+    <script>
+      // Sidebar Toggle Functions
+      function toggleSidebar() {
+        document.getElementById("sidebarMenu").classList.toggle("show");
+      }
+
+      function closeSidebar() {
+        document.getElementById("sidebarMenu").classList.remove("show");
+      }
+
+      // Form Submission with Loader
+      function submitForm() {
+        var url = document.getElementById("id_url").value;
+        var urlRegex = /^(https?|ftp):\/\/[^\s/$.?#].[^\s]*$/i;
+
+        if (url.trim() === "") {
+          alert("Please enter a valid URL.");
+          event.preventDefault();
+          return false;
+        }
+        if (!urlRegex.test(url)) {
+          alert("Please enter a valid URL format (must include https://).");
+          event.preventDefault();
+          return false;
+        }
+
+        // Show loader
+        document.getElementById("loader").style.display = "flex";
+        return true;
+      }
+
+      // Hide loader on page load
+      window.addEventListener("load", () => {
+        document.getElementById("loader").style.display = "none";
+      });
+
+      // Auto-hide alerts
+      setTimeout(() => {
+        const alerts = document.querySelectorAll(".alert-modern");
+        alerts.forEach((alert) => {
+          alert.style.animation = "slideOut 0.3s ease forwards";
+          setTimeout(() => alert.remove(), 300);
+        });
+      }, 4000);
+    </script>
+  </body>
+</html>

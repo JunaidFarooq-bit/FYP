@@ -1,0 +1,5 @@
+# Words marked as correct by users
+    # This file is auto-updated when users click "Not a mistake"
+    # Add your custom words below:
+    codup
+    

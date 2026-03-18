@@ -1,229 +1,755 @@
 <!doctype html>
 <html lang="en">
-{% load static %}
-<head>
-    <title>Smart Web Analyzer</title>
-    <!-- Required meta tags -->
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <link rel="stylesheet" href="{% static 'fyp.css'%}">
-    <link rel="icon" type="image/ico" href="{% static 'favicon-1.ico'%}">
-            <!-- Font Awesome CSS -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+  {% load static %}
+  <head>
+    <title>WEB LIFT - Mobile Friendly Test</title>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, shrink-to-fit=no"
+    />
+    <link rel="icon" type="image/ico" href="{% static 'favicon-1.ico'%}" />
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+
     <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
-</head>
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+      integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T"
+      crossorigin="anonymous"
+    />
 
-<body style="background-color:rgb(255, 255, 255)">
+    <!-- Font Awesome CSS -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"
+    />
 
-    <!-- Sidebar -->
-<style>
-     @media (max-width: 996px) {
-            #mylogo {
-                display: none !important;
-            }
-</style>
- <main style="margin-top: 58px; ">
-             {% if messages %}
-                            {% for message in messages %}
-                            {% if message.tags == 'success' %}
-                                <div class="alert-success m-2" id="msg" role="alert" style="background-color: #023761; text-decoration: none;color:white; font-size: 25px;height: 48px;padding-top:4px; padding-bottom: 4px ;padding-left: 30px;">
-                                    {{ message }}
-                                </div>
-                            {% elif message.tags == 'error' %}
-                                 <div class="alert-danger m-2" id="msg1" role="alert" style="background-color: #B30202; text-decoration: none;color:white; font-size: 25px;height: 48px;padding-top:4px; padding-bottom: 4px ;padding-left: 30px;">
-                                    {{ message }}
-                                </div>
-                            {% endif %}
-                            {% endfor %}
-                        {% endif %}
-    <div class="container">
-        <div class="row">
-            <div class="col-md-8 offset-md-2 mt-5">
-                <br>
-                <br>
-                <h3 class="text-center">Mobile Friendly Test</h3>
-                <p class="text-center mt-3">It analyze in a bulk mode many pages and check how Googlebot sees them. Imagine that you make changes to your website layout, theme, or the way the pages of your website are served to the Googlebot. By using the Mobile-Friendly test tool you can check lots of pages very fast and easily to make sure that the Googlebot sees your website as expected by examining the blocked resources and the screenshots.</p>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-md-8 offset-md-2">
-                <form name="myForm" id="myForm" action="/mobiletest" method="post" required>
-                    {% csrf_token %}
-                    <div class="form-group mt-4">
-                        <input placeholder="Enter URL" name="fname"  autocomplete="on" type="search" id="id_url" class="form-control rounded" style="min-width: 350px; min-height:25px"
-                               {% if url %}
-                               value={{url}}
-                               {% endif %}
-                        />
-                    </div>
-                    <div class="form-group text-center">
-                        <button class="btn btn-primary" onclick="myFunction()" style="background-image: linear-gradient(to bottom,#2670ac,#023761)  !important;" type="submit">Submit</button>
-                        <button onclick="trynewurl()" class="btn btn-secondary" style="background-image: linear-gradient(to bottom,#2670ac,#023761)  !important;" type="submit"><a style=" color:white;text-decoration:none;" href="{% url 'mobiletest' %}" >Try New URL!</a></button>
-                    </div>
-                </form>
-            </div>
-        </div>
-        {% if result %}
-        <div class="row mt-5">
-            <div class="col-md-8 offset-md-2">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>Test:</th>
-                            <td>  {% if test %}
-                                                                <p style="font-size: 60px; color: green;">&#10004;</p>
-                                                            {% elif test1 %}
-                                                                <p style="font-size: 60px; color: red;">&#10008;</p>
-                                                            {% endif %}
-                                    {{result}}</td>
-                        </tr>
-                        {% if content %}
-                    <tr>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{% static 'fyp.css'%}" />
+    <link rel="stylesheet" href="{% static 'modern-style.css'%}" />
 
-                        <th>Description:</th>
-                        <td style="padding-right: 170px;"><textarea id="my-textbox" name="my-textbox" rows="8" cols="100" style="border:0;overflow: auto; resize: both;">{{content}}</textarea></td>
+    <style>
+      /* ================================================
+         Mobile Friendly Test — page-specific styles
+         ================================================ */
 
-                    </tr>
-                        {% endif %}
+      /* Hero intro box */
+      .tool-hero {
+        background: var(--white);
+        border-radius: var(--radius-xl);
+        box-shadow: var(--shadow-md);
+        padding: var(--spacing-2xl) var(--spacing-xl);
+        margin-bottom: var(--spacing-xl);
+        text-align: center;
+      }
+      .tool-hero .hero-icon {
+        width: 72px;
+        height: 72px;
+        border-radius: 50%;
+        background: var(--primary-gradient);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: var(--spacing-lg);
+      }
+      .tool-hero .hero-icon i {
+        font-size: 2rem;
+        color: var(--white);
+      }
+      .tool-hero h2 {
+        font-family: var(--font-primary);
+        font-size: 1.875rem;
+        font-weight: 700;
+        color: var(--gray-800);
+        margin: 0 0 var(--spacing-sm) 0;
+      }
+      .tool-hero p {
+        color: var(--gray-500);
+        font-size: 1rem;
+        max-width: 680px;
+        margin: 0 auto;
+        line-height: 1.7;
+      }
 
-                    </thead>
-                </table>
-            </div>
-        </div>
-    {% endif %}
+      /* Input card */
+      .tool-form-card {
+        background: var(--white);
+        border-radius: var(--radius-xl);
+        box-shadow: var(--shadow-md);
+        padding: var(--spacing-xl);
+        margin-bottom: var(--spacing-xl);
+      }
+      .tool-form-card .form-label {
+        font-family: var(--font-primary);
+        font-weight: 600;
+        color: var(--gray-700);
+        font-size: 0.9375rem;
+        margin-bottom: var(--spacing-sm);
+        display: block;
+      }
+      .tool-form-card .search-input-group {
+        max-width: 100%;
+      }
+      .tool-form-card .form-actions {
+        display: flex;
+        gap: var(--spacing-sm);
+        margin-top: var(--spacing-lg);
+        flex-wrap: wrap;
+      }
+
+      /* Results section */
+      .results-section {
+        animation: fadeInUp 0.5s ease forwards;
+      }
+
+      /* Results header */
+      .results-header {
+        background: var(--white);
+        border-radius: var(--radius-xl);
+        box-shadow: var(--shadow-md);
+        padding: var(--spacing-xl);
+        margin-bottom: var(--spacing-xl);
+        text-align: center;
+      }
+
+      .results-header h3 {
+        font-family: var(--font-primary);
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--gray-800);
+        margin: 0 0 var(--spacing-sm) 0;
+      }
+
+      .results-url {
+        font-size: 0.9375rem;
+        color: var(--primary-mid);
+        font-weight: 500;
+        word-break: break-all;
+      }
+
+      /* Score sections */
+      .score-section {
+        background: var(--white);
+        border-radius: var(--radius-xl);
+        box-shadow: var(--shadow-md);
+        padding: var(--spacing-xl);
+        margin-bottom: var(--spacing-xl);
+      }
+
+      .section-title-header {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-md);
+        margin-bottom: var(--spacing-lg);
+        padding-bottom: var(--spacing-md);
+        border-bottom: 2px solid var(--gray-100);
+      }
+
+      .section-title-header i {
+        font-size: 1.5rem;
+        color: var(--primary-mid);
+      }
+
+      .section-title-header h3 {
+        font-family: var(--font-primary);
+        font-size: 1.375rem;
+        font-weight: 700;
+        color: var(--gray-800);
+        margin: 0;
+      }
+
+      /* Lighthouse scores grid */
+      .lighthouse-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: var(--spacing-lg);
+      }
+
+      .lighthouse-item {
+        background: var(--gray-50);
+        border-radius: var(--radius-lg);
+        padding: var(--spacing-lg);
+        text-align: center;
+        transition: all var(--transition-base);
+        border: 2px solid transparent;
+      }
+
+      .lighthouse-item:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-md);
+        border-color: var(--primary-light);
+      }
+
+      .lighthouse-label {
+        font-family: var(--font-primary);
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--gray-600);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: var(--spacing-sm);
+      }
+
+      .lighthouse-score {
+        font-family: var(--font-primary);
+        font-size: 2.5rem;
+        font-weight: 700;
+        line-height: 1;
+        margin-bottom: var(--spacing-xs);
+      }
+
+      .lighthouse-score.excellent {
+        color: var(--success);
+      }
+
+      .lighthouse-score.good {
+        color: var(--info);
+      }
+
+      .lighthouse-score.needs-improvement {
+        color: var(--warning);
+      }
+
+      .lighthouse-score.poor {
+        color: var(--error);
+      }
+
+      .lighthouse-max {
+        font-size: 0.875rem;
+        color: var(--gray-500);
+        font-weight: 500;
+      }
+
+      /* UX Checks grid */
+      .ux-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: var(--spacing-md);
+      }
+
+      .ux-check-item {
+        background: var(--gray-50);
+        border-radius: var(--radius-md);
+        padding: var(--spacing-md) var(--spacing-lg);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        transition: all var(--transition-base);
+      }
+
+      .ux-check-item:hover {
+        background: var(--white);
+        box-shadow: var(--shadow-sm);
+      }
+
+      .ux-check-label {
+        font-family: var(--font-secondary);
+        font-size: 0.9375rem;
+        font-weight: 500;
+        color: var(--gray-700);
+      }
+
+      .ux-check-status {
+        font-size: 1.5rem;
+        flex-shrink: 0;
+        margin-left: var(--spacing-md);
+      }
+
+      .ux-check-status.pass {
+        color: var(--success);
+      }
+
+      .ux-check-status.fail {
+        color: var(--error);
+      }
+
+      /* Final verdict */
+      .final-verdict-card {
+        background: var(--primary-gradient);
+        border-radius: var(--radius-xl);
+        box-shadow: var(--shadow-lg);
+        padding: var(--spacing-2xl);
+        text-align: center;
+        color: var(--white);
+      }
+
+      .final-verdict-card i {
+        font-size: 3rem;
+        margin-bottom: var(--spacing-md);
+        opacity: 0.9;
+      }
+
+      .final-verdict-label {
+        font-family: var(--font-primary);
+        font-size: 0.875rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        margin-bottom: var(--spacing-sm);
+        opacity: 0.9;
+      }
+
+      .final-verdict-text {
+        font-family: var(--font-primary);
+        font-size: 2rem;
+        font-weight: 700;
+        margin: 0;
+      }
+
+      /* Responsive */
+      @media (max-width: 768px) {
+        .lighthouse-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+
+        .ux-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .lighthouse-score {
+          font-size: 2rem;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- Loader -->
+    <div id="loader">
+      <div class="loader-animation">
+        <div class="loader-ring"></div>
+        <div class="loader-ring"></div>
+        <div class="loader-ring"></div>
+        <span class="loader-text">Analyzing...</span>
+      </div>
     </div>
 
-    <!--Main Navigation-->
+    <!-- Main Navigation Header -->
     <header>
+      <!-- Sidebar Navigation -->
+      <nav
+        id="sidebarMenu"
+        class="sidebar"
+        aria-label="Main navigation"
+      >
+        <div class="sidebar-header">
+          <div class="sidebar-logo">
+            <img src="{% static 'logo.png'%}" alt="WEB LIFT Logo" />
+            <h5>WEB LIFT</h5>
+          </div>
+        </div>
 
+        <div class="sidebar-content">
+          <div class="nav-section">
+            <span class="nav-section-title">Analysis Tools</span>
+            <a href="{% url 'Home' %}" class="sidebar-link">
+              <i class="fas fa-tachometer-alt"></i>
+              <span>Website Audit</span>
+            </a>
+            <a href="{% url 'backlink' %}" class="sidebar-link">
+              <i class="fas fa-link"></i>
+              <span>Backlinks</span>
+            </a>
+            <a href="{% url 'DomainAuthority' %}" class="sidebar-link">
+              <i class="fas fa-chart-pie"></i>
+              <span>Domain Authority</span>
+            </a>
+            <a href="{% url 'pageAuthority' %}" class="sidebar-link">
+              <i class="fas fa-file-alt"></i>
+              <span>Page Authority</span>
+            </a>
+            <a
+              href="{% url 'mobiletest' %}"
+              class="sidebar-link active"
+              aria-current="page"
+            >
+              <i class="fas fa-mobile-alt"></i>
+              <span>Mobile Friendly Test</span>
+            </a>
+            <a
+              href="{% url 'sentiment_analysis' %}"
+              class="sidebar-link"
+              aria-current="page"
+            >
+              <i class="fas fa-smile"></i>
+              <span>Sentiment Analysis</span>
+            </a>
+          </div>
+        </div>
+      </nav>
 
-        <!-- Sidebar -->
-<nav id="sidebarMenu" class="collapse d-lg-block sidebar collapse bg-primary" style="background-image: linear-gradient(to bottom,#023761,#02569b,#80aacd)  !important;">
-  <div class="position-sticky">
-    <div class="list-group list-group-flush mx-3 mt-4">
-      <a href="{% url 'Home' %}" class="list-group-item list-group-item-action py-2 ripple ">
-        <span class="icon me-3"><i class="fas fa-tachometer-alt"></i></span>
-        <span class="text">Website Audit</span>
-      </a>
-      <a href="{% url 'backlink' %}" class="list-group-item list-group-item-action py-2 ripple ">
-        <span class="icon me-3"><i class="fas fa-chart-line"></i></span>
-        <span class="text">Backlinks Checker</span>
-      </a>
-      <a href="{% url 'DomainAuthority' %}" class="list-group-item list-group-item-action py-2 ripple">
-        <span class="icon me-3"><i class="fas fa-chart-pie"></i></span>
-        <span class="text">Domain Authority</span>
-      </a>
-      <a href="{% url 'pageAuthority' %}" class="list-group-item list-group-item-action py-2 ripple">
-        <span class="icon me-3"><i class="fas fa-chart-pie"></i></span>
-        <span class="text">Page Authority</span>
-      </a>
-        <a href="{% url 'keyPosition' %}" class="list-group-item list-group-item-action py-2 ripple ">
-        <span class="icon me-3"><i class="fas fa-chart-line"></i></span>
-        <span class="text">Keyword Position</span>
-      </a>
-      <a href="{% url 'mobiletest' %}" class="list-group-item list-group-item-action py-2 ripple active">
-        <span class="icon me-3"><i class="fas fa-chart-bar"></i></span>
-        <span class="text">Mobile Friendly Test</span>
-      </a>
-      <a href="{% url 'robot' %}" class="list-group-item list-group-item-action py-2 ripple">
-        <span class="icon me-3"><i class="fas fa-globe"></i></span>
-        <span class="text">Robot.txt Generator</span>
-      </a>
-      <a href="{% url 'keysuggestion' %}" class="list-group-item list-group-item-action py-2 ripple ">
-        <span class="icon me-3"><i class="fas fa-chart-line"></i></span>
-        <span class="text">Keyword Suggestion</span>
-      </a>
-    </div>
-  </div>
-</nav>
+      <!-- Top Navbar -->
+      <nav
+        id="main-navbar"
+        class="navbar navbar-expand-lg fixed-top"
+        role="navigation"
+      >
+        <div class="navbar-container">
+          <!-- Mobile Toggle -->
+          <button
+            class="navbar-toggler"
+            id="navbar-toggle"
+            type="button"
+            aria-controls="sidebarMenu"
+            aria-expanded="false"
+            aria-label="Toggle navigation"
+            onclick="toggleSidebar()"
+          >
+            <i class="fas fa-bars"></i>
+          </button>
 
+          <!-- Desktop Logo -->
+          {% comment %}
+          <div class="navbar-logo" id="mylogo">
+            <img src="{% static 'logo.png'%}" alt="WEB LIFT Logo" />
+            <h4>WEB LIFT</h4>
+          </div>
+          {% endcomment %}
 
-      <!-- Navbar -->
-        <nav id="main-navbar" class="navbar navbar-expand-lg navbar-light bg-white fixed-top" style="background-image: linear-gradient(to right,#023761,#02569b,#80aacd)  !important;">
-          <!-- Container wrapper -->
-         <button class="navbar-toggler" id="navbar-toggle" type="button" data-mdb-toggle="collapse" data-mdb-target="#sidebarMenu" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle navigation" style="color: white; margin: 0px;" onclick="navbar()">
-                        <i class="fas fa-bars"></i>
-                    </button>
-          <!-- Container wrapper -->
-            <div id="mylogo">
-            <img src="{% static 'logo.png'%}" style="display:inline-block !important;width: 40px; height: auto; margin-right: 5px;" />
-<h4 style="color: white; display: inline-block;" class="logo">Smart Web Analyzer</h4>                </div>
-            <div style="width:calc(100% - 280px)">
-                    <div class="row" style="width: 100%;">
-                        <div class="col-sm-9">
-                        </div>
-                        <div class="col-sm-3">
-                            <button class="btn" type="submit" style="background-image: linear-gradient(to bottom,#2670ac,#023761)  !important;padding-left: 20px; padding-right: 20px;float: right;"><a style=" color:white;text-decoration:none;" href="{% url 'logout' %}" >Logout</a></button>
-                        </div>
-                    </div>
-            </div>
-            </nav>
-
+          <!-- Navbar actions -->
+          <div style="flex: 1"></div>
+          <div class="navbar-actions" style="margin-left: auto">
+            <a
+              class="btn btn-primary"
+              href="{% url 'logout' %}"
+              class="btn btn-outline logout-btn"
+              id="logout"
+            >
+              <i class="fas fa-sign-out-alt"></i>
+              <span>Logout</span>
+            </a>
+          </div>
+        </div>
+      </nav>
     </header>
 
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Alert Messages -->
+      {% if messages %} {% for message in messages %}
+      <div class="alert-modern alert-{{ message.tags }}" id="msg" role="alert">
+        <div class="alert-content">
+          <i
+            class="fas {% if message.tags == 'success' %}fa-check-circle{% else %}fa-exclamation-circle{% endif %}"
+          ></i>
+          <span>{{ message }}</span>
+        </div>
+        <button class="alert-close" onclick="this.parentElement.remove()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      {% endfor %} {% endif %}
+
+      <div class="container-fluid content-wrapper">
+        <!-- Hero -->
+        <div class="tool-hero">
+          <div class="hero-icon">
+            <i class="fas fa-mobile-alt"></i>
+          </div>
+          <h2>Mobile Friendly Test</h2>
+          <p>
+            Analyze how Googlebot sees your page and check mobile usability
+            scores including performance, accessibility, best practices, and
+            SEO. Get comprehensive UX and HTML validation checks.
+          </p>
+        </div>
+
+        <!-- Input Form -->
+        <div class="tool-form-card">
+          <label class="form-label"
+            >Enter a URL to test mobile compatibility</label
+          >
+          <form
+            name="myForm"
+            id="myForm"
+            action="{% url 'mobiletest' %}"
+            method="post"
+          >
+            {% csrf_token %}
+            <div class="search-input-group">
+              <i class="fas fa-search search-icon"></i>
+              <input
+                placeholder="e.g. https://example.com"
+                name="fname"
+                autocomplete="on"
+                type="search"
+                id="id_url"
+                class="search-input"
+                aria-label="Website URL"
+                required
+                {%
+                if
+                url
+                %}value="{{ url }}"
+                {%
+                endif
+                %}
+              />
+            </div>
+            <div class="form-actions">
+              <button
+                id="analyzeBtn"
+                onclick="submitForm()"
+                class="btn btn-primary"
+                type="button"
+              >
+                <i class="fas fa-search-plus"></i>
+                <span>Run Test</span>
+              </button>
+              <a href="{% url 'mobiletest' %}" class="btn btn-outline">
+                <i class="fas fa-redo"></i>
+                <span>Try New URL</span>
+              </a>
+            </div>
+          </form>
+        </div>
+
+        <!-- Results (conditional) -->
+        {% if performance_score or accessibility_score or best_practices_score or seo_score %}
+        <div class="results-section">
+          <!-- Results Header -->
+          <div class="results-header">
+            <h3>Mobile Test Results</h3>
+            <p class="results-url">{{ url }}</p>
+          </div>
+
+          <!-- Lighthouse Scores -->
+          <div class="score-section">
+            <div class="section-title-header">
+              <i class="fas fa-chart-bar"></i>
+              <h3>Lighthouse Scores</h3>
+            </div>
+
+            <div class="lighthouse-grid">
+              <div class="lighthouse-item">
+                <div class="lighthouse-label">Performance</div>
+                <div
+                  class="lighthouse-score {% if performance_score|add:'0' >= 90 %}excellent{% elif performance_score|add:'0' >= 50 %}good{% elif performance_score|add:'0' >= 25 %}needs-improvement{% else %}poor{% endif %}"
+                >
+                  {{ performance_score }}
+                </div>
+                <div class="lighthouse-max">/ 100</div>
+              </div>
+
+              <div class="lighthouse-item">
+                <div class="lighthouse-label">Accessibility</div>
+                <div
+                  class="lighthouse-score {% if accessibility_score|add:'0' >= 90 %}excellent{% elif accessibility_score|add:'0' >= 50 %}good{% elif accessibility_score|add:'0' >= 25 %}needs-improvement{% else %}poor{% endif %}"
+                >
+                  {{ accessibility_score }}
+                </div>
+                <div class="lighthouse-max">/ 100</div>
+              </div>
+
+              <div class="lighthouse-item">
+                <div class="lighthouse-label">Best Practices</div>
+                <div
+                  class="lighthouse-score {% if best_practices_score|add:'0' >= 90 %}excellent{% elif best_practices_score|add:'0' >= 50 %}good{% elif best_practices_score|add:'0' >= 25 %}needs-improvement{% else %}poor{% endif %}"
+                >
+                  {{ best_practices_score }}
+                </div>
+                <div class="lighthouse-max">/ 100</div>
+              </div>
+
+              <div class="lighthouse-item">
+                <div class="lighthouse-label">SEO</div>
+                <div
+                  class="lighthouse-score {% if seo_score|add:'0' >= 90 %}excellent{% elif seo_score|add:'0' >= 50 %}good{% elif seo_score|add:'0' >= 25 %}needs-improvement{% else %}poor{% endif %}"
+                >
+                  {{ seo_score }}
+                </div>
+                <div class="lighthouse-max">/ 100</div>
+              </div>
+
+              {% if pwa_score %}
+              <div class="lighthouse-item">
+                <div class="lighthouse-label">PWA</div>
+                <div
+                  class="lighthouse-score {% if pwa_score|add:'0' >= 90 %}excellent{% elif pwa_score|add:'0' >= 50 %}good{% elif pwa_score|add:'0' >= 25 %}needs-improvement{% else %}poor{% endif %}"
+                >
+                  {{ pwa_score }}
+                </div>
+                <div class="lighthouse-max">/ 100</div>
+              </div>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- UX / HTML Checks -->
+          <div class="score-section">
+            <div class="section-title-header">
+              <i class="fas fa-check-circle"></i>
+              <h3>UX / HTML Validation Checks</h3>
+            </div>
+
+            <div class="ux-grid">
+              <div class="ux-check-item">
+                <span class="ux-check-label">Viewport Meta Tag</span>
+                <span
+                  class="ux-check-status {% if ux_checks.viewport %}pass{% else %}fail{% endif %}"
+                >
+                  {% if ux_checks.viewport %}
+                  <i class="fas fa-check-circle"></i>
+                  {% else %}
+                  <i class="fas fa-times-circle"></i>
+                  {% endif %}
+                </span>
+              </div>
+
+              <div class="ux-check-item">
+                <span class="ux-check-label"
+                  >Content Fit (width=device-width)</span
+                >
+                <span
+                  class="ux-check-status {% if ux_checks.content_fit %}pass{% else %}fail{% endif %}"
+                >
+                  {% if ux_checks.content_fit %}
+                  <i class="fas fa-check-circle"></i>
+                  {% else %}
+                  <i class="fas fa-times-circle"></i>
+                  {% endif %}
+                </span>
+              </div>
+
+              <div class="ux-check-item">
+                <span class="ux-check-label">Scalable Text</span>
+                <span
+                  class="ux-check-status {% if ux_checks.scalable %}pass{% else %}fail{% endif %}"
+                >
+                  {% if ux_checks.scalable %}
+                  <i class="fas fa-check-circle"></i>
+                  {% else %}
+                  <i class="fas fa-times-circle"></i>
+                  {% endif %}
+                </span>
+              </div>
+
+              <div class="ux-check-item">
+                <span class="ux-check-label">Responsive Images</span>
+                <span
+                  class="ux-check-status {% if ux_checks.responsive_images %}pass{% else %}fail{% endif %}"
+                >
+                  {% if ux_checks.responsive_images %}
+                  <i class="fas fa-check-circle"></i>
+                  {% else %}
+                  <i class="fas fa-times-circle"></i>
+                  {% endif %}
+                </span>
+              </div>
+
+              <div class="ux-check-item">
+                <span class="ux-check-label">Alt Text Present</span>
+                <span
+                  class="ux-check-status {% if ux_checks.alt_text %}pass{% else %}fail{% endif %}"
+                >
+                  {% if ux_checks.alt_text %}
+                  <i class="fas fa-check-circle"></i>
+                  {% else %}
+                  <i class="fas fa-times-circle"></i>
+                  {% endif %}
+                </span>
+              </div>
+
+              <div class="ux-check-item">
+                <span class="ux-check-label">Font Size Adequate</span>
+                <span
+                  class="ux-check-status {% if ux_checks.font_size_ok %}pass{% else %}fail{% endif %}"
+                >
+                  {% if ux_checks.font_size_ok %}
+                  <i class="fas fa-check-circle"></i>
+                  {% else %}
+                  <i class="fas fa-times-circle"></i>
+                  {% endif %}
+                </span>
+              </div>
+
+              <div class="ux-check-item">
+                <span class="ux-check-label">Tap Targets (Buttons/Links)</span>
+                <span
+                  class="ux-check-status {% if ux_checks.tap_targets %}pass{% else %}fail{% endif %}"
+                >
+                  {% if ux_checks.tap_targets %}
+                  <i class="fas fa-check-circle"></i>
+                  {% else %}
+                  <i class="fas fa-times-circle"></i>
+                  {% endif %}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Final Verdict -->
+          <div class="final-verdict-card">
+            <i class="fas fa-trophy"></i>
+            <div class="final-verdict-label">Final Verdict</div>
+            <p class="final-verdict-text">{{ final_verdict }}</p>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </main>
+
+    <!-- JavaScript -->
+    <script
+      src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
+      integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"
+      integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
+      integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
+      crossorigin="anonymous"
+    ></script>
 
     <script>
-        function trynewurl() {
-            var url = document.getElementById("urlfield");
-            var c = document.getElementById("content");
-            c.style.display = "none";
-            url.value = ""
+      // Sidebar Toggle
+      function navbar() {
+        const toggler = document.getElementById("sidebarMenu");
+        toggler.classList.toggle("show");
+      }
+
+      // Form validation and submission
+      function submitForm() {
+        const url = document.getElementById("id_url").value;
+        var urlRegex = /^(https?|ftp):\/\/[^\s/$.?#].[^\s]*$/i;
+
+        if (!url.trim()) {
+          alert("Enter a valid URL first.");
+          return;
         }
+        if (!urlRegex.test(url)) {
+          alert("Enter a valid URL format.");
+          return;
+        }
+        document.getElementById("loader").style.display = "flex";
+        document.getElementById("myForm").submit();
+      }
+
+      window.addEventListener("load", () => {
+        document.getElementById("loader").style.display = "none";
+      });
+
+      // Auto-hide Alerts
+      setTimeout(() => {
+        const alerts = document.querySelectorAll(".alert-modern");
+        alerts.forEach((alert) => {
+          alert.style.animation = "slideOut 0.3s ease forwards";
+          setTimeout(() => alert.remove(), 300);
+        });
+      }, 4000);
     </script>
-
- <script>
-            const toggler= document.getElementById("sidebarMenu");
-            function navbar(){
-
-            if (toggler.style.display === 'block') {
-              toggler.style.display = 'none';
-            } else {
-              toggler.style.display = 'block';
-            }
-            }
-
-            function myFunction() {
-                var url = document.getElementById("id_url").value;
-                var isValid = true;
-
-                // Regular expression to check for a valid URL format
-                var urlRegex = /^(https?|ftp):\/\/[^\s/$.?#].[^\s]*$/i;
-
-                if (url.trim() === "") {
-                    alert("Enter a valid URL first.");
-                    isValid = false;
-                } else if (!urlRegex.test(url)) {
-                    alert("Enter a valid URL format.");
-                    isValid = false;
-                }
-
-                if (isValid) {
-                    // If the form data is valid, submit the form
-                    document.getElementById("myForm").submit();
-                }
-            }
-
-             setTimeout(function(){
-              if ($('#msg').length > 0) {
-                $('#msg').remove();
-              }
-            }, 4000)
-
-            setTimeout(function(){
-              if ($('#msg1').length > 0) {
-                $('#msg1').remove();
-              }
-            }, 4000)
-        </script>
-
-    </main>
-    <!--Main layout-->
-    <!-- Optional JavaScript -->
-    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
-    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js " integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo " crossorigin="anonymous "></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js " integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1 " crossorigin="anonymous "></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js " integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM " crossorigin="anonymous "></script>
-</body>
-
+  </body>
 </html>

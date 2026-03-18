@@ -13,6 +13,10 @@ import os.path
 from pathlib import Path
 import django_heroku
 import dj_database_url
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 from django.core.checks import messages
@@ -30,7 +34,11 @@ SECRET_KEY = 'django-insecure-j6zzp2rm^v6(m90de2662_$$53&ro8vdmz&g&gg*o#jl9_5@pw
 DEBUG = True
 
 ALLOWED_HOSTS = ['*']
-
+CSRF_TRUSTED_ORIGINS = [
+    "https://e551-119-155-204-25.ngrok-free.app",
+    "https://d2c9-202-47-51-230.ngrok-free.app",
+    # Add any other trusted origins if applicable.
+]
 
 # Application definition
 
@@ -42,6 +50,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'SEOAnalyzer',
+    'comparative_analysis',
+    # "keyword_suggestion.apps.KeywordSuggestionConfig",
 ]
 
 MIDDLEWARE = [
@@ -120,17 +130,19 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.1/howto/static-files/
 
+
 STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_DIRS = (os.path.join(BASE_DIR, 'static'),)
 django_heroku.settings(locals())
-
+# LOCAL
+SITE_URL = "http://127.0.0.1:8000"
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_USE_TLS = True
 EMAIL_PORT = 587
-EMAIL_HOST_USER = 'smartwebanalyzer0@gmail.com'
-EMAIL_HOST_PASSWORD = 'upljzqoulxaljwtd'
+EMAIL_HOST_USER = 'moazzamrazaghori@gmail.com'
+EMAIL_HOST_PASSWORD = 'ahdbwmrxdpiaxiew'
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.1/ref/settings/#default-auto-field
 
@@ -138,3 +150,71 @@ EMAIL_HOST_PASSWORD = 'upljzqoulxaljwtd'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 SESSION_COOKIE_AGE=300000
+
+
+
+MOZ_ACCESS_ID = os.getenv('MOZ_ACCESS_ID')
+MOZ_SECRET_KEY = os.getenv('MOZ_SECRET_KEY')
+USE_MOZ_API = os.getenv('USE_MOZ_API', 'false').lower() == 'true'
+MOZ_API_MONTHLY_LIMIT = int(os.getenv('MOZ_API_MONTHLY_LIMIT', 50))
+
+# OpenAI Configuration (supports both OpenAI and OpenRouter)
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+OPENAI_MODEL = os.getenv('OPENAI_MODEL', 'gpt-4o-mini')
+USE_OPENROUTER = os.getenv('USE_OPENROUTER', 'false').lower() == 'true'
+
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "keyword-suggestions-cache",
+    }
+}
+
+
+# LOGGING = {
+#     "version": 1,
+#     "disable_existing_loggers": False,
+#     "formatters": {
+#         "verbose": {
+#             "format": "{levelname} {asctime} {module} {message}",
+#             "style": "{",
+#         }
+#     },
+#     "handlers": {
+#         "console": {"class": "logging.StreamHandler", "formatter": "verbose"}
+#     },
+#     "loggers": {
+#         "keyword_suggestion": {"handlers": ["console"], "level": "DEBUG", "propagate": False},
+#         "ml_models":          {"handlers": ["console"], "level": "INFO",  "propagate": False},
+#         "pipeline":           {"handlers": ["console"], "level": "INFO",  "propagate": False},
+#     },
+# }
+
+# ML_MODELS_DIR      = BASE_DIR / "ml_models"
+# FAISS_INDEX_PATH   = ML_MODELS_DIR / "faiss_index.bin"
+# KEYWORDS_JSON_PATH = ML_MODELS_DIR / "keywords.json"
+
+
+
+# from celery.schedules import crontab
+
+# CELERY_BEAT_SCHEDULE = {
+#     # Collect fresh keyword trends every 6 hours
+#     "collect-trends-every-6h": {
+#         "task": "pipeline.collect_trends",
+#         "schedule": crontab(minute=0, hour="*/6"),
+#     },
+
+#     # Smart training check every hour
+#     "check-and-train-hourly": {
+#         "task": "pipeline.check_and_train",
+#         "schedule": crontab(minute=30),   # runs at :30 of every hour
+#     },
+
+#     # Guaranteed full retrain every Sunday at 2 AM
+#     "full-retrain-weekly": {
+#         "task": "pipeline.full_retrain",
+#         "schedule": crontab(minute=0, hour=2, day_of_week="sunday"),
+#     },
+# }

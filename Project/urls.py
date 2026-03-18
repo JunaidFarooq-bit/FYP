@@ -14,7 +14,7 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path
+from django.urls import path,include
 from SEOAnalyzer import views
 
 app_name='SEOAnalyzer'
@@ -37,4 +37,9 @@ urlpatterns = [
     path('logout/', views.logoutuser, name="logout"),
     path('forget-password/', views.ForgetPassword, name="forget_password"),
     path('change-password/<token>/', views.ChangePassword, name="change_password"),
+    path('sentimentanalysis/', views.sentiment_analysis_page, name='sentiment_analysis'),
+    path('sentimentanalysis/analyze/', views.analyze_sentiment_view, name='analyze_sentiment'),
+    path('comparative-analysis/', include('comparative_analysis.urls')),
+    path("api/", include("keyword_suggestion.urls")),
+
 ]

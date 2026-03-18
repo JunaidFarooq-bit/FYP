@@ -1,0 +1,31 @@
+# Technology and programming terms
+    app
+    apps
+    api
+    apis
+    css
+    html
+    javascript
+    js
+    python
+    reactjs
+    nodejs
+    github
+    docker
+    kubernetes
+    mongodb
+    postgresql
+    frontend
+    backend
+    fullstack
+    devops
+    seo
+    ui
+    ux
+    admin
+    analytics
+    shopify
+    wordpress
+    blockchain
+    saas
+    

@@ -1,95 +1,154 @@
+/* ========================================
+   Login/Auth Pages - Gradient Background
+   ======================================== */
+
 .gradient-custom-2 {
-    /* fallback for old browsers */
-    background: #fccb90;
-    /* Chrome 10-25, Safari 5.1-6 */
-    background: -webkit-linear-gradient(to right, #ee7724, #d8363a, #dd3675, #b44593);
-    /* W3C, IE 10+/ Edge, Firefox 16+, Chrome 26+, Opera 12+, Safari 7+ */
-    background: linear-gradient(to right, #ee7724, #d8363a, #dd3675, #b44593);
+  background: #fccb90;
+  background: -webkit-linear-gradient(
+    to right,
+    #ee7724,
+    #d8363a,
+    #dd3675,
+    #b44593
+  );
+  background: linear-gradient(to right, #ee7724, #d8363a, #dd3675, #b44593);
 }
 
 @media (min-width: 768px) {
-    .gradient-form {
-        height: 100vh !important;
-    }
+  .gradient-form {
+    height: 100vh !important;
+  }
 }
 
 @media (min-width: 769px) {
-    .gradient-custom-2 {
-        border-top-right-radius: .3rem;
-        border-bottom-right-radius: .3rem;
-    }
-    
+  .gradient-custom-2 {
+    border-top-right-radius: 0.3rem;
+    border-bottom-right-radius: 0.3rem;
+  }
 }
+
+/* ========================================
+   Body Background
+   ======================================== */
+
 body {
-    background-color: #fbfbfb;
+  background-color: #fbfbfb;
+}
+
+/* ========================================
+   Main Content with Sidebar Offset
+   ✅ FIXED: Updated to 901px breakpoint
+   ======================================== */
+
+@media (min-width: 901px) {
+  main {
+    padding-left: 260px;
   }
-  @media (min-width: 991.98px) {
-    main {
-      padding-left: 240px;
-    }
+}
+
+@media (max-width: 900px) {
+  main {
+    padding-left: 0 !important;
+  }
+}
+
+/* ========================================
+   Container Responsive Fixes
+   ✅ FIXED: Match 901px breakpoint
+   ======================================== */
+
+.mycontainers {
+  margin-left: 0;
+  width: 100%;
+  padding: 0 15px;
+  transition: all 0.3s ease;
+}
+
+/* Desktop - with sidebar */
+@media screen and (min-width: 901px) {
+  .mycontainers {
+    margin-left: 260px;
+  }
+}
+
+/* Tablet/Mobile - no sidebar */
+@media screen and (max-width: 900px) {
+  .mycontainers {
+    margin-left: 0 !important;
+    padding: 0 20px;
   }
 
-  /* Sidebar */
-  .sidebar {
-    position: fixed;
-    top: 0;
-    bottom: 0;
-    left: 0;
-    padding: 58px 0 0; /* Height of navbar */
-    box-shadow: 0 2px 5px 0 rgb(0 0 0 / 5%), 0 2px 10px 0 rgb(0 0 0 / 5%);
-    width: 240px;
-    z-index: 600;
+  .mycontainers div {
+    margin-left: 0 !important;
   }
 
-  @media (max-width: 991.98px) {
-    .sidebar {
-      width: 100%;
-    }
+  .mycontainers form {
+    padding-left: 0 !important;
+    width: 100%;
   }
-  .sidebar .active {
-    border-radius: 5px;
-    box-shadow: 0 2px 5px 0 rgb(0 0 0 / 16%), 0 2px 10px 0 rgb(0 0 0 / 12%);
-  }
+}
 
-  .sidebar-sticky {
-    position: relative;
-    top: 0;
-    height: calc(100vh - 48px);
-    padding-top: 0.5rem;
-    overflow-x: hidden;
-    overflow-y: auto; /* Scrollable contents if viewport is shorter than content. */
+/* Mobile view */
+@media screen and (max-width: 768px) {
+  .mycontainers {
+    margin-left: 0 !important;
+    padding: 0 15px;
+    width: 100%;
   }
 
+  .mycontainers div {
+    margin-left: 0 !important;
+    width: 100%;
+  }
 
-  @media screen and (max-width: 770px) {
-    .mycontainers{
-      margin-left:0px !important;
-    }
-    .mycontainers div{
-      margin-left:130px !important;
-    }
-    .mycontainers form{
-      padding-left: 0px !important;
-    }
-    .mycontainers form #urlfield{
-      display: block;
-      width: 40px !important;
-    }
-    }
-    @media screen and (max-width: 890px) {
-      .mycontainers{
-        margin-left:20px !important;
-      }
-      .mycontainers div{
-        margin-left:130px !important;
-      }
-      .mycontainers form{
-        padding-left: 80px !important;
-      }
-      }
+  .mycontainers form {
+    padding-left: 0 !important;
+    width: 100%;
+  }
 
-      nav a{
+  .mycontainers form #urlfield {
+    display: block;
+    width: 100% !important;
+    max-width: 100%;
+  }
+}
 
-        background-color:  transparent !important;
-        color: white !important;
-      }
+/* Extra small devices */
+@media screen and (max-width: 480px) {
+  .mycontainers {
+    padding: 0 10px;
+  }
+}
+
+/* ========================================
+   Navigation Links
+   ======================================== */
+
+nav a {
+  background-color: transparent !important;
+  color: white !important;
+  text-decoration: none;
+  transition: all 0.3s ease;
+}
+
+nav a:hover {
+  opacity: 0.8;
+}
+
+/* ========================================
+   Utility Classes
+   ======================================== */
+
+@media screen and (max-width: 768px) {
+  .mobile-full-width {
+    width: 100% !important;
+  }
+
+  .mobile-no-margin {
+    margin: 0 !important;
+  }
+
+  .mobile-no-padding {
+    padding: 0 !important;
+  }
+}

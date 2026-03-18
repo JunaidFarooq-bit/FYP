@@ -1,118 +1,758 @@
 <!doctype html>
 <html lang="en">
-{% load static %}
-<head>
-    <title>Smart Web Analyzer</title>
+  {% load static %}
+  <head>
+    <title>WEB LIFT - Register</title>
+    <meta
+      name="description"
+      content="Create your WEB LIFT account to access powerful SEO tools and analytics. Join thousands of users optimizing their websites for better search engine rankings."
+    />
+
     <!-- Required meta tags -->
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <link rel="stylesheet" href="{% static 'stylelogin.css'%}">
-    <link rel="icon" type="image/ico" href="{% static 'favicon-1.ico'%}">
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, shrink-to-fit=no"
+    />
+    <link rel="icon" type="image/ico" href="{% static 'favicon-1.ico'%}" />
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+
     <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
-</head>
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+      integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T"
+      crossorigin="anonymous"
+    />
 
-<body>
-    <section class="h-100 gradient-form" style="background-color: #eee;">
-        <div class="container py-5 h-100">
-            <div class="row d-flex justify-content-center align-items-center h-100">
-                <div class="col-xl-10">
-                    <div class="card rounded-3 text-black">
-                        <div class="row g-0">
-                            <div class="col-lg-6">
-                                <div class="card-body p-md-5 mx-md-4">
+    <!-- Font Awesome CSS -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"
+    />
 
-                                    <div class="text-center">
-                                        <img src="{% static 'web.jpg'%}" style="width: 185px;" alt="logo">
-                                        <h4 class="mt-1 mb-5 pb-1">Welcome To Smart Web Analyzer</h4>
-                                    </div>
-{% if messages %}
+    <style>
+      /* ================================================
+         Registration Page - Modern WEB LIFT Theme
+         ================================================ */
 
-        {% for message in messages %}
-        <div class="alert alert-danger">
-            {{ message }}
-        </div>
-        {% endfor %}
-        {% endif %}
+      :root {
+        /* Brand Colors */
+        --primary-dark: #023761;
+        --primary-mid: #02569b;
+        --primary-light: #80aacd;
+        --primary-gradient: linear-gradient(
+          135deg,
+          #023761 0%,
+          #02569b 50%,
+          #80aacd 100%
+        );
 
-                                    <form method="post">
-                                        {% csrf_token %}
-                                        <p style="padding-bottom: 0px;text-align: center;">Register Yourself</p>
+        /* Neutral Colors */
+        --white: #ffffff;
+        --gray-50: #f9fafb;
+        --gray-100: #f3f4f6;
+        --gray-200: #e5e7eb;
+        --gray-300: #d1d5db;
+        --gray-400: #9ca3af;
+        --gray-500: #6b7280;
+        --gray-600: #4b5563;
+        --gray-700: #374151;
+        --gray-800: #1f2937;
+        --gray-900: #111827;
 
+        /* Semantic Colors */
+        --success: #10b981;
+        --warning: #f59e0b;
+        --error: #ef4444;
+        --info: #3b82f6;
 
-                                        <div  style="padding-top: 0px;"class="form-outline mb-4">
-                                            <label class="form-label" for="form2Example11">Username</label>
-                                            <input type="text" id="form2Example11" class="form-control" name="username" placeholder="Enter First name" value="{{username}}"/>
-                                            
-                                        </div>
-                                        <div  style="padding-top: 0px;"class="form-outline mb-4">
-                                            <label class="form-label" for="form2Example11">First Name</label>
-                                            <input type="text" id="form2Example11" class="form-control"  name="FirstName" placeholder="Enter Last name" value="{{firstname}}"/>
+        /* Typography */
+        --font-primary:
+          "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        --font-secondary:
+          "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 
-                                        </div>
-                                        <div  style="padding-top: 0px;"class="form-outline mb-4">
-                                            <label class="form-label" for="form2Example11">Last Name</label>
-                                            <input type="text" id="form2Example11" class="form-control"  name="LastName" placeholder="Enter Last name" value="{{lastname}}"/>
+        /* Spacing */
+        --spacing-xs: 0.5rem;
+        --spacing-sm: 0.75rem;
+        --spacing-md: 1rem;
+        --spacing-lg: 1.5rem;
+        --spacing-xl: 2rem;
+        --spacing-2xl: 3rem;
 
-                                        </div>
-                                        <div  style="padding-top: 0px;"class="form-outline mb-4">
-                                            <label class="form-label" for="form2Example11">Email</label>
-                                            <input type="email" id="form2Example11" class="form-control"name="email" placeholder="Enter your Email address" value="{{email}}"/>
+        /* Border Radius */
+        --radius-sm: 0.375rem;
+        --radius-md: 0.5rem;
+        --radius-lg: 0.75rem;
+        --radius-xl: 1rem;
+        --radius-2xl: 1.5rem;
 
-                                        </div>
-                                        <div  style="padding-top: 0px;"class="form-outline mb-4">
-                                            <label class="form-label" for="form2Example11">Password</label>
-                                            <input type="password" id="form2Example11" class="form-control" name="password1" placeholder="Enter Password" />
-                                            
-                                        </div>
-                                        <div  style="padding-top: 0px;"class="form-outline mb-4">
-                                            <label class="form-label" for="form2Example11">Confirm Password</label>
-                                            <input type="password" id="form2Example11" class="form-control" name="password2" placeholder="Re-enter Password" />
-                                            
-                                        </div>
+        /* Shadows */
+        --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        --shadow-md:
+          0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        --shadow-lg:
+          0 10px 15px -3px rgba(0, 0, 0, 0.1),
+          0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        --shadow-xl:
+          0 20px 25px -5px rgba(0, 0, 0, 0.1),
+          0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
 
-                                        
+        /* Transitions */
+        --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+        --transition-base: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+        --transition-slow: 500ms cubic-bezier(0.4, 0, 0.2, 1);
+      }
 
-                                        <div class="text-center pt-1 mb-5 pb-1">
-                                            <a href="fyplogin.html">
-                                            <button  class="btn btn-primary btn-block fa-lg gradient-custom-2 mb-3" type="submit">Register
-                            </button></a>
-                           
-                           
-                                
-                           
-                                <p class="mb-0 me-2" style="font-size: small;">By registering you agree </p>
-                                <p class="mb-0 me-2" style="font-size: small;">to the Smart Web Analyzer's</p>
-                                <a href="fyplogin.html" style="margin-left: 10px;" style="font-size: small;"  >Terms Of Use</a>
-                           
-                                            
-                                        </div>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
 
-                        
+      body {
+        font-family: var(--font-secondary);
+        background: linear-gradient(
+          135deg,
+          #023761 0%,
+          #02569b 50%,
+          #80aacd 100%
+        );
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: var(--spacing-xl);
+        position: relative;
+        overflow-x: hidden;
+      }
 
-                                    </form>
+      /* Animated background pattern */
+      body::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-image:
+          radial-gradient(
+            circle at 20% 50%,
+            rgba(128, 170, 205, 0.1) 0%,
+            transparent 50%
+          ),
+          radial-gradient(
+            circle at 80% 80%,
+            rgba(2, 86, 155, 0.1) 0%,
+            transparent 50%
+          );
+        animation: backgroundMove 15s ease infinite;
+      }
 
-                                </div>
-                            </div>
-                            <div class="col-lg-6 d-flex align-items-center gradient-custom-2">
-                                <div class="text-white px-3 py-4 p-md-5 mx-md-4">
-                                    <h4 class="mb-4">This is where your SEO success story begins.</h4>
-                                    <p class="small mb-0">Welcome to our SEO website, where we offer resources to help you improve your website's search engine optimization and boost your online visibility. We cover all aspects of SEO, including keyword research, on-page optimization, link building, and more. We provide actionable steps and up-to-date information to help you stay ahead of the competition and attract more organic traffic to your website. Browse through our content and start optimizing your website today!
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+      @keyframes backgroundMove {
+        0%,
+        100% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(-20px);
+        }
+      }
+
+      .register-container {
+        max-width: 1000px;
+        width: 100%;
+        position: relative;
+        z-index: 1;
+        animation: fadeInUp 0.6s ease;
+      }
+
+      @keyframes fadeInUp {
+        from {
+          opacity: 0;
+          transform: translateY(30px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .register-card {
+        background: var(--white);
+        border-radius: var(--radius-2xl);
+        box-shadow: var(--shadow-2xl);
+        overflow: hidden;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+      }
+
+      /* Left side - Form */
+      .register-form-section {
+        padding: var(--spacing-2xl);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        max-height: 90vh;
+        overflow-y: auto;
+      }
+
+      .register-form-section::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      .register-form-section::-webkit-scrollbar-thumb {
+        background: var(--gray-300);
+        border-radius: 3px;
+      }
+
+      .register-header {
+        text-align: center;
+        margin-bottom: var(--spacing-xl);
+      }
+
+      .register-logo {
+        width: 72px;
+        height: 72px;
+        margin: 0 auto var(--spacing-md);
+        border-radius: 50%;
+        padding: var(--spacing-sm);
+        background: var(--primary-gradient);
+        box-shadow: var(--shadow-lg);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .register-logo img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+      }
+
+      .register-header h4 {
+        font-family: var(--font-primary);
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: var(--gray-800);
+        margin: 0 0 var(--spacing-xs) 0;
+      }
+
+      .register-header p {
+        color: var(--gray-500);
+        font-size: 0.9375rem;
+        margin: 0;
+      }
+
+      /* Alert Messages */
+      .alert {
+        border-radius: var(--radius-lg);
+        border: none;
+        padding: var(--spacing-md) var(--spacing-lg);
+        margin-bottom: var(--spacing-lg);
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+        animation: slideIn 0.3s ease;
+      }
+
+      .alert-danger {
+        background: linear-gradient(135deg, var(--error) 0%, #dc2626 100%);
+        color: var(--white);
+      }
+
+      .alert i {
+        font-size: 1.125rem;
+      }
+
+      @keyframes slideIn {
+        from {
+          transform: translateY(-10px);
+          opacity: 0;
+        }
+        to {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+
+      /* Form Styles */
+      .form-group {
+        margin-bottom: var(--spacing-md);
+      }
+
+      .form-label {
+        font-family: var(--font-primary);
+        font-weight: 600;
+        font-size: 0.875rem;
+        color: var(--gray-700);
+        margin-bottom: var(--spacing-xs);
+        display: block;
+      }
+
+      .form-input-wrapper {
+        position: relative;
+      }
+
+      .form-input-icon {
+        position: absolute;
+        left: var(--spacing-md);
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--gray-400);
+        font-size: 0.9375rem;
+        pointer-events: none;
+      }
+
+      .form-control {
+        width: 100%;
+        height: 46px;
+        padding: 0 var(--spacing-md) 0 2.75rem;
+        border: 2px solid var(--gray-200);
+        border-radius: var(--radius-lg);
+        font-size: 0.9375rem;
+        font-weight: 500;
+        color: var(--gray-800);
+        background: var(--white);
+        transition: all var(--transition-base);
+      }
+
+      .form-control:focus {
+        outline: none;
+        border-color: var(--primary-mid);
+        box-shadow: 0 0 0 4px rgba(2, 86, 155, 0.1);
+      }
+
+      .form-control::placeholder {
+        color: var(--gray-400);
+        font-weight: 400;
+      }
+
+      /* Name fields in grid */
+      .name-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--spacing-md);
+      }
+
+      /* Buttons */
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--spacing-sm);
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: var(--radius-lg);
+        font-family: var(--font-primary);
+        font-size: 0.9375rem;
+        font-weight: 600;
+        text-decoration: none;
+        cursor: pointer;
+        transition: all var(--transition-base);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .btn::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.1);
+        transform: translateX(-100%);
+        transition: transform var(--transition-base);
+      }
+
+      .btn:hover::before {
+        transform: translateX(0);
+      }
+
+      .btn-primary {
+        background: var(--primary-gradient);
+        color: var(--white);
+        box-shadow: var(--shadow-md);
+        width: 100%;
+      }
+
+      .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+      }
+
+      /* Terms section */
+      .terms-section {
+        text-align: center;
+        margin-top: var(--spacing-lg);
+        padding-top: var(--spacing-lg);
+        border-top: 1px solid var(--gray-200);
+      }
+
+      .terms-text {
+        font-size: 0.8125rem;
+        color: var(--gray-600);
+        margin: 0 0 var(--spacing-xs) 0;
+      }
+
+      .terms-link {
+        color: var(--primary-mid);
+        font-weight: 600;
+        text-decoration: none;
+        transition: all var(--transition-fast);
+      }
+
+      .terms-link:hover {
+        color: var(--primary-dark);
+        text-decoration: underline;
+      }
+
+      /* Right side - Info */
+      .register-info-section {
+        background: var(--primary-gradient);
+        padding: var(--spacing-2xl);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        color: var(--white);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .register-info-section::before {
+        content: "";
+        position: absolute;
+        top: -50%;
+        right: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(
+          circle,
+          rgba(255, 255, 255, 0.1) 0%,
+          transparent 70%
+        );
+        animation: rotate 20s linear infinite;
+      }
+
+      @keyframes rotate {
+        from {
+          transform: rotate(0deg);
+        }
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .info-content {
+        position: relative;
+        z-index: 1;
+      }
+
+      .info-icon {
+        width: 64px;
+        height: 64px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: var(--spacing-xl);
+        backdrop-filter: blur(10px);
+      }
+
+      .info-icon i {
+        font-size: 2rem;
+        color: var(--white);
+      }
+
+      .info-content h4 {
+        font-family: var(--font-primary);
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: var(--spacing-lg);
+        line-height: 1.3;
+      }
+
+      .info-content p {
+        font-size: 0.9375rem;
+        line-height: 1.7;
+        opacity: 0.95;
+        margin: 0;
+      }
+
+      .feature-list {
+        list-style: none;
+        padding: 0;
+        margin-top: var(--spacing-xl);
+      }
+
+      .feature-list li {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-md);
+        padding: var(--spacing-sm) 0;
+        font-size: 0.9375rem;
+      }
+
+      .feature-list i {
+        font-size: 1.125rem;
+        color: rgba(255, 255, 255, 0.9);
+      }
+
+      /* Responsive */
+      @media (max-width: 992px) {
+        .register-card {
+          grid-template-columns: 1fr;
+        }
+
+        .register-info-section {
+          display: none;
+        }
+
+        .name-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 768px) {
+        body {
+          padding: var(--spacing-md);
+        }
+
+        .register-form-section {
+          padding: var(--spacing-xl);
+        }
+
+        .register-header h4 {
+          font-size: 1.5rem;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .register-form-section {
+          padding: var(--spacing-lg);
+        }
+
+        .register-header h4 {
+          font-size: 1.375rem;
+        }
+
+        .btn {
+          padding: 0.625rem 1.25rem;
+        }
+
+        .form-control {
+          height: 44px;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="register-container">
+      <div class="register-card">
+        <!-- Left Side - Registration Form -->
+        <div class="register-form-section">
+          <div class="register-header">
+            <div class="register-logo">
+              <img src="{% static 'logo.png'%}" alt="WEB LIFT Logo" />
             </div>
+            <h4>Welcome to WEB LIFT</h4>
+            <p>Register yourself to get started</p>
+          </div>
+
+          <!-- Alert Messages -->
+          {% if messages %} {% for message in messages %}
+          <div class="alert alert-danger" role="alert">
+            <i class="fas fa-exclamation-circle"></i>
+            <span>{{ message }}</span>
+          </div>
+          {% endfor %} {% endif %}
+
+          <!-- Registration Form -->
+          <form method="post">
+            {% csrf_token %}
+
+            <!-- Username Field -->
+            <div class="form-group">
+              <label class="form-label" for="username">Username</label>
+              <div class="form-input-wrapper">
+                <i class="fas fa-user form-input-icon"></i>
+                <input
+                  type="text"
+                  id="username"
+                  class="form-control"
+                  name="username"
+                  placeholder="Choose a username"
+                  value="{{username}}"
+                  required
+                />
+              </div>
+            </div>
+
+            <!-- First Name & Last Name Grid -->
+            <div class="name-grid">
+              <div class="form-group">
+                <label class="form-label" for="firstName">First Name</label>
+                <div class="form-input-wrapper">
+                  <i class="fas fa-id-card form-input-icon"></i>
+                  <input
+                    type="text"
+                    id="firstName"
+                    class="form-control"
+                    name="FirstName"
+                    placeholder="Enter first name"
+                    value="{{firstname}}"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="lastName">Last Name</label>
+                <div class="form-input-wrapper">
+                  <i class="fas fa-id-card form-input-icon"></i>
+                  <input
+                    type="text"
+                    id="lastName"
+                    class="form-control"
+                    name="LastName"
+                    placeholder="Enter last name"
+                    value="{{lastname}}"
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Email Field -->
+            <div class="form-group">
+              <label class="form-label" for="email">Email Address</label>
+              <div class="form-input-wrapper">
+                <i class="fas fa-envelope form-input-icon"></i>
+                <input
+                  type="email"
+                  id="email"
+                  class="form-control"
+                  name="email"
+                  placeholder="Enter your email address"
+                  value="{{email}}"
+                  required
+                />
+              </div>
+            </div>
+
+            <!-- Password Field -->
+            <div class="form-group">
+              <label class="form-label" for="password1">Password</label>
+              <div class="form-input-wrapper">
+                <i class="fas fa-lock form-input-icon"></i>
+                <input
+                  type="password"
+                  id="password1"
+                  class="form-control"
+                  name="password1"
+                  placeholder="Create a strong password"
+                  required
+                />
+              </div>
+            </div>
+
+            <!-- Confirm Password Field -->
+            <div class="form-group">
+              <label class="form-label" for="password2">Confirm Password</label>
+              <div class="form-input-wrapper">
+                <i class="fas fa-lock form-input-icon"></i>
+                <input
+                  type="password"
+                  id="password2"
+                  class="form-control"
+                  name="password2"
+                  placeholder="Re-enter your password"
+                  required
+                />
+              </div>
+            </div>
+
+            <!-- Submit Button -->
+            <button class="btn btn-primary" type="submit">
+              <i class="fas fa-user-plus"></i>
+              <span>Create Account</span>
+            </button>
+
+            <!-- Terms Section -->
+            <div class="terms-section">
+              <p class="terms-text">By registering you agree to WEB LIFT's</p>
+              <a href="#" class="terms-link">Terms of Use & Privacy Policy</a>
+            </div>
+          </form>
         </div>
-    </section>
+
+        <!-- Right Side - Info Section -->
+        <div class="register-info-section">
+          <div class="info-content">
+            <div class="info-icon">
+              <i class="fas fa-rocket"></i>
+            </div>
+            <h4>This is where your SEO success story begins.</h4>
+            <p>
+              Welcome to our SEO website, where we offer resources to help you
+              improve your website's search engine optimization and boost your
+              online visibility. We cover all aspects of SEO, including keyword
+              research, on-page optimization, link building, and more.
+            </p>
+            <ul class="feature-list">
+              <li>
+                <i class="fas fa-check-circle"></i>
+                <span>Comprehensive Website Analysis</span>
+              </li>
+              <li>
+                <i class="fas fa-check-circle"></i>
+                <span>Domain & Page Authority Tracking</span>
+              </li>
+              <li>
+                <i class="fas fa-check-circle"></i>
+                <span>Backlink Quality Assessment</span>
+              </li>
+              <li>
+                <i class="fas fa-check-circle"></i>
+                <span>Mobile Usability Testing</span>
+              </li>
+              <li>
+                <i class="fas fa-check-circle"></i>
+                <span>Detailed SEO Reports</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- Optional JavaScript -->
-    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
-    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
-</body>
-
-</html> 
+    <script
+      src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
+      integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"
+      integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
+      integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
+      crossorigin="anonymous"
+    ></script>
+  </body>
+</html>

@@ -1,0 +1,17 @@
+# Company and product names
+    google
+    facebook
+    twitter
+    instagram
+    linkedin
+    amazon
+    microsoft
+    apple
+    shopify
+    stripe
+    paypal
+    zoom
+    slack
+    tabnine
+    copilot
+    

@@ -1,92 +1,709 @@
 <!doctype html>
 <html lang="en">
-{% load static %}
-<head>
-    <title>Smart Web Analyzer</title>
+  {% load static %}
+  <head>
+    <title>WEB LIFT - Login</title>
+    <meta
+      name="description"
+      content="Welcome to our SEO website, where we offer resources to help you improve your website's search engine optimization and boost your online visibility."
+    />
+
     <!-- Required meta tags -->
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <link rel="stylesheet" href="{% static 'stylelogin.css'%}">
-    <link rel="icon" type="image/ico" href="{% static 'favicon-1.ico'%}">
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, shrink-to-fit=no"
+    />
+    <link rel="icon" type="image/ico" href="{% static 'favicon-1.ico'%}" />
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+
     <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
-</head>
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+      integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T"
+      crossorigin="anonymous"
+    />
 
-<body>
-    <section class="h-100 gradient-form" style="background-color: #eee;">
-        <div class="container py-5 h-100">
-            <div class="row d-flex justify-content-center align-items-center h-100">
-                <div class="col-xl-10">
-                    <div class="card rounded-3 text-black">
-                        <div class="row g-0">
-                            <div class="col-lg-6">
-                                <div class="card-body p-md-5 mx-md-4">
+    <!-- Font Awesome CSS -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"
+    />
 
-                                    <div class="text-center">
-                                        <img src="{% static 'web.jpg'%}" style="width: 185px;" alt="logo">
-                                        <h4 class="mt-1 mb-5 pb-1">Welcome To Smart Web Analyzer</h4>
-                                    </div>
+    <style>
+      /* ================================================
+         Login Page - Modern WEB LIFT Theme
+         ================================================ */
 
+      :root {
+        /* Brand Colors */
+        --primary-dark: #023761;
+        --primary-mid: #02569b;
+        --primary-light: #80aacd;
+        --primary-gradient: linear-gradient(
+          135deg,
+          #023761 0%,
+          #02569b 50%,
+          #80aacd 100%
+        );
 
-                                    <form method="post">
-                                        {% csrf_token %}
-                                        <p style="padding-bottom: 20px;text-align: center;">Please login to your account</p>
-{% if messages %}
+        /* Neutral Colors */
+        --white: #ffffff;
+        --gray-50: #f9fafb;
+        --gray-100: #f3f4f6;
+        --gray-200: #e5e7eb;
+        --gray-300: #d1d5db;
+        --gray-400: #9ca3af;
+        --gray-500: #6b7280;
+        --gray-600: #4b5563;
+        --gray-700: #374151;
+        --gray-800: #1f2937;
+        --gray-900: #111827;
 
-        {% for message in messages %}
-        <div class="alert alert-danger">
-            {{ message }}
-        </div>
-        {% endfor %}
-        {% endif %}
-                                        <div  style="padding-top: 10px;"class="form-outline mb-4">
-                                            <label class="form-label" for="form2Example11">Username</label>
-                                            <input type="text" id="form2Example11" class="form-control" name="username" placeholder="Enter Username" />
-                                           
-                                        </div>
+        /* Semantic Colors */
+        --success: #10b981;
+        --warning: #f59e0b;
+        --error: #ef4444;
+        --info: #3b82f6;
 
-                                        <div class="form-outline mb-4">
-                                            <label class="form-label" for="form2Example22">Password</label>
-                                            <input type="password" id="form2Example22" name="pass" class="form-control" />
-                                           
-                                        </div>
+        /* Typography */
+        --font-primary: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        --font-secondary: "DM Sans", -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
 
-                                        <div class="text-center pt-1 mb-5 pb-1">
-                                            <button class="btn btn-primary btn-block fa-lg gradient-custom-2 mb-3" type="submit">Log
-                            in</button>
-                                            <a class="text-muted" href="{% url 'forget_password' %}">Forgot password?</a>
-                                        </div>
+        /* Spacing */
+        --spacing-xs: 0.5rem;
+        --spacing-sm: 0.75rem;
+        --spacing-md: 1rem;
+        --spacing-lg: 1.5rem;
+        --spacing-xl: 2rem;
+        --spacing-2xl: 3rem;
 
-                                        <div class="d-flex align-items-center justify-content-center pb-4">
-                                            <p class="mb-0 me-2">Don't have an account?</p>
-                                            <a href="{% url 'register' %}">
-                                            <button style="margin-left: 10px;"type="button" class="btn btn-outline-danger">Create new</button></a>
-                                       
-                                        </div>
+        /* Border Radius */
+        --radius-sm: 0.375rem;
+        --radius-md: 0.5rem;
+        --radius-lg: 0.75rem;
+        --radius-xl: 1rem;
+        --radius-2xl: 1.5rem;
 
-                                    </form>
+        /* Shadows */
+        --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+          0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+          0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
+          0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
 
-                                </div>
-                            </div>
-                            <div class="col-lg-6 d-flex align-items-center gradient-custom-2">
-                                <div class="text-white px-3 py-4 p-md-5 mx-md-4">
-                                    <h4 class="mb-4">This is where your SEO success story begins.</h4>
-                                    <p class="small mb-0">Welcome to our SEO website, where we offer resources to help you improve your website's search engine optimization and boost your online visibility. We cover all aspects of SEO, including keyword research, on-page optimization, link building, and more. We provide actionable steps and up-to-date information to help you stay ahead of the competition and attract more organic traffic to your website. Browse through our content and start optimizing your website today!
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+        /* Transitions */
+        --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+        --transition-base: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+        --transition-slow: 500ms cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: var(--font-secondary);
+        background: linear-gradient(135deg, #023761 0%, #02569b 50%, #80aacd 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: var(--spacing-xl);
+        position: relative;
+        overflow-x: hidden;
+      }
+
+      /* Animated background pattern */
+      body::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-image: radial-gradient(
+            circle at 20% 50%,
+            rgba(128, 170, 205, 0.1) 0%,
+            transparent 50%
+          ),
+          radial-gradient(
+            circle at 80% 80%,
+            rgba(2, 86, 155, 0.1) 0%,
+            transparent 50%
+          );
+        animation: backgroundMove 15s ease infinite;
+      }
+
+      @keyframes backgroundMove {
+        0%,
+        100% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(-20px);
+        }
+      }
+
+      .login-container {
+        max-width: 1000px;
+        width: 100%;
+        position: relative;
+        z-index: 1;
+        animation: fadeInUp 0.6s ease;
+      }
+
+      @keyframes fadeInUp {
+        from {
+          opacity: 0;
+          transform: translateY(30px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .login-card {
+        background: var(--white);
+        border-radius: var(--radius-2xl);
+        box-shadow: var(--shadow-2xl);
+        overflow: hidden;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+      }
+
+      /* Left side - Form */
+      .login-form-section {
+        padding: var(--spacing-2xl);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+
+      .login-header {
+        text-align: center;
+        margin-bottom: var(--spacing-2xl);
+      }
+
+      .login-logo {
+        width: 80px;
+        height: 80px;
+        margin: 0 auto var(--spacing-lg);
+        border-radius: 50%;
+        padding: var(--spacing-md);
+        background: var(--primary-gradient);
+        box-shadow: var(--shadow-lg);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .login-logo img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+      }
+
+      .login-header h2 {
+        font-family: var(--font-primary);
+        font-size: 1.875rem;
+        font-weight: 700;
+        color: var(--gray-800);
+        margin: 0 0 var(--spacing-xs) 0;
+      }
+
+      .login-header p {
+        color: var(--gray-500);
+        font-size: 0.9375rem;
+        margin: 0;
+      }
+
+      /* Alert Messages */
+      .alert {
+        border-radius: var(--radius-lg);
+        border: none;
+        padding: var(--spacing-md) var(--spacing-lg);
+        margin-bottom: var(--spacing-lg);
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+        animation: slideIn 0.3s ease;
+      }
+
+      .alert-danger {
+        background: linear-gradient(135deg, var(--error) 0%, #dc2626 100%);
+        color: var(--white);
+      }
+
+      .alert i {
+        font-size: 1.125rem;
+      }
+
+      @keyframes slideIn {
+        from {
+          transform: translateY(-10px);
+          opacity: 0;
+        }
+        to {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+
+      /* Form Styles */
+      .form-group {
+        margin-bottom: var(--spacing-lg);
+      }
+
+      .form-label {
+        font-family: var(--font-primary);
+        font-weight: 600;
+        font-size: 0.875rem;
+        color: var(--gray-700);
+        margin-bottom: var(--spacing-xs);
+        display: block;
+      }
+
+      .form-input-wrapper {
+        position: relative;
+      }
+
+      .form-input-icon {
+        position: absolute;
+        left: var(--spacing-md);
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--gray-400);
+        font-size: 1rem;
+        pointer-events: none;
+      }
+
+      .form-control {
+        width: 100%;
+        height: 48px;
+        padding: 0 var(--spacing-md) 0 2.75rem;
+        border: 2px solid var(--gray-200);
+        border-radius: var(--radius-lg);
+        font-size: 0.9375rem;
+        font-weight: 500;
+        color: var(--gray-800);
+        background: var(--white);
+        transition: all var(--transition-base);
+      }
+
+      .form-control:focus {
+        outline: none;
+        border-color: var(--primary-mid);
+        box-shadow: 0 0 0 4px rgba(2, 86, 155, 0.1);
+      }
+
+      .form-control::placeholder {
+        color: var(--gray-400);
+        font-weight: 400;
+      }
+
+      /* Buttons */
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--spacing-sm);
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: var(--radius-lg);
+        font-family: var(--font-primary);
+        font-size: 0.9375rem;
+        font-weight: 600;
+        text-decoration: none;
+        cursor: pointer;
+        transition: all var(--transition-base);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .btn::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.1);
+        transform: translateX(-100%);
+        transition: transform var(--transition-base);
+      }
+
+      .btn:hover::before {
+        transform: translateX(0);
+      }
+
+      .btn-primary {
+        background: var(--primary-gradient);
+        color: var(--white);
+        box-shadow: var(--shadow-md);
+        width: 100%;
+      }
+
+      .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+      }
+
+      .btn-outline-primary {
+        background: transparent;
+        color: var(--primary-dark);
+        border: 2px solid var(--primary-light);
+      }
+
+      .btn-outline-primary:hover {
+        background: var(--primary-light);
+        color: var(--white);
+        border-color: var(--primary-light);
+      }
+
+      /* Links */
+      .forgot-password {
+        display: block;
+        text-align: center;
+        color: var(--primary-mid);
+        font-size: 0.875rem;
+        font-weight: 500;
+        text-decoration: none;
+        margin-top: var(--spacing-md);
+        transition: all var(--transition-fast);
+      }
+
+      .forgot-password:hover {
+        color: var(--primary-dark);
+        text-decoration: underline;
+      }
+
+      .divider {
+        display: flex;
+        align-items: center;
+        text-align: center;
+        margin: var(--spacing-xl) 0;
+        color: var(--gray-400);
+        font-size: 0.875rem;
+      }
+
+      .divider::before,
+      .divider::after {
+        content: "";
+        flex: 1;
+        border-bottom: 1px solid var(--gray-200);
+      }
+
+      .divider::before {
+        margin-right: var(--spacing-md);
+      }
+
+      .divider::after {
+        margin-left: var(--spacing-md);
+      }
+
+      .signup-prompt {
+        text-align: center;
+        color: var(--gray-600);
+        font-size: 0.9375rem;
+      }
+
+      .signup-prompt a {
+        color: var(--primary-mid);
+        font-weight: 600;
+        text-decoration: none;
+        margin-left: var(--spacing-xs);
+        transition: all var(--transition-fast);
+      }
+
+      .signup-prompt a:hover {
+        color: var(--primary-dark);
+        text-decoration: underline;
+      }
+
+      /* Right side - Info */
+      .login-info-section {
+        background: var(--primary-gradient);
+        padding: var(--spacing-2xl);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        color: var(--white);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .login-info-section::before {
+        content: "";
+        position: absolute;
+        top: -50%;
+        right: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(
+          circle,
+          rgba(255, 255, 255, 0.1) 0%,
+          transparent 70%
+        );
+        animation: rotate 20s linear infinite;
+      }
+
+      @keyframes rotate {
+        from {
+          transform: rotate(0deg);
+        }
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .info-content {
+        position: relative;
+        z-index: 1;
+      }
+
+      .info-icon {
+        width: 64px;
+        height: 64px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: var(--spacing-xl);
+        backdrop-filter: blur(10px);
+      }
+
+      .info-icon i {
+        font-size: 2rem;
+        color: var(--white);
+      }
+
+      .info-content h4 {
+        font-family: var(--font-primary);
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: var(--spacing-lg);
+        line-height: 1.3;
+      }
+
+      .info-content p {
+        font-size: 0.9375rem;
+        line-height: 1.7;
+        opacity: 0.95;
+        margin: 0;
+      }
+
+      .feature-list {
+        list-style: none;
+        padding: 0;
+        margin-top: var(--spacing-xl);
+      }
+
+      .feature-list li {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-md);
+        padding: var(--spacing-sm) 0;
+        font-size: 0.9375rem;
+      }
+
+      .feature-list i {
+        font-size: 1.125rem;
+        color: rgba(255, 255, 255, 0.9);
+      }
+
+      /* Responsive */
+      @media (max-width: 992px) {
+        .login-card {
+          grid-template-columns: 1fr;
+        }
+
+        .login-info-section {
+          display: none;
+        }
+      }
+
+      @media (max-width: 768px) {
+        body {
+          padding: var(--spacing-md);
+        }
+
+        .login-form-section {
+          padding: var(--spacing-xl);
+        }
+
+        .login-header h2 {
+          font-size: 1.5rem;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .login-form-section {
+          padding: var(--spacing-lg);
+        }
+
+        .login-header h2 {
+          font-size: 1.375rem;
+        }
+
+        .btn {
+          padding: 0.625rem 1.25rem;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="login-container">
+      <div class="login-card">
+        <!-- Left Side - Login Form -->
+        <div class="login-form-section">
+          <div class="login-header">
+            <div class="login-logo">
+              <img src="{% static 'logo.png'%}" alt="WEB LIFT Logo" />
             </div>
+            <h2>Welcome to WEB LIFT</h2>
+            <p>Please login to your account</p>
+          </div>
+
+          <!-- Alert Messages -->
+          {% if messages %} {% for message in messages %}
+          <div class="alert alert-danger" role="alert">
+            <i class="fas fa-exclamation-circle"></i>
+            <span>{{ message }}</span>
+          </div>
+          {% endfor %} {% endif %}
+
+          <!-- Login Form -->
+          <form method="post">
+            {% csrf_token %}
+
+            <!-- Username Field -->
+            <div class="form-group">
+              <label class="form-label" for="form2Example11">Username</label>
+              <div class="form-input-wrapper">
+                <i class="fas fa-user form-input-icon"></i>
+                <input
+                  type="text"
+                  id="form2Example11"
+                  class="form-control"
+                  name="username"
+                  placeholder="Enter your username"
+                  required
+                />
+              </div>
+            </div>
+
+            <!-- Password Field -->
+            <div class="form-group">
+              <label class="form-label" for="form2Example22">Password</label>
+              <div class="form-input-wrapper">
+                <i class="fas fa-lock form-input-icon"></i>
+                <input
+                  type="password"
+                  id="form2Example22"
+                  name="pass"
+                  class="form-control"
+                  placeholder="Enter your password"
+                  required
+                />
+              </div>
+            </div>
+
+            <!-- Submit Button -->
+            <button class="btn btn-primary" type="submit">
+              <i class="fas fa-sign-in-alt"></i>
+              <span>Log In</span>
+            </button>
+
+            <!-- Forgot Password Link -->
+            <a class="forgot-password" href="{% url 'forget_password' %}">
+              Forgot password?
+            </a>
+
+            <!-- Divider -->
+            <div class="divider">Don't have an account?</div>
+
+            <!-- Sign Up Link -->
+            <div class="signup-prompt">
+              <a href="{% url 'register' %}">
+                <button type="button" class="btn btn-outline-primary">
+                  <i class="fas fa-user-plus"></i>
+                  <span>Create New Account</span>
+                </button>
+              </a>
+            </div>
+          </form>
         </div>
-    </section>
+
+        <!-- Right Side - Info Section -->
+        <div class="login-info-section">
+          <div class="info-content">
+            <div class="info-icon">
+              <i class="fas fa-chart-line"></i>
+            </div>
+            <h4>This is where your SEO success story begins.</h4>
+            <p>
+              Welcome to our SEO website, where we offer resources to help you
+              improve your website's search engine optimization and boost your
+              online visibility. We cover all aspects of SEO, including keyword
+              research, on-page optimization, link building, and more.
+            </p>
+            <ul class="feature-list">
+              <li>
+                <i class="fas fa-check-circle"></i>
+                <span>Comprehensive SEO Analysis</span>
+              </li>
+              <li>
+                <i class="fas fa-check-circle"></i>
+                <span>Real-time Performance Metrics</span>
+              </li>
+              <li>
+                <i class="fas fa-check-circle"></i>
+                <span>Actionable Insights & Reports</span>
+              </li>
+              <li>
+                <i class="fas fa-check-circle"></i>
+                <span>Boost Your Online Visibility</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- Optional JavaScript -->
-    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
-    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
-</body>
-
+    <script
+      src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
+      integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"
+      integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
+      integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
+      crossorigin="anonymous"
+    ></script>
+  </body>
 </html>

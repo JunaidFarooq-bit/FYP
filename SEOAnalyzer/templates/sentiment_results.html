@@ -1,0 +1,772 @@
+<!doctype html>
+<html lang="en">
+  {% load static %}
+  <head>
+    <title>WEB LIFT - Sentiment Analysis Results</title>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, shrink-to-fit=no"
+    />
+    <link rel="icon" type="image/ico" href="{% static 'favicon-1.ico'%}" />
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Bootstrap CSS -->
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+      integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T"
+      crossorigin="anonymous"
+    />
+
+    <!-- Font Awesome -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"
+    />
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{% static 'fyp.css'%}" />
+    <link rel="stylesheet" href="{% static 'modern-style.css'%}" />
+
+    <style>
+      /* Results Page Specific Styles */
+      .result-section {
+        animation: fadeInUp 0.5s ease forwards;
+      }
+
+      .score-card {
+        background: var(--white);
+        border-radius: var(--radius-xl);
+        box-shadow: var(--shadow-md);
+        padding: var(--spacing-2xl) var(--spacing-xl);
+        margin-bottom: var(--spacing-xl);
+      }
+
+      .sentiment-display {
+        text-align: center;
+        padding: var(--spacing-xl) 0;
+      }
+
+      .sentiment-badge-large {
+        display: inline-block;
+        padding: 1rem 2.5rem;
+        border-radius: 999px;
+        font-family: var(--font-primary);
+        font-size: 1.5rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        margin-bottom: var(--spacing-lg);
+      }
+
+      .sentiment-positive {
+        background: #ecfdf5;
+        color: #059669;
+      }
+
+      .sentiment-neutral {
+        background: #fffbeb;
+        color: #d97706;
+      }
+
+      .sentiment-negative {
+        background: #fef2f2;
+        color: #dc2626;
+      }
+
+      .score-large {
+        font-size: 4rem;
+        font-weight: 700;
+        color: var(--primary-mid);
+        line-height: 1;
+        margin-bottom: var(--spacing-sm);
+      }
+
+      .score-subtitle {
+        font-size: 1.125rem;
+        color: var(--gray-500);
+      }
+
+      /* ✅ NEW: Analysis Summary */
+      .analysis-summary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: var(--spacing-xl);
+        border-radius: var(--radius-lg);
+        margin-bottom: var(--spacing-xl);
+        text-align: center;
+        font-size: 1.125rem;
+        line-height: 1.6;
+      }
+
+      .confidence-bar {
+        max-width: 400px;
+        margin: var(--spacing-lg) auto 0;
+      }
+
+      .confidence-label {
+        font-weight: 600;
+        color: var(--gray-700);
+        margin-bottom: var(--spacing-xs);
+      }
+
+      .progress-bar-wrapper {
+        height: 24px;
+        background: var(--gray-200);
+        border-radius: 999px;
+        overflow: hidden;
+      }
+
+      .progress-bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        transition: width 1s ease;
+      }
+
+      .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: var(--spacing-lg);
+        margin-top: var(--spacing-xl);
+      }
+
+      .info-panel {
+        background: var(--white);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-md);
+        padding: var(--spacing-xl);
+        border-left: 4px solid var(--primary-mid);
+      }
+
+      .info-panel h3 {
+        font-family: var(--font-primary);
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: var(--gray-800);
+        margin-bottom: var(--spacing-md);
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+      }
+
+      .info-panel h3 i {
+        color: var(--primary-mid);
+      }
+
+      .tone-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--spacing-sm);
+      }
+
+      .tone-tag {
+        padding: 0.5rem 1rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 999px;
+        font-size: 0.875rem;
+        font-weight: 500;
+      }
+
+      /* ✅ NEW: Stats Grid */
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: var(--spacing-md);
+        margin-bottom: var(--spacing-lg);
+      }
+
+      .stat-item {
+        text-align: center;
+        padding: var(--spacing-md);
+        background: var(--gray-50);
+        border-radius: var(--radius-md);
+      }
+
+      .stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--primary-mid);
+        display: block;
+      }
+
+      .stat-label {
+        font-size: 0.875rem;
+        color: var(--gray-600);
+        margin-top: var(--spacing-xs);
+      }
+
+      /* ✅ NEW: Emotional Words Section */
+      .emotional-words {
+        margin-top: var(--spacing-md);
+      }
+
+      .word-category {
+        margin-bottom: var(--spacing-md);
+      }
+
+      .category-label {
+        font-weight: 600;
+        font-size: 0.875rem;
+        text-transform: uppercase;
+        margin-bottom: var(--spacing-xs);
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-xs);
+      }
+
+      .category-positive { color: #059669; }
+      .category-negative { color: #dc2626; }
+      .category-urgent { color: #d97706; }
+      .category-trust { color: #2563eb; }
+
+      .word-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--spacing-xs);
+      }
+
+      .word-badge {
+        padding: 0.25rem 0.75rem;
+        background: var(--gray-100);
+        border-radius: 999px;
+        font-size: 0.813rem;
+      }
+
+      .recommendations-list,
+      .strengths-list,
+      .weaknesses-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+
+      .recommendations-list li,
+      .strengths-list li {
+        padding: var(--spacing-sm) 0 var(--spacing-sm) var(--spacing-xl);
+        position: relative;
+        line-height: 1.6;
+        color: var(--gray-700);
+      }
+
+      .recommendations-list li:before,
+      .strengths-list li:before {
+        content: "✓";
+        position: absolute;
+        left: 0;
+        color: #059669;
+        font-weight: bold;
+        font-size: 1.25rem;
+      }
+
+      .weaknesses-list li {
+        padding: var(--spacing-sm) 0 var(--spacing-sm) var(--spacing-xl);
+        position: relative;
+        line-height: 1.6;
+        color: var(--gray-700);
+      }
+
+      .weaknesses-list li:before {
+        content: "⚠";
+        position: absolute;
+        left: 0;
+        color: #d97706;
+        font-weight: bold;
+        font-size: 1.25rem;
+      }
+
+      .page-meta {
+        background: var(--gray-50);
+        border-radius: var(--radius-lg);
+        padding: var(--spacing-lg);
+        margin-bottom: var(--spacing-xl);
+      }
+
+      .meta-row {
+        display: flex;
+        justify-content: space-between;
+        padding: var(--spacing-sm) 0;
+        border-bottom: 1px solid var(--gray-200);
+      }
+
+      .meta-row:last-child {
+        border-bottom: none;
+      }
+
+      .meta-label {
+        font-weight: 600;
+        color: var(--gray-700);
+      }
+
+      .meta-value {
+        color: var(--gray-600);
+      }
+
+      .url-link {
+        color: var(--primary-mid);
+        text-decoration: none;
+        word-break: break-all;
+      }
+
+      .url-link:hover {
+        text-decoration: underline;
+      }
+
+      /* ✅ NEW: Details Section */
+      .details-section {
+        background: var(--white);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-md);
+        padding: var(--spacing-xl);
+        margin-top: var(--spacing-xl);
+      }
+
+      .details-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--gray-800);
+        margin-bottom: var(--spacing-md);
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+      }
+
+      .details-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: var(--spacing-md);
+      }
+
+      .detail-item {
+        padding: var(--spacing-md);
+        background: var(--gray-50);
+        border-radius: var(--radius-md);
+      }
+
+      .detail-label {
+        font-size: 0.875rem;
+        color: var(--gray-600);
+        margin-bottom: var(--spacing-xs);
+      }
+
+      .detail-value {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--gray-800);
+      }
+
+      @media (max-width: 768px) {
+        .score-large {
+          font-size: 3rem;
+        }
+        .sentiment-badge-large {
+          font-size: 1.25rem;
+          padding: 0.75rem 2rem;
+        }
+        .stats-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+
+      @media print {
+        .sidebar, .navbar, .form-actions {
+          display: none !important;
+        }
+        .main-content {
+          margin-left: 0 !important;
+          margin-top: 0 !important;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- Loader -->
+    <div id="loader">
+      <div class="loader-animation">
+        <div class="loader-ring"></div>
+        <div class="loader-ring"></div>
+        <div class="loader-ring"></div>
+        <span class="loader-text">Loading...</span>
+      </div>
+    </div>
+
+    <header>
+      <!-- Sidebar Navigation -->
+      <nav id="sidebarMenu" class="sidebar" aria-label="Main navigation">
+        <div class="sidebar-header">
+          <div class="sidebar-logo">
+            <img src="{% static 'logo.png'%}" alt="WEB LIFT Logo" />
+            <h5>WEBLIFT</h5>
+          </div>
+          <button
+            class="sidebar-close"
+            id="sidebar-close"
+            onclick="closeSidebar()"
+            aria-label="Close sidebar"
+          >
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+
+        <div class="sidebar-content">
+          <div class="nav-section">
+            <span class="nav-section-title">Analysis Tools</span>
+            <a href="{% url 'Home' %}" class="sidebar-link">
+              <i class="fas fa-tachometer-alt"></i>
+              <span>Website Audit</span>
+            </a>
+            <a href="{% url 'backlink' %}" class="sidebar-link">
+              <i class="fas fa-link"></i>
+              <span>Backlinks</span>
+            </a>
+            <a href="{% url 'DomainAuthority' %}" class="sidebar-link">
+              <i class="fas fa-chart-pie"></i>
+              <span>Domain Authority</span>
+            </a>
+            <a href="{% url 'pageAuthority' %}" class="sidebar-link">
+              <i class="fas fa-file-alt"></i>
+              <span>Page Authority</span>
+            </a>
+            <a href="{% url 'mobiletest' %}" class="sidebar-link">
+              <i class="fas fa-mobile-alt"></i>
+              <span>Mobile Friendly Test</span>
+            </a>
+            <a
+              href="{% url 'sentiment_analysis' %}"
+              class="sidebar-link active"
+              aria-current="page"
+            >
+              <i class="fas fa-smile"></i>
+              <span>Sentiment Analysis</span>
+            </a>
+          </div>
+        </div>
+      </nav>
+
+      <!-- Top Navbar -->
+      <nav
+        id="main-navbar"
+        class="navbar navbar-expand-lg fixed-top"
+        role="navigation"
+      >
+        <div class="navbar-container navbar-no-search">
+          <button
+            class="navbar-toggler"
+            id="navbar-toggle"
+            type="button"
+            onclick="toggleSidebar()"
+          >
+            <i class="fas fa-bars"></i>
+          </button>
+          <div style="flex: 1"></div>
+          <div class="navbar-actions">
+            <a href="{% url 'logout' %}" class="btn btn-primary">
+              <i class="fas fa-sign-out-alt"></i>
+              <span>Logout</span>
+            </a>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="main-content">
+      <div class="container-fluid content-wrapper">
+        <!-- Page Info -->
+        <div class="page-meta">
+          <div class="meta-row">
+            <span class="meta-label">URL Analyzed:</span>
+            <a href="{{ url }}" target="_blank" class="url-link meta-value"
+              >{{ url }}</a
+            >
+          </div>
+          <div class="meta-row">
+            <span class="meta-label">Page Title:</span>
+            <span class="meta-value">{{ title }}</span>
+          </div>
+          {% if meta_description %}
+          <div class="meta-row">
+            <span class="meta-label">Meta Description:</span>
+            <span class="meta-value">{{ meta_description }}</span>
+          </div>
+          {% endif %}
+          <div class="meta-row">
+            <span class="meta-label">Analysis Method:</span>
+            <span class="meta-value">{{ sentiment.method }}</span>
+          </div>
+        </div>
+
+        {% comment %} <!-- ✅ NEW: Analysis Summary -->
+        {% if sentiment.analysis_summary %}
+        <div class="analysis-summary">
+          <i class="fas fa-info-circle" style="margin-right: 8px;"></i>
+          {{ sentiment.analysis_summary }}
+        </div>
+        {% endif %} {% endcomment %}
+
+        <!-- Main Sentiment Score -->
+        <div class="result-section">
+          <div class="score-card">
+            <div class="sentiment-display">
+              <div
+                class="sentiment-badge-large sentiment-{{ sentiment.sentiment }}"
+              >
+                {{ sentiment.sentiment|upper }}
+              </div>
+              <div class="score-large">{{ sentiment.sentiment_score }}</div>
+              <div class="score-subtitle">Sentiment Score (0-100)</div>
+
+              <div class="confidence-bar">
+                <div class="confidence-label">
+                  Confidence: {{ sentiment.confidence }}%
+                </div>
+                <div class="progress-bar-wrapper">
+                  <div
+                    class="progress-bar-fill"
+                    id="confidenceBar"
+                    style="width: 0%"
+                  ></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ✅ NEW: Text Statistics -->
+          {% if sentiment.text_stats %}
+          <div class="score-card">
+            <h3 style="margin-bottom: var(--spacing-lg); text-align: center;">
+              <i class="fas fa-chart-bar"></i> Text Statistics
+            </h3>
+            <div class="stats-grid">
+              <div class="stat-item">
+                <span class="stat-value">{{ sentiment.text_stats.word_count }}</span>
+                <span class="stat-label">Words</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-value">{{ sentiment.text_stats.sentence_count }}</span>
+                <span class="stat-label">Sentences</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-value">{{ sentiment.text_stats.avg_word_length }}</span>
+                <span class="stat-label">Avg Word Length</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-value">{{ sentiment.text_stats.avg_sentence_length }}</span>
+                <span class="stat-label">Avg Sentence Length</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-value">{{ sentiment.text_stats.exclamation_marks }}</span>
+                <span class="stat-label">Exclamation Marks</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-value">{{ sentiment.text_stats.emotional_intensity }}%</span>
+                <span class="stat-label">Emotional Intensity</span>
+              </div>
+            </div>
+
+            <!-- ✅ NEW: Emotional Words -->
+            {% if sentiment.text_stats.top_emotional_words %}
+            <div class="emotional-words">
+              <h4 style="margin-bottom: var(--spacing-md); font-size: 1rem; font-weight: 600;">
+                Detected Emotional Keywords:
+              </h4>
+              {% for category, words in sentiment.text_stats.top_emotional_words.items %}
+              <div class="word-category">
+                <div class="category-label category-{{ category }}">
+                  {% if category == 'positive' %}<i class="fas fa-smile"></i>
+                  {% elif category == 'negative' %}<i class="fas fa-frown"></i>
+                  {% elif category == 'urgent' %}<i class="fas fa-clock"></i>
+                  {% elif category == 'trust' %}<i class="fas fa-shield-alt"></i>
+                  {% endif %}
+                  {{ category|title }}:
+                </div>
+                <div class="word-list">
+                  {% for word in words %}
+                  <span class="word-badge">{{ word }}</span>
+                  {% endfor %}
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+            {% endif %}
+          </div>
+          {% endif %}
+
+          <!-- Info Panels -->
+          <div class="info-grid">
+            <!-- Detected Tone -->
+            <div class="info-panel">
+              <h3>
+                <i class="fas fa-palette"></i>
+                Detected Tone
+              </h3>
+              <div class="tone-tags">
+                {% for tone in sentiment.tone %}
+                <span class="tone-tag">{{ tone }}</span>
+                {% endfor %}
+              </div>
+            </div>
+
+            <!-- Intent & Topic -->
+            <div class="info-panel">
+              <h3>
+                <i class="fas fa-bullseye"></i>
+                Content Insights
+              </h3>
+              {% if sentiment.intent %}
+              <p><strong>Search Intent:</strong> <span style="text-transform: capitalize;">{{ sentiment.intent }}</span></p>
+              {% endif %}
+              {% if sentiment.primary_topic %}
+              <p><strong>Primary Topic:</strong> {{ sentiment.primary_topic }}</p>
+              {% endif %}
+              {% if sentiment.seo_quality %}
+              <p><strong>SEO Quality:</strong> {{ sentiment.seo_quality|upper }}</p>
+              {% endif %}
+              {% if sentiment.call_to_action %}
+              <p><strong>Call-to-Action:</strong> {{ sentiment.call_to_action|title }}</p>
+              {% endif %}
+              {% if sentiment.readability %}
+              <p><strong>Readability:</strong> {{ sentiment.readability|title }}</p>
+              {% endif %}
+              {% if sentiment.target_audience %}
+              <p><strong>Target Audience:</strong> {{ sentiment.target_audience|title }}</p>
+              {% endif %}
+              {% if sentiment.emotional_appeal %}
+              <p><strong>Emotional Appeal:</strong> {{ sentiment.emotional_appeal|upper }}</p>
+              {% endif %}
+            </div>
+
+            <!-- ✅ NEW: Strengths -->
+            {% if sentiment.strengths %}
+            <div class="info-panel">
+              <h3>
+                <i class="fas fa-check-circle"></i>
+                Strengths
+              </h3>
+              <ul class="strengths-list">
+                {% for strength in sentiment.strengths %}
+                <li>{{ strength }}</li>
+                {% endfor %}
+              </ul>
+            </div>
+            {% endif %}
+
+            <!-- ✅ NEW: Weaknesses -->
+            {% if sentiment.weaknesses %}
+            <div class="info-panel">
+              <h3>
+                <i class="fas fa-exclamation-triangle"></i>
+                Areas for Improvement
+              </h3>
+              <ul class="weaknesses-list">
+                {% for weakness in sentiment.weaknesses %}
+                <li>{{ weakness }}</li>
+                {% endfor %}
+              </ul>
+            </div>
+            {% endif %}
+
+            <!-- Recommendations -->
+            {% if sentiment.recommendations %}
+            <div class="info-panel" style="grid-column: 1 / -1">
+              <h3>
+                <i class="fas fa-lightbulb"></i>
+                Recommendations
+              </h3>
+              <ul class="recommendations-list">
+                {% for rec in sentiment.recommendations %}
+                <li>{{ rec }}</li>
+                {% endfor %}
+              </ul>
+            </div>
+            {% endif %}
+          </div>
+
+          <!-- ✅ NEW: VADER Details (if using VADER) -->
+          {% if sentiment.details %}
+          <div class="details-section">
+            <h3 class="details-title">
+              <i class="fas fa-microscope"></i>
+              Detailed Sentiment Breakdown
+            </h3>
+            <div class="details-grid">
+              <div class="detail-item">
+                <div class="detail-label">Positive</div>
+                <div class="detail-value" style="color: #059669;">{{ sentiment.details.positive }}%</div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-label">Neutral</div>
+                <div class="detail-value" style="color: #6b7280;">{{ sentiment.details.neutral }}%</div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-label">Negative</div>
+                <div class="detail-value" style="color: #dc2626;">{{ sentiment.details.negative }}%</div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-label">Compound Score</div>
+                <div class="detail-value">{{ sentiment.details.compound }}</div>
+              </div>
+            </div>
+          </div>
+          {% endif %}
+
+          <!-- Action Buttons -->
+          <div
+            class="form-actions"
+            style="justify-content: center; margin-top: var(--spacing-2xl)"
+          >
+            <a href="{% url 'sentiment_analysis' %}" class="btn btn-primary">
+              <i class="fas fa-redo"></i>
+              <span>Analyze Another URL</span>
+            </a>
+            <button onclick="window.print()" class="btn btn-outline">
+              <i class="fas fa-print"></i>
+              <span>Print Results</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- JavaScript -->
+    <script
+      src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
+      crossorigin="anonymous"
+    ></script>
+
+    <script>
+      function toggleSidebar() {
+        document.getElementById("sidebarMenu").classList.toggle("show");
+      }
+
+      function closeSidebar() {
+        document.getElementById("sidebarMenu").classList.remove("show");
+      }
+
+      window.addEventListener("load", () => {
+        document.getElementById("loader").style.display = "none";
+
+        // Animate confidence bar
+        const confidence = {{ sentiment.confidence }};
+        setTimeout(() => {
+          document.getElementById("confidenceBar").style.width = confidence + "%";
+        }, 300);
+      });
+    </script>
+  </body>
+</html>

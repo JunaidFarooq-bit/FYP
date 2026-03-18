@@ -1,219 +1,536 @@
 <!doctype html>
 <html lang="en">
-{% load static %}
-<head>
-    <title>Smart Web Analyzer</title>
-    <!-- Required meta tags -->
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <link rel="stylesheet" href="{% static 'fyp.css'%}">
-    <link rel="icon" type="image/ico" href="{% static 'favicon-1.ico'%}">
-            <!-- Font Awesome CSS -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+  {% load static %}
+  <head>
+    <title>WEB LIFT - Backlink Checker</title>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, shrink-to-fit=no"
+    />
+    <link rel="icon" type="image/ico" href="{% static 'favicon-1.ico'%}" />
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+
     <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
-</head>
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+      integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T"
+      crossorigin="anonymous"
+    />
 
-<body style="background-color:rgb(255, 255, 255)">
+    <!-- Font Awesome CSS -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"
+    />
 
-    <!-- Sidebar -->
-<style>
-     @media (max-width: 996px) {
-            #mylogo {
-                display: none !important;
-            }
-</style>
-      <main style="margin-top: 58px; ">
-             {% if messages %}
-                            {% for message in messages %}
-                            {% if message.tags == 'success' %}
-                                <div class="alert-success m-2" id="msg" role="alert" style="background-color: #023761; text-decoration: none;color:white; font-size: 25px;height: 48px;padding-top:4px; padding-bottom: 4px ;padding-left: 30px;">
-                                    {{ message }}
-                                </div>
-                            {% elif message.tags == 'error' %}
-                                 <div class="alert-danger m-2" id="msg1" role="alert" style="background-color: #B30202; text-decoration: none;color:white; font-size: 25px;height: 48px;padding-top:4px; padding-bottom: 4px ;padding-left: 30px;">
-                                    {{ message }}
-                                </div>
-                            {% endif %}
-                            {% endfor %}
-                        {% endif %}
-    <div class="container">
-        <div class="row">
-            <div class="col-md-8 offset-md-2 mt-5">
-                <br>
-                <br>
-                <h3 class="text-center">Website Backlinks Checker</h3>
-                <p class="text-center mt-3">A backlink is simply a link from one website to another. Search Engine like google use backlink as a ranking signal because when one website links to another, it means the content is noteworthy. High-quality backlinks can help to increase a site’s ranking position and visibility in search engine results(SEO)</p>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-md-8 offset-md-2">
-                <form name="myForm" id="myForm" action="/backlink" method="post" required>
-                    {% csrf_token %}
-                    <div class="form-group mt-4">
-                        <input placeholder="Enter URL" name="fname" autocomplete="on" type="search" id="id_url" class="form-control rounded" style="min-width: 350px; min-height:25px"
-                        {% if url %}
-                            value={{url}}
-                        {% endif %}
-                        />
-                    </div>
-                    <div class="form-group text-center">
-                        <button class="btn btn-primary" onclick="myFunction()" style="background-image: linear-gradient(to bottom,#2670ac,#023761)  !important;" type="submit">Submit</button>
-                        </form>
-                        <button onclick="trynewurl()" class="btn btn-secondary" style="background-image: linear-gradient(to bottom,#2670ac,#023761)  !important;" type="submit"><a style=" color:white;text-decoration:none; " href="{% url 'backlink' %}" >Try New URL!</a></button>
-                    </div>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{% static 'fyp.css'%}" />
+    <link rel="stylesheet" href="{% static 'modern-style.css'%}" />
 
-            </div>
-        </div>
-        {% if backlinks or urls %}
-        <div class="row mt-5">
-            <div class="col-md-8 offset-md-2">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>Total Backlinks:</th>
-                            <td>{{ backlinks }}</td>
-                        </tr>
-                        <tr>
-                            <th>Referring Domains:</th>
-                            <td>
-                                 {% for index, url in urls %}
-                                    {{ index }}. <a href="{{ url }}" target="_blank">{{ url }}</a><br>
-                                {% endfor %}
-                            </td>
-                        </tr>
-                    </thead>
-                </table>
-            </div>
-        </div>
-        {% endif %}
+    <style>
+      /* ================================================
+         Backlink Checker — page-specific styles only
+         ================================================ */
+
+      /* Hero intro box */
+      .tool-hero {
+        background: var(--white);
+        border-radius: var(--radius-xl);
+        box-shadow: var(--shadow-md);
+        padding: var(--spacing-2xl) var(--spacing-xl);
+        margin-bottom: var(--spacing-xl);
+        text-align: center;
+      }
+      .tool-hero .hero-icon {
+        width: 72px;
+        height: 72px;
+        border-radius: 50%;
+        background: var(--primary-gradient);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: var(--spacing-lg);
+      }
+      .tool-hero .hero-icon i {
+        font-size: 2rem;
+        color: var(--white);
+      }
+      .tool-hero h2 {
+        font-family: var(--font-primary);
+        font-size: 1.875rem;
+        font-weight: 700;
+        color: var(--gray-800);
+        margin: 0 0 var(--spacing-sm) 0;
+      }
+      .tool-hero p {
+        color: var(--gray-500);
+        font-size: 1rem;
+        max-width: 680px;
+        margin: 0 auto;
+        line-height: 1.7;
+      }
+
+      /* Input card */
+      .tool-form-card {
+        background: var(--white);
+        border-radius: var(--radius-xl);
+        box-shadow: var(--shadow-md);
+        padding: var(--spacing-xl);
+        margin-bottom: var(--spacing-xl);
+      }
+      .tool-form-card .form-label {
+        font-family: var(--font-primary);
+        font-weight: 600;
+        color: var(--gray-700);
+        font-size: 0.9375rem;
+        margin-bottom: var(--spacing-sm);
+        display: block;
+      }
+      .tool-form-card .search-input-group {
+        max-width: 100%;
+      }
+      .tool-form-card .form-actions {
+        display: flex;
+        gap: var(--spacing-sm);
+        margin-top: var(--spacing-lg);
+        flex-wrap: wrap;
+      }
+
+      /* Results section */
+      .results-section {
+        animation: fadeInUp 0.5s ease forwards;
+      }
+
+      /* Metrics card */
+      .metrics-card {
+        background: var(--white);
+        border-radius: var(--radius-xl);
+        box-shadow: var(--shadow-md);
+        padding: var(--spacing-xl);
+        margin-bottom: var(--spacing-xl);
+      }
+
+      .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: var(--spacing-lg);
+      }
+
+      .metric-item {
+        background: var(--gray-50);
+        border-radius: var(--radius-lg);
+        padding: var(--spacing-lg);
+        border-left: 4px solid var(--primary-mid);
+        transition: all var(--transition-base);
+      }
+
+      .metric-item:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-md);
+        border-left-color: var(--primary-dark);
+      }
+
+      .metric-label {
+        font-family: var(--font-primary);
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--gray-600);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: var(--spacing-xs);
+      }
+
+      .metric-value {
+        font-family: var(--font-primary);
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--primary-dark);
+        line-height: 1;
+      }
+
+      .metric-url {
+        font-size: 0.875rem;
+        color: var(--gray-600);
+        margin-top: var(--spacing-xs);
+        word-break: break-all;
+      }
+
+      /* --- NEW: small hint text below the number --- */
+      .metric-hint {
+        font-family: var(--font-primary);
+        font-size: 0.75rem;
+        color: var(--gray-500);
+        margin-top: 5px;
+      }
+
+      /* --- NEW: spam score colour states --- */
+      .spam-clean {
+        color: var(--success);
+      } /* 0-3  */
+      .spam-watch {
+        color: var(--warning);
+      } /* 4-7  */
+      .spam-danger {
+        color: var(--error);
+      } /* 8+   */
+
+      /* --- NEW: group divider between metric rows --- */
+      .metrics-group-title {
+        font-family: var(--font-primary);
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: var(--gray-500);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin: var(--spacing-lg) 0 var(--spacing-sm) 0;
+        padding-bottom: var(--spacing-xs);
+        border-bottom: 1px solid var(--gray-200);
+      }
+
+      /* Responsive */
+      @media (max-width: 996px) {
+        .metrics-grid {
+          grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        }
+      }
+
+      @media (max-width: 768px) {
+        .metrics-grid {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .metrics-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- Loader -->
+    <div id="loader">
+      <div class="loader-animation">
+        <div class="loader-ring"></div>
+        <div class="loader-ring"></div>
+        <div class="loader-ring"></div>
+        <span class="loader-text">Analyzing...</span>
+      </div>
     </div>
 
+    <!-- Main Navigation Header -->
     <header>
+      <!-- Sidebar Navigation -->
+      <nav id="sidebarMenu" class="sidebar" aria-label="Main navigation">
+  <div class="sidebar-header">
+    <div class="sidebar-logo">
+      <img src="{% static 'logo.png'%}" alt="WEB LIFT Logo" />
+      <h5>WEBLIFT</h5>
+    </div>
+    <!-- Close button for mobile -->
+    <button
+      class="sidebar-close"
+      id="sidebar-close"
+      onclick="closeSidebar()"
+      aria-label="Close sidebar"
+    >
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
 
-
-        <!-- Sidebar -->
-<nav id="sidebarMenu" class="collapse d-lg-block sidebar collapse bg-primary" style="background-image: linear-gradient(to bottom,#023761,#02569b,#80aacd)  !important;">
-  <div class="position-sticky">
-    <div class="list-group list-group-flush mx-3 mt-4">
-      <a href="{% url 'Home' %}" class="list-group-item list-group-item-action py-2 ripple ">
-        <span class="icon me-3"><i class="fas fa-tachometer-alt"></i></span>
-        <span class="text">Website Audit</span>
+  <div class="sidebar-content">
+    <div class="nav-section">
+      <span class="nav-section-title">Analysis Tools</span>
+      
+      <a href="{% url 'Home' %}" class="sidebar-link">
+        <i class="fas fa-tachometer-alt"></i>
+        <span>Website Audit</span>
       </a>
-      <a href="{% url 'backlink' %}" class="list-group-item list-group-item-action py-2 ripple active">
-        <span class="icon me-3"><i class="fas fa-chart-line"></i></span>
-        <span class="text">Backlinks Checker</span>
+      
+      <!-- ✅ BACKLINKS - Active on this page -->
+      <a 
+        href="{% url 'backlink' %}" 
+        class="sidebar-link active"
+        aria-current="page"
+      >
+        <i class="fas fa-link"></i>
+        <span>Backlinks</span>
       </a>
-      <a href="{% url 'DomainAuthority' %}" class="list-group-item list-group-item-action py-2 ripple">
-        <span class="icon me-3"><i class="fas fa-chart-pie"></i></span>
-        <span class="text">Domain Authority</span>
+      
+      <a href="{% url 'DomainAuthority' %}" class="sidebar-link">
+        <i class="fas fa-chart-pie"></i>
+        <span>Domain Authority</span>
       </a>
-      <a href="{% url 'pageAuthority' %}" class="list-group-item list-group-item-action py-2 ripple">
-        <span class="icon me-3"><i class="fas fa-chart-pie"></i></span>
-        <span class="text">Page Authority</span>
+      
+      <a href="{% url 'pageAuthority' %}" class="sidebar-link">
+        <i class="fas fa-file-alt"></i>
+        <span>Page Authority</span>
       </a>
-        <a href="{% url 'keyPosition' %}" class="list-group-item list-group-item-action py-2 ripple">
-        <span class="icon me-3"><i class="fas fa-chart-line"></i></span>
-        <span class="text">Keyword Position</span>
+      
+      <a href="{% url 'mobiletest' %}" class="sidebar-link">
+        <i class="fas fa-mobile-alt"></i>
+        <span>Mobile Friendly Test</span>
       </a>
-      <a href="{% url 'mobiletest' %}" class="list-group-item list-group-item-action py-2 ripple">
-        <span class="icon me-3"><i class="fas fa-chart-bar"></i></span>
-        <span class="text">Mobile Friendly Test</span>
-      </a>
-      <a href="{% url 'robot' %}" class="list-group-item list-group-item-action py-2 ripple">
-        <span class="icon me-3"><i class="fas fa-globe"></i></span>
-        <span class="text">Robot.txt Generator</span>
-      </a>
-      <a href="{% url 'keysuggestion' %}" class="list-group-item list-group-item-action py-2 ripple">
-        <span class="icon me-3"><i class="fas fa-chart-line"></i></span>
-        <span class="text">Keyword Suggestion</span>
-      </a>
+      <a
+              href="{% url 'sentiment_analysis' %}"
+              class="sidebar-link"
+              aria-current="page"
+            >
+              <i class="fas fa-smile"></i>
+              <span>Sentiment Analysis</span>
+            </a>
     </div>
   </div>
 </nav>
 
-    <!-- Navbar -->
-        <nav id="main-navbar" class="navbar navbar-expand-lg navbar-light bg-white fixed-top" style="background-image: linear-gradient(to right,#023761,#02569b,#80aacd)  !important;">
-            <button class="navbar-toggler" id="navbar-toggle" type="button" data-mdb-toggle="collapse" data-mdb-target="#sidebarMenu" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle navigation" style="color: white; margin: 0px;" onclick="navbar()">
-                        <i class="fas fa-bars"></i>
-                    </button>
-          <!-- Container wrapper -->
-            <div id="mylogo">
-            <img src="{% static 'logo.png'%}" style="display:inline-block !important;width: 40px; height: auto; margin-right: 5px;" />
-<h4 style="color: white; display: inline-block;" class="logo">Smart Web Analyzer</h4>                </div>
-            <div style="width:calc(100% - 280px)">
-                    <div class="row" style="width: 100%;">
-                        <div class="col-sm-9">
-                        </div>
-                        <div class="col-sm-3">
-                            <button class="btn" type="submit" style="background-image: linear-gradient(to bottom,#2670ac,#023761)  !important;padding-left: 20px; padding-right: 20px;float: right;"><a style=" color:white;text-decoration:none;" href="{% url 'logout' %}" >Logout</a></button>
-                        </div>
-                    </div>
-            </div>
-            </nav>
+      <!-- Top Navbar - NO SEARCH BAR VERSION -->
+      <nav
+        id="main-navbar"
+        class="navbar navbar-expand-lg fixed-top"
+        role="navigation"
+      >
+        <div class="navbar-container navbar-no-search">
+          <!-- Mobile Toggle -->
+          <button
+            class="navbar-toggler"
+            id="navbar-toggle"
+            type="button"
+            aria-controls="sidebarMenu"
+            aria-expanded="false"
+            aria-label="Toggle navigation"
+            onclick="toggleSidebar()"
+          >
+            <i class="fas fa-bars"></i>
+          </button>
+
+          <!-- Logo (visible on all screens when no search) -->
+          {% comment %} <div class="navbar-logo">
+            <img src="{% static 'logo.png'%}" alt="WEB LIFT Logo" />
+            <h4>WEBLIFT</h4> 
+          </div> {% endcomment %}
+
+          <!-- Spacer -->
+          <div style="flex: 1"></div>
+
+          <!-- Navbar actions (right side) -->
+          <div class="navbar-actions">
+            <a href="{% url 'logout' %}" class="btn btn-primary">
+              <i class="fas fa-sign-out-alt"></i>
+              <span>Logout</span>
+            </a>
+          </div>
+        </div>
+      </nav>
     </header>
-  <script>
-        function trynewurl() {
-            var url = document.getElementById("urlfield");
-            var c = document.getElementById("content");
-            c.style.display = "none";
-            url.value = ""
-        }
-    </script>
 
- <script>
-             const toggler= document.getElementById("sidebarMenu");
-                                        function navbar(){
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Alert Messages -->
+      {% if messages %} {% for message in messages %}
+      <div class="alert-modern alert-{{ message.tags }}" id="msg" role="alert">
+        <div class="alert-content">
+          <i
+            class="fas {% if message.tags == 'success' %}fa-check-circle{% else %}fa-exclamation-circle{% endif %}"
+          ></i>
+          <span>{{ message }}</span>
+        </div>
+        <button class="alert-close" onclick="this.parentElement.remove()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      {% endfor %} {% endif %}
 
-            if (toggler.style.display === 'block') {
-              toggler.style.display = 'none';
-            } else {
-              toggler.style.display = 'block';
-            }
-            }
+      <div class="container-fluid content-wrapper">
+        <!-- Hero -->
+        <div class="tool-hero">
+          <div class="hero-icon">
+            <i class="fas fa-link"></i>
+          </div>
+          <h2>Backlink & SEO Metrics Checker</h2>
+          <p>
+            Enter your website URL to get comprehensive backlink analysis
+            including Domain Authority, Page Authority, total backlinks, and
+            detailed quality metrics using Moz API.
+          </p>
+        </div>
 
-               function myFunction() {
-                var url = document.getElementById("id_url").value;
-                var isValid = true;
+        <!-- Input Form -->
+        <div class="tool-form-card">
+          <label class="form-label"
+            >Enter your website URL to analyze backlinks</label
+          >
+          <form name="myForm" id="myForm" action="" method="post">
+            {% csrf_token %}
+            <div class="search-input-group">
+              <i class="fas fa-search search-icon"></i>
+              <input
+                placeholder="e.g. https://example.com"
+                name="url"
+                autocomplete="on"
+                type="url"
+                id="id_url"
+                class="search-input"
+                aria-label="Website URL"
+                required
+                value="{{ url|default:'' }}"
+              />
+            </div>
+            <div class="form-actions">
+              <button
+                id="analyzeBtn"
+                onclick="myFunction()"
+                class="btn btn-primary"
+                type="submit"
+              >
+                <i class="fas fa-search-plus"></i>
+                <span>Check Backlinks</span>
+              </button>
+              <a href="{% url 'backlink' %}" class="btn btn-outline">
+                <i class="fas fa-redo"></i>
+                <span>Try New URL</span>
+              </a>
+            </div>
+          </form>
+        </div>
 
-                // Regular expression to check for a valid URL format
-                var urlRegex = /^(https?|ftp):\/\/[^\s/$.?#].[^\s]*$/i;
+        <!-- Results (conditional) -->
+        {% if url %}
+        <div class="results-section">
+          <div class="metrics-card">
+            <div class="table-header">
+              <i class="fas fa-chart-bar"></i>
+              <h3>SEO Metrics Overview</h3>
+            </div>
 
-                if (url.trim() === "") {
-                    alert("Enter a valid URL first.");
-                    isValid = false;
-                } else if (!urlRegex.test(url)) {
-                    alert("Enter a valid URL format.");
-                    isValid = false;
-                }
+            <!-- ============================================
+                 GROUP 1 — Authority
+                 (original 4 cards, unchanged)
+                 ============================================ -->
+            <div class="metrics-grid">
+              <div class="metric-item">
+                <div class="metric-label">Website</div>
+                <div class="metric-value">{{ url }}</div>
+              </div>
 
-                if (isValid) {
-                    // If the form data is valid, submit the form
-                    document.getElementById("myForm").submit();
-                }
-            }
+              <div class="metric-item">
+                <div class="metric-label">Total Backlinks</div>
+                <div class="metric-value">
+                  {{ total_backlinks|default:"0" }}
+                </div>
+                <div class="metric-hint">external equity links</div>
+              </div>
+            </div>
 
-            setTimeout(function(){
-              if ($('#msg').length > 0) {
-                $('#msg').remove();
-              }
-            }, 4000)
+            <!-- ============================================
+                 GROUP 2 — Trust & Reputation  (NEW cards)
+                 ============================================ -->
+            <div class="metrics-group-title">
+              <i class="fas fa-shield-alt" style="margin-right: 6px"></i>
+              Trust &amp; Reputation
+            </div>
+            <div class="metrics-grid">
+              <div class="metric-item">
+                <div class="metric-label">MozRank</div>
+                <div class="metric-value">{{ moz_rank|default:"0" }}</div>
+                <div class="metric-hint">link popularity · 0–10</div>
+              </div>
 
-            setTimeout(function(){
-              if ($('#msg1').length > 0) {
-                $('#msg1').remove();
-              }
-            }, 4000)
-        </script>
+              <div class="metric-item">
+                <div class="metric-label">MozTrust</div>
+                <div class="metric-value">{{ moz_trust|default:"0" }}</div>
+                <div class="metric-hint">trust score · 0–100</div>
+              </div>
 
+              <!-- Spam Score — value colour changes based on severity -->
+            </div>
 
+            <!-- ============================================
+                 GROUP 3 — Link Profile  (NEW cards)
+                 ============================================ -->
+            <div class="metrics-group-title">
+              <i class="fas fa-project-diagram" style="margin-right: 6px"></i>
+              Link Profile
+            </div>
+            <div class="metrics-grid">
+              <div class="metric-item">
+                <div class="metric-label">Linking Root Domains</div>
+                <div class="metric-value">
+                  {{ linking_root_domains|default:"0" }}
+                </div>
+                <div class="metric-hint">unique domains linking in</div>
+              </div>
+            </div>
+          </div>
+          <!-- end metrics-card -->
+        </div>
+        <!-- end results-section -->
+        {% endif %}
+      </div>
     </main>
-    <!--Main layout-->
-    <!-- Optional JavaScript -->
-    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
-    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js " integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo " crossorigin="anonymous "></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js " integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1 " crossorigin="anonymous "></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js " integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM " crossorigin="anonymous "></script>
-</body>
 
+    <!-- JavaScript -->
+    <script
+      src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
+      integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"
+      integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
+      integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
+      crossorigin="anonymous"
+    ></script>
+
+    <script>
+      // Sidebar Toggle
+      function navbar() {
+        const toggler = document.getElementById("sidebarMenu");
+        toggler.classList.toggle("show");
+      }
+
+      // Form validation and loader
+      function myFunction() {
+        var url = document.getElementById("id_url").value;
+        var urlRegex = /^(https?|ftp):\/\/[^\s/$.?#].[^\s]*$/i;
+
+        if (url.trim() === "") {
+          alert("Enter a valid URL first.");
+          return false;
+        }
+        if (!urlRegex.test(url)) {
+          alert("Enter a valid URL format.");
+          return false;
+        }
+        document.getElementById("loader").style.display = "flex";
+        return true;
+      }
+
+      window.addEventListener("load", () => {
+        document.getElementById("loader").style.display = "none";
+      });
+
+      // Auto-hide Alerts
+      setTimeout(() => {
+        const alerts = document.querySelectorAll(".alert-modern");
+        alerts.forEach((alert) => {
+          alert.style.animation = "slideOut 0.3s ease forwards";
+          setTimeout(() => alert.remove(), 300);
+        });
+      }, 4000);
+    </script>
+  </body>
 </html>

@@ -1,63 +1,178 @@
-from django.contrib.auth.models import User
-from django.contrib.auth import authenticate,login,logout
-from django.http import HttpResponse
-from django.shortcuts import render,redirect,reverse
-from django.views.decorators.cache import never_cache
-from django.contrib import messages
-#import modules
-import favicon
-import requests
-import urllib.request
-from urllib.parse import urlparse
-from bs4 import BeautifulSoup
-import re
-from collections import Counter
-import kaleido
-import plotly.express as px
-import json
-import pycountry
-import builtwith
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-from math import pi
-from PIL import Image
-from py_w3c.validators.html.validator import HTMLValidator
-import ssl
-import socket
-import geocoder
-import time
-import csscompressor
-from jsmin import jsmin
-import json
-from PIL import Image
-#---MOZ API
-import json
-import hashlib
-import hmac
-import time
-import urllib.parse
-import requests
-import base64
-import validators
-from .helpers import send_forget_password_mail
-import uuid
-from .models import Profile
-#---chrome driver
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from django.http import FileResponse
+# ================================
+# DJANGO CORE IMPORTS
+# ================================
+from .services.sentiment_analyzer import analyze_sentiment
+import os
 
-from webdriver_manager.chrome import ChromeDriverManager
-Report_variables={}
+from django.contrib.auth.models import User                 # Django built-in User model
+from django.contrib.auth import authenticate, login, logout # Authentication utilities
+from django.contrib.auth.decorators import login_required   # Protect views with login
+from django.shortcuts import render, redirect, reverse      # Rendering and redirects
+from django.http import HttpResponse, JsonResponse, FileResponse # HTTP responses
+from django.views.decorators.cache import never_cache       # Disable caching for views
+from django.views.decorators.csrf import csrf_exempt        # CSRF exemption (APIs)
+from django.views.decorators.http import require_POST       # Restrict HTTP methods
+from django.contrib import messages                         # Flash messages
+
+# ================================
+# PROJECT / APP SPECIFIC IMPORTS
+# ================================
+
+from .models import Profile                                 # User profile model
+from .helpers import send_forget_password_mail               # Password reset email
+from .modern_report import generate_seo_report               # SEO report generator
+
+# ================================
+# ASYNC & NETWORKING
+# ================================
+
+import asyncio                                              # Async operations
+import aiohttp                                              # Async HTTP requests
+import ssl                                                  # SSL/TLS handling
+import socket                                               # Network socket info
+
+# ================================
+# WEB SCRAPING & URL HANDLING
+# ================================
+
+import requests                                             # HTTP requests
+import urllib.request                                       # URL fetching
+from urllib.parse import urlparse, urljoin, urlunparse       # URL parsing utilities
+from bs4 import BeautifulSoup                                # HTML parsing
+import validators                                           # URL validation
+
+
+# ================================
+# SEO / WEBSITE ANALYSIS TOOLS
+# ================================
+
+import favicon                                              # Website favicon detection
+import builtwith                                            # Detect site technologies
+from py_w3c.validators.html.validator import HTMLValidator   # W3C HTML validation
+
+# ================================
+# DATA ANALYSIS & VISUALIZATION
+# ================================
+
+import pandas as pd                                         # Data analysis
+import numpy as np                                          # Numerical operations
+import plotly.express as px                                 # Interactive charts
+import matplotlib
+matplotlib.use('Agg')                                       # Non-GUI backend
+import matplotlib.pyplot as plt                              # Static charts
+from math import pi                                         # Chart calculations
+
+
+# ================================
+# GEO / LOCATION / COUNTRY INFO
+# ================================
+
+import geocoder                                             # IP-based geolocation
+import pycountry                                            # Country metadata
+
+# ================================
+# CODE OPTIMIZATION
+# ================================
+
+import csscompressor                                        # Minify CSS
+from jsmin import jsmin                                     # Minify JavaScript
+
+
+# ================================
+# SECURITY / TOKENS / HASHING
+# ================================
+
+import uuid                                                 # Unique tokens
+import hashlib                                              # Hashing
+import hmac                                                 # Secure hashing
+import base64                                               # Encoding/decoding
+
+# ================================
+# UTILITIES & HELPERS
+# ================================
+
+import os                                                   # File system access
+import re                                                   # Regex processing
+import json                                                 # JSON handling
+import time                                                 # Time utilities
+import logging                                              # Logging
+import concurrent.futures                                   # Parallel execution
+from datetime import datetime                                # Date & time
+from collections import Counter                              # Frequency counting
+from typing import Optional, Dict 
+
+import os
+import re
+import json
+from openai import OpenAI
+
+logger = logging.getLogger(__name__)
 
 # Create your views here.
+
+Report_variables={}
+global current_user_email
+OPENROUTER_API_KEY = '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'
+
 class Website_Audit(object):
-    def __init__(self, url):
-        self.url = url
-        session_obj = requests.Session()
-        self.response = session_obj.get(url, headers={"User-Agent": "Mozilla/5.0"},timeout=300).text
-        self.soup = BeautifulSoup(self.response, 'html.parser')
+    def __init__(self, url,request=None):
+        
+        
+        # ✅ FIX: Normalize and validate URL to accept all page types
+        self.url = self._normalize_url(url)
+        self.base_url = self._get_base_url(self.url)
+        self.domain = self._get_domain(self.url)
+        
+        # ✅ Modern session configuration with security headers
+        self.session = requests.Session()
+        self.session.headers.update({
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Accept-Encoding": "gzip, deflate, br",
+            "DNT": "1",
+            "Connection": "keep-alive",
+            "Upgrade-Insecure-Requests": "1"
+        })
+        
+        # ✅ Enhanced error handling with redirect tracking
+        try:
+            response = self.session.get(self.url, timeout=120, allow_redirects=True, verify=True)
+            response.raise_for_status()
+            self.response = response.text
+            self.openai_client = None
+            self.soup = BeautifulSoup(self.response, 'html.parser')
+            self.response_headers = response.headers
+            self.status_code = response.status_code
+            self.final_url = response.url  # Track final URL after redirects
+            
+            # ✅ Check if URL was redirected
+            if self.final_url != self.url:
+                self.was_redirected = True
+                self.redirect_url = self.final_url
+            else:
+                self.was_redirected = False
+                self.redirect_url = None
+                
+        except requests.exceptions.Timeout:
+            self.response = ""
+            self.soup = BeautifulSoup("", 'html.parser')
+            self.response_headers = {}
+            self.status_code = None
+            self.final_url = url
+            self.was_redirected = False
+            self.redirect_url = None
+            print(f"Timeout error while fetching {url}")
+        except requests.exceptions.RequestException as e:
+            self.response = ""
+            self.soup = BeautifulSoup("", 'html.parser')
+            self.response_headers = {}
+            self.status_code = None
+            self.final_url = url
+            self.was_redirected = False
+            self.redirect_url = None
+            print(f"Error fetching {url}: {str(e)}")
+        
         self.title_score = 0
         self.desc_score = 0
         self.heading_score = 0
@@ -81,12 +196,12 @@ class Website_Audit(object):
         self.icon_flag = None
         self.schema_flag = None
         self.ogp_flag = None
-        self.fb_flag = False
-        self.insta_flag = False
+        self.facebook_flag = False
+        self.instagram_flag = False
         self.twitter_flag = False
         self.linkedin_flag = False
         self.ip_flag = None
-        self.ip=None
+        self.ip = None
         self.s_count = 0
         self.server_loc_flag = None
         self.loc_name = None
@@ -100,7 +215,7 @@ class Website_Audit(object):
         self.Doctype = None
         self.Encoding = None
         self.keyword_lst = []
-        self.speed = 0  # new added
+        self.speed = 0
         self.plugins = None
         self.css = None
         self.jss = None
@@ -114,576 +229,3095 @@ class Website_Audit(object):
         self.dmca = None
         self.https = None
         self.data = {}
-        self.expiry_date=None
-        self.lst=[]
+        self.expiry_date = None
+        self.lst = []
+    def _get_ai_client(self):
+        """Get OpenAI client for OpenRouter with improved timeout"""
+        # Try environment variable first, then fall back to constant
+        api_key = os.getenv('OPENROUTER_API_KEY') or OPENROUTER_API_KEY
+        
+        if not api_key:
+            # Fallback to basic analysis (no AI)
+            print("Warning: No API key found. Using fallback E-E-A-T analysis.")
+            return None
+        
+        return OpenAI(
+            api_key=api_key,
+            base_url="https://openrouter.ai/api/v1",
+            timeout=45.0,
+            max_retries=3
+        )
+    def _normalize_url(self, url):
+        if not url:
+            return url
 
+        url = url.strip()
+
+        # Fix common malformations FIRST
+        # Case 1: "www.domain.compath" → "www.domain.com/path"
+        if not url.startswith(('http://', 'https://', '//')):
+            import re
+            # Better pattern: Match TLD followed by any non-slash, non-dot character
+            # This catches: .com/path, .compath, .com123, .comPath, etc.
+            pattern = r'(\.com|\.net|\.org|\.edu|\.gov|\.co|\.io|\.ai|\.pk|\.uk|\.ca|\.au)([^/\.])'
+            if re.search(pattern, url):
+                url = re.sub(pattern, r'\1/\2', url)
+        
+        # Add scheme if missing
+        if not url.startswith(('http://', 'https://')):
+            url = 'https://' + url
+
+        # Parse the URL
+        parsed = urlparse(url)
+        
+        # Additional fix: if netloc is empty but path has domain-like structure
+        if not parsed.netloc and parsed.path:
+            # Try to extract domain from path
+            parts = parsed.path.split('/', 1)
+            if len(parts) == 2:
+                domain, path = parts
+                url = f"{parsed.scheme or 'https'}://{domain}/{path}"
+                parsed = urlparse(url)
+            else:
+                # Just a domain, no path
+                url = f"{parsed.scheme or 'https'}://{parsed.path}"
+                parsed = urlparse(url)
+        
+        # Fix: If path exists but doesn't start with '/', add it
+        path = parsed.path
+        if path and not path.startswith('/'):
+            path = '/' + path
+
+        # Clean reconstruction
+        clean_url = urlunparse((
+            parsed.scheme or 'https',
+            parsed.netloc,
+            path or '/',
+            parsed.params,
+            parsed.query,
+            ''  # Remove fragment
+        ))
+
+        return clean_url
+    def _get_base_url(self, url):
+        """Extract base URL (scheme + netloc only)"""
+        try:
+            parsed = urlparse(url)
+            
+            if not parsed.netloc:
+                return None
+            
+            # Ensure we have a scheme
+            scheme = parsed.scheme or 'https'
+            
+            return f"{scheme}://{parsed.netloc}"
+        except Exception:
+            return None
+
+    def _get_domain(self, url):
+        """
+        Extract domain name only
+        Example: https://example.com/page → example.com
+        """
+        try:
+            parsed = urlparse(url)
+            return parsed.netloc if parsed.netloc else url
+        except Exception:
+            return url
     def Score(self, max_val, length):
-        if length > max_val:
-            length = max_val - 10
-        score = (length / max_val) * 100
+        """
+        ✅ MODERNIZED: Dynamic scoring with optimal range penalties
+        """
+        if max_val <= 0:
+            return 0
+        
+        if length < 0:
+            length = 0
+        
+        if length == 0:
+            return 0
+        elif length > max_val:
+            excess = length - max_val
+            penalty = min(excess * 2, 50)
+            base_score = ((max_val / max_val) * 100) - penalty
+            score = max(0, base_score)
+        else:
+            score = (length / max_val) * 100
+        
         score = round(score)
+        score = max(0, min(100, score))
+        
         return score
 
-    def remove_unicode_characters(self,input_string):
-        encoded_bytes = input_string.encode("ascii", "ignore")
-        decoded_string = encoded_bytes.decode("ascii")
-        return decoded_string
+    def remove_unicode_characters(self, input_string):
+        """
+        ✅ MODERNIZED: UTF-8 preservation for international SEO
+        """
+        if input_string is None:
+            return ""
+        
+        if not isinstance(input_string, str):
+            input_string = str(input_string)
+        
+        try:
+            cleaned = re.sub(r'[\x00-\x08\x0b-\x0c\x0e-\x1f\x7f-\x9f]', '', input_string)
+            cleaned = re.sub(r'\s+', ' ', cleaned)
+            return cleaned.strip()
+        except Exception as e:
+            print(f"Error cleaning text: {str(e)}")
+            return input_string.strip() if input_string else ""
 
-    def get_title(self, min_length=30, max_length=60):
-        title1 = self.soup.find('title')
+    
+    
+    def remove_unicode_characters(self, text):
+        """Clean text while preserving semantic meaning"""
+        if not text:
+            return ""
+        # Preserve structured unicode (emojis, special chars) but clean problematic ones
+        text = text.encode('utf-8', 'ignore').decode('utf-8')
+        # Normalize whitespace
+        text = ' '.join(text.split())
+        return text
+    
+    def _fallback_eeat_analysis(self, content_type, content):
+        """
+        Enhanced fallback E-E-A-T analysis with 2026 signals
+        Includes: AI content detection, freshness, expertise markers
+        """
+        content_lower = content.lower()
+        signals = []
+        issues = []
+        score = 50
+        
+        # ✅ 2026 PRIORITY: Author/Brand Signals (Crucial for YMYL)
+        author_signals = ['by ', 'written by', 'author:', 'dr.', 'md,', 'phd,', 'reviewed by']
+        if any(signal in content_lower for signal in author_signals):
+            signals.append("✓ Author attribution detected")
+            score += 15
+        
+        # ✅ Expertise indicators
+        expertise_words = ['expert', 'guide', 'professional', 'certified', 'proven', 'research-based']
+        if any(word in content_lower for word in expertise_words):
+            signals.append("✓ Expertise markers found")
+            score += 12
+        
+        # ✅ Freshness signals (critical for 2026)
+        current_year = 2026
+        if str(current_year) in content or str(current_year - 1) in content:
+            signals.append(f"✓ Current year ({current_year}) mentioned")
+            score += 15
+        elif re.search(r'\b202[3-5]\b', content):
+            signals.append("✓ Recent date found")
+            score += 8
+        
+        # ✅ Data/Stat signals (builds authority)
+        if re.search(r'\d+%|\d+\s*(percent|users|people)', content_lower):
+            signals.append("✓ Data points/statistics included")
+            score += 8
+        
+        # ⚠️ Red flags for thin/AI content
+        clickbait_words = ['shocking', 'secret', 'unbelievable', 'you won\'t believe', 'mind-blowing']
+        if any(word in content_lower for word in clickbait_words):
+            issues.append("⚠ Clickbait language detected")
+            score -= 25
+        
+        # ⚠️ Generic AI content patterns
+        generic_phrases = ['in this article', 'in conclusion', 'in today\'s digital age', 'it\'s important to note']
+        if sum(1 for phrase in generic_phrases if phrase in content_lower) >= 2:
+            issues.append("⚠ Generic phrasing detected (may signal AI/thin content)")
+            score -= 15
+        
+        # ⚠️ Missing key elements
+        if content_type == 'description' and len(content) > 50:
+            if not any(word in content_lower for word in ['learn', 'discover', 'find', 'get', 'explore']):
+                issues.append("⚠ No clear call-to-action")
+                score -= 10
+        
+        return {
+            'eeat_score': max(0, min(100, score)),
+            'signals': signals,
+            'issues': issues,
+            'recommendations': ['Enable AI analysis for comprehensive insights'],
+            'details': {
+                'content_type': content_type,
+                'analysis_method': 'fallback'
+            }
+        }
+    
+    def _analyze_eeat_with_ai(self, content_type, content, context=None):
+        """
+        ✅ AI-POWERED E-E-A-T Analysis - 2026 Updated
+        Focus: Helpful Content, Experience signals, Brand authority, Mobile SERP
+        
+        Args:
+            content_type: 'title', 'description', or 'heading'
+            content: The actual text to analyze
+            context: Additional context (e.g., full page title for description)
+        
+        Returns:
+            dict: E-E-A-T analysis with score, signals, and actionable recommendations
+        """
+        
+        if not content or len(content.strip()) < 3:
+            return {
+                'eeat_score': 0,
+                'signals': [],
+                'issues': ['Content too short for meaningful analysis'],
+                'recommendations': ['Add substantive content (minimum 20 characters)'],
+                'details': {}
+            }
+        
+        try:
+            client = self._get_ai_client()
+            
+            # ✅ 2026 UPDATED PROMPTS - Focus on Helpful Content & Mobile SERP
+            if content_type == 'title':
+                analysis_prompt = f"""Analyze this page TITLE for Google's 2026 ranking factors (E-E-A-T, Helpful Content, Mobile SERP):
 
-        if title1 == []:
-            return None
-        else:
-            try:
-                title1 = self.soup.find('title').get_text()
-                title = self.remove_unicode_characters(title1)
-            except:
-                title=''
-            title_length = len(title)
+TITLE: "{content}"
 
+Evaluate against 2026 SEO priorities:
+1. **Experience**: First-hand language ("I tested", "our guide", specific examples vs generic claims)
+2. **Expertise**: Credentials, year/date (2025-2026), numbers/data, "guide"/"complete"
+3. **Authority**: Brand name, clear topic focus, no keyword stuffing
+4. **Trust**: No clickbait, clear value, mobile-friendly length (50-60 chars optimal)
+5. **Helpful Content**: Specific promise, not generic ("how to X" vs "the ultimate guide to everything")
 
-            if title_length == 0:
-                self.title="Title is not Found!"
-            if title_length < min_length:
-                self.title = "Title is too Short!"
-            elif min_length <= title_length <= max_length:
-                self.title = "Title is good!"
-            else:
-                self.title = "Title is too long!"
-            self.data['title_verdict']=' | '+self.title
-            self.title = title
-            self.data['title'] = self.title
-            title_score = self.Score(max_length, title_length)
-            self.title_score = title_score
-            return title
+CRITICAL 2026 PENALTIES:
+- AI-generated generic titles ("comprehensive guide", "everything you need to know")
+- Clickbait ("shocking", "you won't believe")
+- Missing freshness (no year for time-sensitive topics)
+- Keyword stuffing or duplicate words
 
-    def get_description(self, min_length=50, max_length=160):
-        meta = self.soup.findAll("meta")
-        description = ""
-        for tag in meta:
-            if 'name' in tag.attrs.keys() and tag.attrs['name'].strip().lower() in ['description']:
-                if tag.attrs['content'] == "":
-                    pass
-                elif tag.attrs['content'] != "":
-                    description = description + tag.attrs['content']
-                    self.comp_desc = self.remove_unicode_characters(description)
-                    self.data['description']=self.comp_desc
+Return ONLY valid JSON (no markdown):
+{{
+    "eeat_score": 0-100,
+    "signals_found": ["specific signal 1", "specific signal 2"],
+    "issues": ["specific issue 1"],
+    "recommendations": ["actionable rec 1", "actionable rec 2"],
+    "has_year": true/false,
+    "has_brand": true/false,
+    "has_expertise_marker": true/false,
+    "has_clickbait": true/false,
+    "has_specific_value": true/false,
+    "mobile_serp_quality": "excellent/good/poor",
+    "trust_level": "high/medium/low"
+}}"""
+
+            elif content_type == 'description':
+                analysis_prompt = f"""Analyze this META DESCRIPTION for Google's 2026 Mobile-First SERP standards:
+
+DESCRIPTION: "{content}"
+{f'PAGE TITLE: "{context}"' if context else ''}
+
+Evaluate for 2026 Mobile SERP (Google prioritizes descriptions that enhance user choice):
+1. **Experience**: Author name ("by Jane Doe"), personal insights, tested claims
+2. **Expertise**: Credentials (MD, CPA, "expert"), data/stats, "research-backed"
+3. **Authority**: Dates (updated 2026), original source mentions, specific outcomes
+4. **Trust**: Clear CTA, complements title (not duplicate), mobile-optimized (150-160 chars)
+5. **Helpful Content**: Specific benefits, NOT generic ("learn everything", "comprehensive info")
+
+MOBILE SERP OPTIMIZATION:
+- First 120 chars most critical (mobile cutoff)
+- Action verbs ("discover", "get", "learn how")
+- Unique from title (duplicates are ignored by Google)
+
+CRITICAL PENALTIES:
+- Duplicates title text (Google shows "..." or rewrites)
+- Generic AI patterns ("in this article, we'll explore")
+- No clear benefit stated
+- Missing freshness for time-sensitive content
+
+Return ONLY valid JSON (no markdown):
+{{
+    "eeat_score": 0-100,
+    "signals_found": ["signal 1", "signal 2"],
+    "issues": ["issue 1"],
+    "recommendations": ["rec 1", "rec 2"],
+    "has_author_attribution": true/false,
+    "has_date": true/false,
+    "has_specific_benefit": true/false,
+    "has_cta": true/false,
+    "duplicates_title": true/false,
+    "first_120_chars_quality": "strong/weak",
+    "mobile_serp_quality": "excellent/good/poor",
+    "trust_level": "high/medium/low"
+}}"""
+
+            else:  # heading (H1)
+                analysis_prompt = f"""Analyze this H1 HEADING for Google's 2026 Helpful Content & Accessibility standards:
+
+H1: "{content}"
+{f'PAGE TITLE: "{context}"' if context else ''}
+
+Evaluate for 2026 standards (H1 is critical for topic clarity & accessibility):
+1. **Experience**: Specific, actionable ("7 tested strategies" vs "best strategies")
+2. **Expertise**: Year for freshness, how-to format, demonstrates depth
+3. **Authority**: Clear topic (not vague), aligned with search intent, supports title
+4. **Trust**: No clickbait, accessible (screen readers), complements but differs from title
+5. **Helpful Content**: User-focused ("how you can X" vs "guide to X"), specific outcome
+
+H1 BEST PRACTICES 2026:
+- Should be THE MOST important text on page (accessibility & SEO)
+- 60-70 chars ideal (mobile H1 display)
+- Must differ from title (shows depth)
+- Question format OK if genuinely helpful ("How do I X?" for tutorials)
+
+CRITICAL ISSUES:
+- Duplicate of title (wasted opportunity)
+- Multiple H1s (confuses topic modeling)
+- Vague/generic ("Everything about X")
+- Missing for time-sensitive content: year
+
+Return ONLY valid JSON (no markdown):
+{{
+    "eeat_score": 0-100,
+    "signals_found": ["signal 1", "signal 2"],
+    "issues": ["issue 1"],
+    "recommendations": ["rec 1", "rec 2"],
+    "has_year": true/false,
+    "is_question_format": true/false,
+    "has_specific_outcome": true/false,
+    "title_alignment": "complementary/duplicate/conflicting",
+    "accessibility_score": "excellent/good/poor",
+    "trust_level": "high/medium/low"
+}}"""
+
+            # Call OpenRouter API with improved error handling
+            completion = client.chat.completions.create(
+                model="openai/gpt-4o-mini",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": """You are an expert SEO analyst specializing in Google's 2026 ranking systems: 
+- E-E-A-T (Experience, Expertise, Authoritativeness, Trustworthiness)
+- Helpful Content System (rewards genuine human expertise)
+- Mobile-First Indexing (mobile SERP optimization)
+
+Focus on detecting: AI-generated content patterns, thin content, clickbait, missing expertise signals.
+Return ONLY valid JSON, no markdown, no preamble."""
+                    },
+                    {
+                        "role": "user",
+                        "content": analysis_prompt
+                    }
+                ],
+                temperature=0.2,  # Lower for more consistent analysis
+                max_tokens=700
+            )
+            
+            response_text = completion.choices[0].message.content.strip()
+            
+            # Robust JSON extraction
+            if '```' in response_text:
+                # Extract JSON from markdown code blocks
+                json_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', response_text, re.DOTALL)
+                if json_match:
+                    response_text = json_match.group(1)
                 else:
-                    return None
-        # Calculate Length
-        desc_length = len(self.comp_desc)
-        if desc_length == 0:
-            self.desc = "Description not found!"
-        elif desc_length <= min_length and desc_length != 0:
-            self.desc = "Description is too Short"
-        elif min_length <= desc_length <= max_length:
-            self.desc = "Description is good"
+                    # Fallback: find first JSON object
+                    json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
+                    if json_match:
+                        response_text = json_match.group(0)
+            
+            result = json.loads(response_text)
+            
+            # Ensure all required fields exist with defaults
+            result.setdefault('eeat_score', 50)
+            result.setdefault('signals_found', [])
+            result.setdefault('issues', [])
+            result.setdefault('recommendations', [])
+            
+            return {
+                'eeat_score': result['eeat_score'],
+                'signals': result['signals_found'],
+                'issues': result['issues'],
+                'recommendations': result['recommendations'],
+                'details': result  # Store full AI response for debugging
+            }
+            
+        except json.JSONDecodeError as e:
+            print(f"JSON parsing failed for {content_type}: {e}")
+            print(f"Response was: {response_text[:200]}")
+            return self._fallback_eeat_analysis(content_type, content)
+        except Exception as e:
+            print(f"AI E-E-A-T analysis failed for {content_type}: {e}")
+            return self._fallback_eeat_analysis(content_type, content)
+    
+    def Score(self, max_length, actual_length):
+        """Calculate penalty score for length deviations"""
+        if actual_length == 0:
+            return 0
+        if actual_length <= max_length:
+            return 100
+        # Progressive penalty for exceeding max
+        excess = actual_length - max_length
+        penalty = min(excess * 2, 70)  # Cap penalty at 70%
+        return max(30, 100 - penalty)
+    
+    def get_title(self, min_length=30, max_length=60, use_ai=True):
+        """
+        ✅ 2026 TITLE OPTIMIZATION
+        - Mobile-first (50-60 chars ideal for full mobile display)
+        - E-E-A-T signals (expertise, freshness, brand)
+        - Helpful Content compliance (specific value, not generic)
+        """
+        title_tag = self.soup.find('title')
+
+        if not title_tag:
+            self.title = "Title is not Found!"
+            self.data['title_verdict'] = ' | ' + self.title
+            self.data['title'] = ''
+            self.data['title_length'] = 0
+            self.data['title_issues'] = ['❌ CRITICAL: Missing <title> tag - Major SEO/accessibility issue']
+            self.data['title_eeat_score'] = 0
+            self.data['title_eeat_signals'] = []
+            self.data['title_eeat_recommendations'] = ['Add a descriptive, unique <title> tag immediately']
+            self.title_score = 0
+            return None
+        
+        try:
+            title_text = title_tag.get_text(strip=True)
+            title = self.remove_unicode_characters(title_text)
+        except Exception as e:
+            print(f"Error extracting title: {str(e)}")
+            title = ''
+        
+        title = title.strip()
+        title_length = len(title)
+        
+        # ✅ AI-POWERED E-E-A-T ANALYSIS
+        if use_ai and title:
+            eeat_analysis = self._analyze_eeat_with_ai('title', title)
         else:
-            self.desc = "Description is too long"
-        self.data['desc_verdict']=' | '+self.desc
-        desc_score = self.Score(max_length, desc_length)
-        self.desc_score = desc_score
+            eeat_analysis = self._fallback_eeat_analysis('title', title)
+        
+        issues = []
+        
+        # ✅ 2026 CRITICAL LENGTH CHECKS (Mobile-first)
+        if title_length == 0:
+            self.title = "Title is Empty!"
+            issues.append("❌ Empty title tag - Critical SEO issue")
+            eeat_analysis['eeat_score'] = 0
+        elif title_length < min_length:
+            self.title = "Title is too Short!"
+            issues.append(f"⚠ Title too short ({title_length} chars) - Optimal: 50-60 chars")
+            issues.append("💡 Short titles may appear incomplete in SERPs")
+        elif min_length <= title_length <= max_length:
+            self.title = "Title is Optimal!"
+        elif max_length < title_length <= 70:
+            self.title = "Title is Acceptable (may truncate on mobile)"
+            issues.append(f"⚠ Title ({title_length} chars) may truncate on mobile (60+ chars)")
+        else:
+            self.title = "Title is too Long!"
+            issues.append(f"❌ Title too long ({title_length} chars) - Will truncate in SERPs")
+            issues.append(f"💡 Recommended: Keep under 60 chars for full mobile display")
+        
+        # ✅ 2026 KEYWORD STUFFING DETECTION (Helpful Content penalty)
+        if title:
+            words = [w.lower() for w in re.findall(r'\b\w+\b', title) if len(w) > 3]
+            word_freq = {}
+            for word in words:
+                word_freq[word] = word_freq.get(word, 0) + 1
+            
+            repeated_words = [word for word, count in word_freq.items() if count > 2]
+            if repeated_words:
+                issues.append(f"❌ Keyword stuffing detected: '{', '.join(repeated_words)}' repeated {word_freq[repeated_words[0]]}+ times")
+                eeat_analysis['eeat_score'] = max(0, eeat_analysis['eeat_score'] - 20)
+        
+        # ✅ DUPLICATE TITLE CHECK (if soup has multiple pages - you'd implement)
+        # This is a placeholder for duplicate detection across your site
+        # if self._check_duplicate_title(title):
+        #     issues.append("❌ Duplicate title across site - Each page needs unique title")
+        
+        # Combine issues from AI and basic checks
+        all_issues = issues + eeat_analysis['issues']
+        
+        # Store results
+        self.data['title_verdict'] = ' | ' + self.title
+        self.title = title
+        self.data['title'] = self.title
+        self.data['title_length'] = title_length
+        self.data['title_issues'] = all_issues if all_issues else ['✅ No issues detected']
+        self.data['title_eeat_score'] = eeat_analysis['eeat_score']
+        self.data['title_eeat_signals'] = eeat_analysis['signals']
+        self.data['title_eeat_recommendations'] = eeat_analysis['recommendations']
+        self.data['title_eeat_details'] = eeat_analysis.get('details', {})
+        
+        # ✅ CALCULATE TECHNICAL SCORE (mobile-optimized formula)
+        if title_length == 0:
+            title_score = 0
+        elif min_length <= title_length <= max_length:
+            # Optimal range: 50-60 chars gets 95-100
+            ideal = 55
+            deviation = abs(title_length - ideal)
+            title_score = 100 - (deviation * 1.5)
+            title_score = max(95, min(100, title_score))
+        else:
+            title_score = self.Score(max_length, title_length)
+        
+        # ✅ COMBINE: Technical (55%) + E-E-A-T (45%) - 2026 weights
+        # E-E-A-T is now MORE important in 2026 (increased from 40% to 45%)
+        self.title_score = int((title_score * 0.55) + (eeat_analysis['eeat_score'] * 0.45))
+        
+        return title
+
+    def get_description(self, min_length=120, max_length=160, use_ai=True):
+        """
+        ✅ 2026 META DESCRIPTION OPTIMIZATION
+        - Mobile-first (120-160 chars, first 120 critical)
+        - Unique from title (duplicates ignored by Google)
+        - Clear benefit/CTA for click-through
+        """
+        meta_tags = self.soup.findAll("meta")
+        description = ""
+        
+        # Find description meta tag
+        for tag in meta_tags:
+            try:
+                if 'name' in tag.attrs and tag.attrs['name'].strip().lower() == 'description':
+                    if 'content' in tag.attrs and tag.attrs['content']:
+                        description = tag.attrs['content']
+                        break
+            except (AttributeError, KeyError):
+                continue
+        
+        # Clean description
+        self.comp_desc = self.remove_unicode_characters(description)
+        self.data['description'] = self.comp_desc if self.comp_desc else ''
+        desc_length = len(self.comp_desc)
+        
+        # ✅ AI-POWERED E-E-A-T ANALYSIS (with title context)
+        if use_ai and self.comp_desc:
+            eeat_analysis = self._analyze_eeat_with_ai('description', self.comp_desc, context=self.title)
+        else:
+            eeat_analysis = self._fallback_eeat_analysis('description', self.comp_desc)
+        
+        issues = []
+        
+        # ✅ 2026 CRITICAL CHECKS
+        if desc_length == 0:
+            self.desc = "Description Missing!"
+            issues.append("❌ CRITICAL: Missing meta description")
+            issues.append("💡 Google will auto-generate from content (often poor quality)")
+            eeat_analysis['eeat_score'] = 0
+        elif desc_length < min_length:
+            self.desc = "Description is too Short"
+            issues.append(f"⚠ Description too short ({desc_length} chars)")
+            issues.append("💡 Optimal: 150-160 chars for full mobile display")
+        elif min_length <= desc_length <= max_length:
+            self.desc = "Description is Optimal!"
+        elif max_length < desc_length <= 170:
+            self.desc = "Description is Acceptable (may truncate)"
+            issues.append(f"⚠ Description ({desc_length} chars) may truncate on mobile")
+        else:
+            self.desc = "Description is too Long!"
+            issues.append(f"❌ Description too long ({desc_length} chars) - Will truncate in SERPs")
+            issues.append("💡 Keep under 160 chars for full display")
+        
+        # ✅ CHECK FOR TITLE DUPLICATION (major 2026 issue)
+        if self.comp_desc and self.title:
+            # Check if description is just the title repeated
+            desc_lower = self.comp_desc.lower()
+            title_lower = self.title.lower()
+            
+            if desc_lower == title_lower:
+                issues.append("❌ CRITICAL: Description duplicates title exactly")
+                issues.append("💡 Google ignores duplicate descriptions - make it unique")
+                eeat_analysis['eeat_score'] = max(0, eeat_analysis['eeat_score'] - 30)
+            elif title_lower in desc_lower and len(self.comp_desc) < 100:
+                issues.append("⚠ Description mostly duplicates title")
+                issues.append("💡 Add unique value/benefit not in title")
+        
+        # Combine issues
+        all_issues = issues + eeat_analysis['issues']
+        
+        # Store results
+        self.data['desc_verdict'] = ' | ' + self.desc
+        self.data['desc_length'] = desc_length
+        self.data['desc_issues'] = all_issues if all_issues else ['✅ No issues detected']
+        self.data['desc_eeat_score'] = eeat_analysis['eeat_score']
+        self.data['desc_eeat_signals'] = eeat_analysis['signals']
+        self.data['desc_eeat_recommendations'] = eeat_analysis['recommendations']
+        self.data['desc_eeat_details'] = eeat_analysis.get('details', {})
+        
+        # ✅ CALCULATE TECHNICAL SCORE (mobile-optimized)
+        if desc_length == 0:
+            desc_score = 0
+        elif min_length <= desc_length <= max_length:
+            # Optimal: 155 chars gets 100
+            ideal = 155
+            deviation = abs(desc_length - ideal)
+            desc_score = 100 - (deviation * 1.0)
+            desc_score = max(95, min(100, desc_score))
+        else:
+            desc_score = self.Score(max_length, desc_length)
+        
+        # ✅ COMBINE: Technical (50%) + E-E-A-T (50%) - 2026 equal weight
+        # Description E-E-A-T now EQUALLY important as technical (up from 45%)
+        self.desc_score = int((desc_score * 0.50) + (eeat_analysis['eeat_score'] * 0.50))
+        
         return
 
-    def get_Heading(self, min_length=20, max_length=60):
-        Heading = ""
-        h1 = self.soup.findAll('h1')
-        if h1 == []:
-            # print("Website does'nt have H1 Heading!")
-            h2 = self.soup.findAll('h2')
-            if h2 == []:
-                pass
-                # print("Website does'nt have H2 Heading!")
-            else:
-                Heading = h2
+    def get_Heading(self, min_length=20, max_length=70, use_ai=True):
+        """
+        ✅ 2026 HEADING OPTIMIZATION
+        - Semantic HTML5 structure (WCAG 2.2 compliant)
+        - One H1 only (topic clarity)
+        - Logical hierarchy (H1 > H2 > H3)
+        - Mobile-friendly length
+        """
+        h1_tags = self.soup.findAll('h1')
+        
+        # Count all heading levels
+        h1_count = len(h1_tags) if h1_tags else 0
+        h2_count = len(self.soup.findAll('h2')) if self.soup else 0
+        h3_count = len(self.soup.findAll('h3')) if self.soup else 0
+        h4_count = len(self.soup.findAll('h4')) if self.soup else 0
+        
+        issues = []
+        
+        # ✅ 2026 CRITICAL: H1 COUNT (must be exactly 1)
+        if h1_count > 1:
+            issues.append(f"❌ CRITICAL: {h1_count} H1 tags found - Use ONLY ONE H1 per page")
+            issues.append("💡 Multiple H1s confuse topic modeling & accessibility")
+        elif h1_count == 0:
+            issues.append("❌ CRITICAL: No H1 tag found - Essential for SEO & accessibility")
+            issues.append("💡 H1 defines primary topic for Google & screen readers")
+        
+        # Determine which heading to analyze
+        heading_tags = []
+        if h1_count > 0:
+            heading_tags = h1_tags
+            self.H = "H1"
         else:
-            Heading = h1
-
-        heading = ""
-        for i in Heading:
-            heading = heading + i.get_text(strip=True)
-            if Heading == h1:
-                self.H = "H1"
-                self.comp_head = heading
-                break
-            else:
+            # Fallback to H2 if no H1
+            h2_tags = self.soup.findAll('h2')
+            if h2_tags:
+                heading_tags = h2_tags
                 self.H = "H2"
-                self.comp_head = heading
-                break
+                issues.append("⚠ Using H2 as fallback - H1 is required")
 
-        com_heading=self.remove_unicode_characters(heading)
+        # Extract heading text
+        heading_text = ""
+        if heading_tags:
+            try:
+                # Get first heading only
+                heading_text = heading_tags[0].get_text(strip=True)
+                self.comp_head = heading_text
+            except Exception as e:
+                print(f"Error extracting heading: {str(e)}")
+
+        # Clean heading
+        com_heading = self.remove_unicode_characters(heading_text)
+        com_heading = com_heading.strip()
         heading_length = len(com_heading)
-        if heading_length == 0 or heading_length== 1:
+        
+        # ✅ AI-POWERED E-E-A-T ANALYSIS (with title context)
+        if use_ai and com_heading:
+            eeat_analysis = self._analyze_eeat_with_ai('heading', com_heading, context=self.title)
+        else:
+            eeat_analysis = self._fallback_eeat_analysis('heading', com_heading)
+        
+        # ✅ TECHNICAL VALIDATION
+        if heading_length == 0:
             self.heading = "Heading Tag is Empty"
-            heading_length == 0
+            heading_length = 0
+            issues.append("❌ Empty heading tag - Bad for SEO & accessibility")
+            eeat_analysis['eeat_score'] = 0
         elif heading_length < min_length:
             self.heading = "Heading is too Short"
+            issues.append(f"⚠ Heading too short ({heading_length} chars)")
+            issues.append("💡 Optimal: 60-70 chars for clear topic description")
         elif min_length <= heading_length <= max_length:
-            self.heading = "Heading is good"
+            self.heading = "Heading is Optimal!"
         else:
-            self.heading = "Heading is too long"
-
+            self.heading = "Heading is too Long"
+            issues.append(f"⚠ Heading too long ({heading_length} chars)")
+            issues.append(f"💡 Keep under 70 chars for mobile readability")
+        
+        # ✅ 2026 CRITICAL: HEADING HIERARCHY VALIDATION (WCAG 2.2)
+        hierarchy_issues = []
+        
+        if h2_count > 0 and h1_count == 0:
+            hierarchy_issues.append("❌ H2 tags without H1 - Violates semantic structure")
+        
+        if h3_count > 0 and h2_count == 0:
+            hierarchy_issues.append("❌ H3 tags without H2 - Breaks heading hierarchy")
+        
+        if h4_count > 0 and h3_count == 0:
+            hierarchy_issues.append("❌ H4 tags without H3 - Invalid heading flow")
+        
+        if hierarchy_issues:
+            issues.extend(hierarchy_issues)
+            issues.append("💡 Fix: Ensure headings follow H1 > H2 > H3 > H4 order")
+        
+        # ✅ H1-TITLE RELATIONSHIP CHECK
+        if com_heading and self.title and self.H == "H1":
+            h1_lower = com_heading.lower()
+            title_lower = self.title.lower()
+            
+            if h1_lower == title_lower:
+                issues.append("⚠ H1 duplicates title exactly")
+                issues.append("💡 H1 should complement title with different wording")
+            
+            # Check if too different (might indicate topic mismatch)
+            common_words = set(h1_lower.split()) & set(title_lower.split())
+            if len(common_words) < 2 and len(title_lower.split()) > 3:
+                issues.append("⚠ H1 and title have minimal overlap")
+                issues.append("💡 Ensure H1 supports same topic as title")
+        
+        # Combine issues
+        all_issues = issues + eeat_analysis['issues']
+        
+        # ✅ CONTENT STRUCTURE SIGNALS (positive indicators)
+        structure_signals = []
+        if h2_count >= 3:
+            structure_signals.append(f"✓ Well-structured content ({h2_count} H2 sections)")
+        if h3_count >= 2:
+            structure_signals.append(f"✓ Detailed hierarchy ({h3_count} H3 subsections)")
+        if h1_count == 1 and h2_count >= 3 and h3_count >= 1:
+            structure_signals.append("✓ Excellent semantic structure (aids accessibility)")
+        
+        # Store results
         self.data['head_verdict'] = ' | ' + self.heading
-        if len(com_heading) ==0 or len(com_heading) ==1:
-            self.data['heading'] = ''
+        self.data['heading'] = com_heading if heading_length > 0 else ''
+        self.data['heading_length'] = heading_length
+        self.data['heading_type'] = self.H
+        self.data['h1_count'] = h1_count
+        self.data['h2_count'] = h2_count
+        self.data['h3_count'] = h3_count
+        self.data['h4_count'] = h4_count
+        self.data['heading_issues'] = all_issues if all_issues else ['✅ No issues detected']
+        self.data['heading_eeat_score'] = eeat_analysis['eeat_score']
+        self.data['heading_eeat_signals'] = eeat_analysis['signals'] + structure_signals
+        self.data['heading_eeat_recommendations'] = eeat_analysis['recommendations']
+        self.data['heading_eeat_details'] = eeat_analysis.get('details', {})
+        
+        # ✅ CALCULATE TECHNICAL SCORE
+        if h1_count == 0:
+            heading_score = max(0, self.Score(max_length, heading_length) - 40)  # Severe penalty
+        elif h1_count > 1:
+            heading_score = max(0, self.Score(max_length, heading_length) - 25)  # Moderate penalty
+        elif heading_length == 0:
+            heading_score = 0
+        elif min_length <= heading_length <= max_length:
+            # Optimal: 60-65 chars
+            ideal = 62
+            deviation = abs(heading_length - ideal)
+            heading_score = 100 - (deviation * 0.8)
+            heading_score = max(95, min(100, heading_score))
         else:
-            self.data['heading'] = com_heading
-
-        heading_score = self.Score(max_length, heading_length)
-        self.heading_score = heading_score
+            heading_score = self.Score(max_length, heading_length)
+        
+        # ✅ BONUS FOR EXCELLENT STRUCTURE
+        if h1_count == 1 and h2_count >= 3 and h3_count >= 2 and not hierarchy_issues:
+            heading_score = min(100, heading_score + 5)
+        
+        # ✅ COMBINE: Technical (50%) + E-E-A-T (50%) - 2026 equal weight
+        # Headings now have EQUAL weighting (up from 55/45)
+        self.heading_score = int((heading_score * 0.50) + (eeat_analysis['eeat_score'] * 0.50))
+        
         return
 
     def get_Google_preview(self):
-        self.avg_score = (self.title_score + self.desc_score + self.heading_score) / 3
-        self.avg_score = round(self.avg_score)
-        min = 50
-        max = 100
-        if min <= self.avg_score <= max:
-            google1 = "Google Preview is SEO Optimzed"
-            # print("Google Preview is SEO Optimzed")
-            self.data['google_verdict']=google1
-            self.data['verdict']=True
-            return 1
-        else:
-            google1 = "Google Preview is not Optimized"
-            # print("Google Preview is not Optimized")
+        """
+        ✅ 2026 COMPREHENSIVE SERP OPTIMIZATION SCORE
+        Combines: Technical SEO + E-E-A-T + Structure + Mobile-First
+        """
+        try:
+            # ✅ 2026 UPDATED WEIGHTS (Mobile-first + E-E-A-T emphasis)
+            # Technical components
+            title_weight = 0.25        # Slightly reduced (was 0.28)
+            desc_weight = 0.20         # Slightly reduced (was 0.22)
+            heading_weight = 0.15      # Reduced (was 0.18)
+            
+            # ✅ E-E-A-T components (INCREASED importance in 2026)
+            title_eeat_weight = 0.15   # Increased (was 0.12)
+            desc_eeat_weight = 0.15    # Increased (was 0.12)
+            heading_eeat_weight = 0.10 # Increased (was 0.08)
+            
+            # Total: 100% (25+20+15+15+15+10 = 100)
+            
+            weighted_score = (
+                (self.title_score * title_weight) +
+                (self.desc_score * desc_weight) +
+                (self.heading_score * heading_weight) +
+                (self.data.get('title_eeat_score', 50) * title_eeat_weight) +
+                (self.data.get('desc_eeat_score', 50) * desc_eeat_weight) +
+                (self.data.get('heading_eeat_score', 50) * heading_eeat_weight)
+            )
+            
+            bonus = 0
+            
+            # ✅ PERFECT TECHNICAL BONUS
+            if self.title_score >= 90 and self.desc_score >= 90:
+                bonus += 3
+            
+            # ✅ E-E-A-T EXCELLENCE BONUS (2026 priority)
+            avg_eeat = (
+                self.data.get('title_eeat_score', 0) + 
+                self.data.get('desc_eeat_score', 0) + 
+                self.data.get('heading_eeat_score', 0)
+            ) / 3
+            
+            if avg_eeat >= 85:
+                bonus += 7  # Increased bonus (was 5)
+            elif avg_eeat >= 70:
+                bonus += 4  # Increased bonus (was 3)
+            
+            # ✅ SEMANTIC STRUCTURE BONUS (WCAG 2.2 + Accessibility)
+            if self.data.get('h1_count') == 1:
+                bonus += 3  # Increased (was 2)
+            
+            if (self.data.get('h2_count', 0) >= 3 and 
+                self.data.get('h3_count', 0) >= 2 and
+                self.data.get('h1_count') == 1):
+                bonus += 4  # Excellent hierarchy (was 3)
+            
+            # ✅ MOBILE-FIRST BONUS
+            mobile_ready = (
+                20 <= self.data.get('title_length', 0) <= 60 and
+                120 <= self.data.get('desc_length', 0) <= 160 and
+                20 <= self.data.get('heading_length', 0) <= 70
+            )
+            if mobile_ready:
+                bonus += 3  # All elements mobile-optimized
+            
+            # Calculate final score
+            self.avg_score = round(weighted_score + bonus)
+            self.avg_score = max(0, min(100, self.avg_score))
+            
+            # ✅ STORE DETAILED E-E-A-T BREAKDOWN
+            self.data['eeat_breakdown'] = {
+                'title_eeat': self.data.get('title_eeat_score', 0),
+                'description_eeat': self.data.get('desc_eeat_score', 0),
+                'heading_eeat': self.data.get('heading_eeat_score', 0),
+                'average_eeat': round(avg_eeat, 1),
+                'trust_level': 'high' if avg_eeat >= 75 else 'medium' if avg_eeat >= 50 else 'low',
+                'helpful_content_ready': avg_eeat >= 70  # 2026 threshold
+            }
+            
+        except Exception as e:
+            print(f"Error calculating optimization score: {str(e)}")
+            self.avg_score = 0
+            avg_eeat = 0
+        
+        # ✅ 2026 THRESHOLDS (raised for higher quality bar)
+        excellent = 88  # Raised from 85
+        good = 70       # Raised from 65
+        
+        recommendations = []
+        
+        # Collect all AI recommendations
+        ai_recs = (
+            self.data.get('title_eeat_recommendations', []) +
+            self.data.get('desc_eeat_recommendations', []) +
+            self.data.get('heading_eeat_recommendations', [])
+        )
+        
+        # Remove duplicates from AI recommendations
+        ai_recs = list(dict.fromkeys(ai_recs))
+        
+        # ✅ DETERMINE VERDICT & RECOMMENDATIONS
+        if self.avg_score >= excellent:
+            google1 = "🏆 Excellent - SERP Optimized (2026 Standards)"
             self.data['google_verdict'] = google1
-            return 0
+            self.data['verdict'] = True
+            self.data['optimization_level'] = 'Excellent'
+            
+            # Even excellent pages can improve
+            if avg_eeat < 90:
+                recommendations.append("💡 Consider: Further E-E-A-T enhancement for YMYL topics")
+            
+            return_val = 1
+            
+        elif self.avg_score >= good:
+            google1 = "✅ Good - Well Optimized"
+            self.data['google_verdict'] = google1
+            self.data['verdict'] = True
+            self.data['optimization_level'] = 'Good'
+            
+            # Priority recommendations for good pages
+            if avg_eeat < 70:
+                recommendations.append("🎯 PRIORITY: Improve E-E-A-T signals (currently below 2026 threshold)")
+            
+            if self.title_score < 80:
+                recommendations.append("⚡ Optimize title: Add year/brand/expertise marker")
+            
+            if self.desc_score < 80:
+                recommendations.append("⚡ Improve description: Add specific benefit/CTA")
+            
+            # Add top AI recommendations
+            recommendations.extend(ai_recs[:3])
+            
+            return_val = 1
+            
+        else:
+            google1 = "⚠️ Needs Optimization"
+            self.data['google_verdict'] = google1
+            self.data['verdict'] = False
+            self.data['optimization_level'] = 'Needs Improvement'
+            
+            # ✅ CRITICAL FIXES FIRST
+            critical_issues = []
+            
+            if self.data.get('h1_count', 0) == 0:
+                critical_issues.append("🚨 CRITICAL: Add H1 tag (essential for SEO)")
+            elif self.data.get('h1_count', 0) > 1:
+                critical_issues.append("🚨 CRITICAL: Remove extra H1 tags (use only ONE)")
+            
+            if self.data.get('title_length', 0) == 0:
+                critical_issues.append("🚨 CRITICAL: Add page title")
+            
+            if self.data.get('desc_length', 0) == 0:
+                critical_issues.append("🚨 CRITICAL: Add meta description")
+            
+            # Add critical issues first
+            recommendations.extend(critical_issues)
+            
+            # ✅ TECHNICAL FIXES (if no critical issues)
+            if not critical_issues:
+                if self.title_score < 70:
+                    recommendations.append("⚡ Fix title: Optimize length (50-60 chars) + add freshness")
+                
+                if self.desc_score < 70:
+                    recommendations.append("⚡ Fix description: 150-160 chars + unique from title")
+                
+                if self.heading_score < 70:
+                    recommendations.append("⚡ Fix heading: Ensure ONE H1 + proper hierarchy")
+            
+            # ✅ E-E-A-T RECOMMENDATIONS (2026 priority)
+            if avg_eeat < 60:
+                recommendations.append("🛡️ E-E-A-T CRITICAL: See AI analysis below for expertise signals")
+                recommendations.append("💡 Add: Author attribution, dates, credentials, data/stats")
+            
+            # Add top AI recommendations
+            recommendations.extend(ai_recs[:6])
+            
+            return_val = 0
+        
+        # ✅ REMOVE DUPLICATES (preserve order)
+        seen = set()
+        unique_recs = []
+        for rec in recommendations:
+            if rec not in seen:
+                seen.add(rec)
+                unique_recs.append(rec)
+        
+        # Limit to top 10 recommendations
+        self.data['recommendations'] = unique_recs[:10] if unique_recs else ['✅ No major issues - maintain optimization']
+        
+        # ✅ ADD MOBILE-FIRST SCORE
+        self.data['mobile_optimized'] = (
+            20 <= self.data.get('title_length', 0) <= 60 and
+            120 <= self.data.get('desc_length', 0) <= 160
+        )
+        
+        # ✅ ADD ACCESSIBILITY SCORE
+        self.data['accessibility_ready'] = (
+            self.data.get('h1_count') == 1 and
+            self.data.get('heading_length', 0) > 0
+        )
+        
+        return return_val
+
+    def get_grammar_analysis(self):
+        """
+        ✅ Spelling & Grammar Analysis with File-Based Custom Dictionaries
+        Loads custom words from external files for easy management
+        """
+        import re
+        import os
+        from collections import Counter
+        
+        try:
+            from spellchecker import SpellChecker
+        except ImportError:
+            print("Warning: pyspellchecker not installed. Run: pip install pyspellchecker")
+            self._set_empty_grammar_data()
+            return None
+        
+        # Extract visible text from soup
+        if not self.soup:
+            self._set_empty_grammar_data()
+            return None
+        
+        # Remove script and style elements
+        for script in self.soup(["script", "style", "noscript"]):
+            script.decompose()
+        
+        # Get text content
+        try:
+            text = self.soup.get_text(separator=' ', strip=True)
+            text = self.remove_unicode_characters(text)
+        except Exception as e:
+            print(f"Error extracting text for grammar analysis: {str(e)}")
+            self._set_empty_grammar_data()
+            return None
+        
+        if not text or len(text.strip()) < 50:
+            self.data['grammar_verdict'] = 'Insufficient content for analysis'
+            self.data['grammar_score'] = 0
+            self.data['spelling_errors'] = []
+            self.data['grammar_issues'] = ['Content too short for meaningful analysis']
+            self.data['readability_score'] = 0
+            self.data['grammar_recommendations'] = ['Add more content (minimum 50 characters)']
+            return None
+        
+        # Initialize tracking
+        spelling_errors = []
+        grammar_issues = []
+        recommendations = []
+        total_deductions = 0
+        
+        # Clean text for analysis
+        sentences = re.split(r'[.!?]+', text)
+        sentences = [s.strip() for s in sentences if s.strip()]
+        words = re.findall(r'\b[a-zA-Z]+\b', text)
+        words_lower = [w.lower() for w in words]
+        
+        # --- LOAD CUSTOM DICTIONARIES FROM FILES ---
+        spell = SpellChecker()
+        
+        # ✅ Load custom words from external files
+        custom_words = self._load_custom_dictionaries()
+        
+        # Add custom words to spell checker
+        if custom_words:
+            spell.word_frequency.load_words(custom_words)
+        
+        # Filter words to check
+        words_to_check = []
+        for word in words:
+            word_lower = word.lower()
+            
+            # Skip if already in custom dictionary
+            if word_lower in custom_words:
+                continue
+            
+            # Skip various patterns
+            if (len(word) < 3 or 
+                word.isupper() or 
+                any(c.isdigit() for c in word) or
+                any(c.isupper() for c in word[1:]) or
+                word.endswith("'s") or
+                "'" in word or
+                word.isdigit()):
+                continue
+                
+            # Skip common URL parts
+            if word_lower in ['www', 'http', 'https', 'com', 'net', 'org', 'io', 'co', 'pk', 'edu', 'gov']:
+                continue
+                
+            words_to_check.append(word_lower)
+        
+        # Find misspelled words
+        misspelled = spell.unknown(words_to_check)
+        
+        # ✅ Filter out proper nouns (capitalized words)
+        original_words_set = set(words)
+        filtered_misspelled = []
+        
+        for word in misspelled:
+            capitalized_version = word.capitalize()
+            if capitalized_version in original_words_set or word.upper() in original_words_set:
+                continue
+            filtered_misspelled.append(word)
+        
+        # Get corrections for misspelled words (limit to top 10)
+        spelling_errors_with_buttons = []
+        for word in list(filtered_misspelled)[:10]:
+            correction = spell.correction(word)
+            if correction and correction != word:
+                count = words_lower.count(word)
+                
+                # Check similarity to avoid bad suggestions
+                if len(word) > 4 and len(correction) > 4:
+                    common_chars = set(word) & set(correction)
+                    if len(common_chars) < len(word) * 0.5:
+                        continue
+                
+                # Create error dict with word for button functionality
+                if count > 1:
+                    display_text = f"'{word}' → '{correction}' ({count} occurrences)"
+                else:
+                    display_text = f"'{word}' → '{correction}'"
+                
+                spelling_errors_with_buttons.append({
+                    'word': word,
+                    'suggestion': correction,
+                    'count': count,
+                    'display': display_text
+                })
+                total_deductions += 2 * count
+
+        if len(filtered_misspelled) > 10:
+            spelling_errors_with_buttons.append({
+                'display': f"... and {len(filtered_misspelled) - 10} more potential spelling issues",
+                'word': None,
+                'suggestion': None,
+                'count': 0
+            })
+
+        # Store with button data
+        if not spelling_errors_with_buttons:
+            spelling_errors_with_buttons = [{
+                'display': '✓ No spelling errors detected',
+                'word': None,
+                'suggestion': None,
+                'count': 0
+            }]
+
+        self.data['spelling_errors'] = spelling_errors_with_buttons
+        # --- GRAMMAR CHECKS ---
+        
+        # 1. Repeated words
+        word_pairs = [' '.join(words_lower[i:i+2]) for i in range(len(words_lower)-1)]
+        repeated = [pair.split()[0] for pair in word_pairs if len(pair.split()) == 2 and pair.split()[0] == pair.split()[1]]
+        if repeated:
+            unique_repeated = list(set(repeated))[:5]
+            grammar_issues.append(f"Repeated words detected: {', '.join(unique_repeated)}")
+            total_deductions += len(set(repeated)) * 3
+        
+        # 2. Sentence length analysis
+        long_sentences = [s for s in sentences if len(s.split()) > 30]
+        if long_sentences:
+            count = len(long_sentences)
+            grammar_issues.append(f"{count} overly long sentence(s) detected (>30 words)")
+            recommendations.append("Break long sentences for better readability")
+            total_deductions += count * 2
+        
+        short_sentences = [s for s in sentences if 0 < len(s.split()) < 5]
+        if len(short_sentences) > len(sentences) * 0.3 and len(sentences) > 5:
+            grammar_issues.append("Too many short sentences - affects flow")
+            recommendations.append("Combine short sentences for better rhythm")
+            total_deductions += 3
+        
+        # 3. Passive voice detection
+        passive_indicators = ['is being', 'was being', 'has been', 'have been', 
+                            'had been', 'will be', 'is done', 'was done', 'were being']
+        text_lower = text.lower()
+        passive_count = sum(text_lower.count(indicator) for indicator in passive_indicators)
+        if passive_count > 3:
+            grammar_issues.append(f"Excessive passive voice detected ({passive_count} instances)")
+            recommendations.append("Use active voice for stronger, clearer writing")
+            total_deductions += passive_count
+        
+        # 4. Capitalization issues
+        sentences_text = '. '.join(sentences)
+        lowercase_starts = len(re.findall(r'\.\s+[a-z]', sentences_text))
+        if lowercase_starts > 0:
+            grammar_issues.append(f"{lowercase_starts} sentence(s) start with lowercase")
+            total_deductions += lowercase_starts * 2
+        
+        # 5. Multiple punctuation
+        multi_punct = len(re.findall(r'[!?]{2,}', text))
+        if multi_punct > 0:
+            grammar_issues.append("Multiple exclamation/question marks detected")
+            recommendations.append("Use single punctuation marks for professionalism")
+            total_deductions += multi_punct * 2
+        
+        # 6. Common grammar mistakes
+        grammar_patterns = {
+            r'\b(your)\s+(welcome)\b': "Use \"you're welcome\" (contraction of 'you are')",
+            r'\b(should|could|would)\s+(of)\b': "Use 'have' instead of 'of' (should have, could have, would have)",
+            r'\b(alot)\b': "Use 'a lot' (two words)",
+            r'\bthere\s+(own|coming|going)\b': "Consider if 'their' or 'they're' is correct here",
+        }
+        
+        for pattern, suggestion in grammar_patterns.items():
+            matches = re.findall(pattern, text_lower)
+            if matches:
+                grammar_issues.append(f"{suggestion} - {len(matches)} instance(s)")
+                total_deductions += len(matches) * 2
+        
+        # 7. Missing spaces after punctuation
+        no_space_after_punct = len(re.findall(r'[.,;:][a-zA-Z]', text))
+        if no_space_after_punct > 2:
+            grammar_issues.append(f"Missing space after punctuation ({no_space_after_punct} instances)")
+            total_deductions += no_space_after_punct
+        
+        # 8. Double spaces
+        double_spaces = len(re.findall(r'\s{2,}', text))
+        if double_spaces > 2:
+            grammar_issues.append(f"Multiple spaces detected ({double_spaces} instances)")
+            total_deductions += 1
+        
+        # --- READABILITY ANALYSIS ---
+        if words and sentences:
+            avg_word_length = sum(len(w) for w in words) / len(words)
+            avg_sentence_length = len(words) / len(sentences)
+            
+            syllable_estimate = sum(max(1, len(re.findall(r'[aeiou]+', w.lower()))) for w in words)
+            syllables_per_word = syllable_estimate / len(words)
+            
+            readability_score = 206.835 - 1.015 * avg_sentence_length - 84.6 * syllables_per_word
+            readability_score = max(0, min(100, readability_score))
+            
+            if readability_score < 50:
+                recommendations.append("Simplify language for better readability")
+                total_deductions += 2
+            elif readability_score > 80:
+                recommendations.append("✓ Excellent readability - text is easy to understand")
+        else:
+            readability_score = 50
+        
+        # --- SEO RECOMMENDATIONS ---
+        if len(words) < 300:
+            recommendations.append("Consider adding more content (aim for 300+ words for SEO)")
+        
+        if not spelling_errors and not grammar_issues:
+            recommendations.append("✓ Excellent writing quality - no issues detected")
+        
+        if len(spelling_errors) == 0:
+            recommendations.append("✓ No spelling errors found")
+        
+        if passive_count == 0:
+            recommendations.append("✓ Good use of active voice")
+        
+        # --- CALCULATE FINAL SCORE ---
+        grammar_score = max(0, min(100, 100 - total_deductions))
+        
+        if grammar_score >= 90:
+            verdict = "✓ Excellent - Professional writing quality"
+        elif grammar_score >= 75:
+            verdict = "✓ Good - Minor improvements possible"
+        elif grammar_score >= 60:
+            verdict = "⚠️ Fair - Several issues to address"
+        else:
+            verdict = "❌ Poor - Significant writing issues detected"
+        
+        # Store results
+        self.data['grammar_verdict'] = verdict
+        self.data['grammar_score'] = round(grammar_score, 1)
+        self.data['spelling_errors'] = spelling_errors if spelling_errors else ['✓ No spelling errors detected']
+        self.data['grammar_issues'] = grammar_issues if grammar_issues else ['✓ No grammar issues detected']
+        self.data['readability_score'] = round(readability_score, 1)
+        self.data['grammar_recommendations'] = recommendations if recommendations else ['✓ Content quality is excellent']
+        
+        return True
+
+
+    def _load_custom_dictionaries(self):
+        """
+        ✅ Load custom words from external dictionary files
+        Returns a set of all custom words
+        """
+        import os
+        
+        custom_words = set()
+        
+        # Define dictionary directory
+        dict_dir = os.path.join(os.path.dirname(__file__), 'dictionaries')
+        
+        # Create directory if it doesn't exist
+        if not os.path.exists(dict_dir):
+            os.makedirs(dict_dir)
+            print(f"Created dictionaries directory: {dict_dir}")
+        
+        # List of dictionary files to load
+        dict_files = [
+            'custom_dictionary.txt',
+            'tech_terms.txt',
+            'brand_names.txt',
+            'pakistani_locations.txt',
+            'user_ignored_words.txt'
+        ]
+        
+        # Load each dictionary file
+        for filename in dict_files:
+            filepath = os.path.join(dict_dir, filename)
+            
+            # Create file with sample content if it doesn't exist
+            if not os.path.exists(filepath):
+                self._create_sample_dictionary(filepath, filename)
+            
+            # Load words from file
+            try:
+                with open(filepath, 'r', encoding='utf-8') as f:
+                    for line in f:
+                        line = line.strip().lower()
+                        # Skip empty lines and comments
+                        if line and not line.startswith('#'):
+                            custom_words.add(line)
+            except Exception as e:
+                print(f"Warning: Could not load dictionary file {filename}: {str(e)}")
+        
+        return custom_words
+
+
+    def _create_sample_dictionary(self, filepath, filename):
+        """
+        ✅ Create sample dictionary files with common words
+        """
+        sample_content = {
+            'custom_dictionary.txt': '''# Common abbreviations and contractions
+    doesn
+    isn
+    wasn
+    hasn
+    haven
+    didn
+    wouldn
+    shouldn
+    couldn
+    aren
+    weren
+    won
+    don
+    ll
+    ve
+    re
+    ''',
+            'tech_terms.txt': '''# Technology and programming terms
+    app
+    apps
+    api
+    apis
+    css
+    html
+    javascript
+    js
+    python
+    reactjs
+    nodejs
+    github
+    docker
+    kubernetes
+    mongodb
+    postgresql
+    frontend
+    backend
+    fullstack
+    devops
+    seo
+    ui
+    ux
+    admin
+    analytics
+    shopify
+    wordpress
+    blockchain
+    saas
+    ''',
+            'brand_names.txt': '''# Company and product names
+    google
+    facebook
+    twitter
+    instagram
+    linkedin
+    amazon
+    microsoft
+    apple
+    shopify
+    stripe
+    paypal
+    zoom
+    slack
+    tabnine
+    copilot
+    ''',
+            'pakistani_locations.txt': '''# Pakistani cities and locations
+    karachi
+    lahore
+    islamabad
+    rawalpindi
+    faisalabad
+    multan
+    peshawar
+    quetta
+    hyderabad
+    sindh
+    punjab
+    balochistan
+    kpk
+    pakistan
+    pakistani
+    shahrah
+    clifton
+    defence
+    gulshan
+    saddar
+    ''',
+            'user_ignored_words.txt': '''# Words marked as correct by users
+    # This file is auto-updated when users click "Not a mistake"
+    # Add your custom words below:
+    codup
+    '''
+        }
+        
+        try:
+            with open(filepath, 'w', encoding='utf-8') as f:
+                content = sample_content.get(filename, '# Custom dictionary words\n# Add one word per line\n')
+                f.write(content)
+            print(f"Created sample dictionary: {filepath}")
+        except Exception as e:
+            print(f"Warning: Could not create dictionary file {filename}: {str(e)}")
+
+
+    @require_POST
+    def add_to_dictionary(request):
+        try:
+            data = json.loads(request.body)
+            word = data.get('word', '').strip().lower()
+            
+            if not word:
+                return JsonResponse({'success': False, 'error': 'No word provided'})
+            
+            # Path to user dictionary
+            dict_dir = os.path.join(os.path.dirname(__file__), 'dictionaries')
+            filepath = os.path.join(dict_dir, 'user_ignored_words.txt')
+            
+            # Create directory if needed
+            os.makedirs(dict_dir, exist_ok=True)
+            
+            # Check if word already exists
+            existing_words = set()
+            if os.path.exists(filepath):
+                with open(filepath, 'r', encoding='utf-8') as f:
+                    existing_words = {line.strip().lower() for line in f if line.strip() and not line.startswith('#')}
+            
+            # Add word if not present
+            if word not in existing_words:
+                with open(filepath, 'a', encoding='utf-8') as f:
+                    f.write(f'\n{word}')
+                
+                return JsonResponse({
+                    'success': True, 
+                    'word': word,
+                    'message': f"'{word}' added to dictionary"
+                })
+            else:
+                return JsonResponse({
+                    'success': True, 
+                    'word': word,
+                    'message': f"'{word}' already in dictionary"
+                })
+                
+        except Exception as e:
+            return JsonResponse({
+                'success': False, 
+                'error': str(e)
+            })
+
+
+    def _set_empty_grammar_data(self):
+        """Helper to set empty grammar data"""
+        self.data['grammar_verdict'] = 'Analysis unavailable'
+        self.data['grammar_score'] = 0
+        self.data['spelling_errors'] = []
+        self.data['grammar_issues'] = []
+        self.data['readability_score'] = 0
+        self.data['grammar_recommendations'] = []
 
     def Keyword_Density(self):
-        # All content of webpage
-        content1 = re.sub(r'[-\r\n,0123456789|!&()@#$%^*/{}+=:]', '', self.soup.get_text())
+        """
+        ✅ MODERNIZED: Semantic keyword analysis for 2024 SEO
+        """
+        
+        for script in self.soup(["script", "style", "noscript", "iframe"]):
+            script.decompose()
+        
+        visible_text = self.soup.get_text(separator=' ', strip=True)
+        
+        content1 = re.sub(r'[0-9|!&()@#$%^*/{}+=:;"\[\]<>?~`]', ' ', visible_text)
+        content1 = re.sub(r'[-]{2,}', ' ', content1)
+        content1 = re.sub(r'[_]{2,}', ' ', content1)
+        
         content = self.remove_unicode_characters(content1)
-        result1 = content.lower().split()
-
-        # If website have keywords
+        content = re.sub(r'\s+', ' ', content).strip()
+        
+        all_words = content.lower().split()
+        
         meta = self.soup.findAll("meta")
         keyword = ""
-        result = ""
+        meta_keywords_found = False
+        
         for tag in meta:
-            if 'name' in tag.attrs.keys() and tag.attrs['name'].strip().lower() in ['keyword']:
-                keyword = keyword + tag.attrs['content']
-            elif 'name' in tag.attrs.keys() and tag.attrs['name'].strip().lower() in ['keywords']:
-                keyword = keyword + tag.attrs['content']
-        if keyword == "":
-            result = result1
-
-        else:
-            content1 = re.sub(r'[-\r\n,0123456789|.!&()@#$%^*/{}+=]', '', keyword)
-            content=self.remove_unicode_characters(content1)
-            res = content.lower().split(' ')
-            result = []
-            for i in res:
-                a = i.split(',')
-                result += a
-            result += result1
-        dict_c = dict()
-        extra_words =  ['all','not','have', 'from', 'the', 'and','are','...','ours','for','will'
-                       'our', 'your','how', 'where', 'why', 'what', 'with','only','may','can','you',
-                       'more','any','does','its','new','minute']
-
-        result = [i for i in result if len(i) > 2 and not any(j in i for j in ["..."])]
-        for i in result:
-            if i in dict_c or i in extra_words:
-                pass
-            else:
-                dict_c[i.lower()] = result1.count(i.lower())
-        k = Counter(dict_c)
-        high = k.most_common(5)
-        density_dict = {}
-        if len(high) >= 5:
-            if high[0][1] <= 1:
-                self.data['density'] = "Website doesn't give access to crawl the keywords!"
-                return
-        else:
-            self.data['density'] = "Website doesn't give access to crawl the keywords!"
+            try:
+                if 'name' in tag.attrs.keys() and tag.attrs['name'].strip().lower() in ['keyword', 'keywords']:
+                    if 'content' in tag.attrs:
+                        keyword = keyword + tag.attrs['content']
+                        meta_keywords_found = True
+            except (AttributeError, KeyError):
+                continue
+        
+        if meta_keywords_found:
+            self.data['meta_keywords_warning'] = "Meta keywords tag detected but ignored by Google since 2009"
+        
+        result = all_words
+        
+        if len(result) < 50:
+            self.data['density'] = "Insufficient content for keyword analysis (minimum 50 words required)"
+            self.data['word_count'] = len(result)
+            self.data['content_quality'] = 'Too Short'
             return
-        self.keyword_lst.append(high[0][0])
-        self.keyword_lst.append(high[1][0])
-        for i in high:
-            density = (i[1] / len(result1)) * 100
-            density=round(density,2)
-            density_dict[i[0]]="Count:"+str(i[1]),"Density:"+str(density)+"%"
-        self.data['density_dict']=density_dict
-
-
-
-
-        self.conversion = dict(high)
+        
+        extra_words = {
+            'a', 'an', 'the', 'this', 'that', 'these', 'those',
+            'i', 'you', 'he', 'she', 'it', 'we', 'they', 'me', 'him', 'her', 'us', 'them',
+            'my', 'your', 'his', 'her', 'its', 'our', 'their', 'mine', 'yours', 'hers', 'ours', 'theirs',
+            'myself', 'yourself', 'himself', 'herself', 'itself', 'ourselves', 'themselves',
+            'in', 'on', 'at', 'to', 'for', 'of', 'from', 'with', 'without', 'by', 'about', 'into',
+            'through', 'during', 'before', 'after', 'above', 'below', 'between', 'under', 'over',
+            'and', 'or', 'but', 'nor', 'so', 'yet', 'if', 'when', 'where', 'while', 'because',
+            'is', 'am', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had',
+            'do', 'does', 'did', 'will', 'would', 'shall', 'should', 'may', 'might', 'must',
+            'can', 'could',
+            'not', 'no', 'yes', 'very', 'too', 'so', 'just', 'only', 'even', 'also', 'both',
+            'more', 'most', 'less', 'least', 'much', 'many', 'few', 'some', 'any', 'all',
+            'each', 'every', 'either', 'neither', 'other', 'another',
+            'what', 'when', 'where', 'which', 'who', 'whom', 'whose', 'why', 'how',
+            'here', 'there', 'now', 'then', 'than', 'as', 'such', 'like', 'well',
+            'up', 'down', 'out', 'off', 'back', 'home', 'page', 'new', 'old',
+            'one', 'two', 'first', 'second', 'third', 'next', 'last', 'ago', 'today',
+            'minute', 'minutes', 'hour', 'hours', 'day', 'days', 'week', 'month', 'year',
+            'get', 'got', 'make', 'made', 'go', 'going', 'gone', 'come', 'came',
+            'know', 'see', 'saw', 'take', 'took', 'give', 'find', 'tell', 'ask',
+            'use', 'used', 'way', 'said', 'say',
+            'click', 'please', 'read', 'learn', 'view', 'copyright', 'rights', 'reserved',
+            'privacy', 'policy', 'terms', 'conditions', 'cookies', 'accept',
+            '...', '--', '–', '—', '»', '«', '›', '‹'
+        }
+        
+        filtered_words = [
+            word for word in result 
+            if len(word) >= 3 
+            and word not in extra_words
+            and word.isalpha()
+            and not word.startswith(('http', 'www'))
+        ]
+        
+        if len(filtered_words) < 10:
+            self.data['density'] = "Insufficient meaningful content for analysis"
+            self.data['word_count'] = len(all_words)
+            self.data['filtered_word_count'] = len(filtered_words)
+            self.data['content_quality'] = 'Low Quality'
+            return
+        
+        dict_c = Counter(filtered_words)
+        high = dict_c.most_common(10)
+        
+        if len(high) < 5:
+            self.data['density'] = "Insufficient keyword diversity for analysis"
+            self.data['content_quality'] = 'Low Diversity'
+            return
+        
+        if high[0][1] < 3:
+            self.data['density'] = "Content lacks topical focus - no clear keyword themes detected"
+            self.data['content_quality'] = 'Unfocused'
+            self.data['top_keyword_count'] = high[0][1]
+            return
+        
+        density_dict = {}
+        semantic_analysis = {}
+        
+        total_meaningful_words = len(filtered_words)
+        total_all_words = len(all_words)
+        
+        if len(high) >= 2:
+            self.keyword_lst.append(high[0][0])
+            self.keyword_lst.append(high[1][0])
+        
+        top_5_total = sum([count for word, count in high[:5]])
+        topic_concentration = (top_5_total / total_meaningful_words) * 100
+        
+        for i, (word, count) in enumerate(high[:10]):
+            density_percent = (count / total_meaningful_words) * 100
+            
+            if density_percent > 4.0:
+                usage_verdict = "⚠️ Overused - Risk of keyword stuffing"
+            elif density_percent > 2.5:
+                usage_verdict = "⚠️ High usage - Monitor for naturalness"
+            elif density_percent >= 1.0:
+                usage_verdict = "✓ Optimal - Natural usage"
+            elif density_percent >= 0.5:
+                usage_verdict = "✓ Good - Supporting keyword"
+            else:
+                usage_verdict = "Low - Minor relevance"
+            
+            density_dict[word] = {
+                "count": count,
+                "density": f"{density_percent:.2f}%",
+                "usage": usage_verdict,
+                "rank": i + 1
+            }
+        
+        self.data['density_dict'] = density_dict
+        self.data['total_words'] = total_all_words
+        self.data['meaningful_words'] = total_meaningful_words
+        self.data['unique_keywords'] = len(dict_c)
+        self.data['keyword_diversity'] = round((len(dict_c) / total_meaningful_words) * 100, 2)
+        
+        if topic_concentration > 30:
+            concentration_verdict = "⚠️ High - Content may lack depth or be overly repetitive"
+        elif topic_concentration > 20:
+            concentration_verdict = "⚠️ Moderate-High - Consider broadening topical coverage"
+        elif topic_concentration >= 10:
+            concentration_verdict = "✓ Good - Focused content with clear topics"
+        else:
+            concentration_verdict = "⚠️ Low - Content may lack focus or be too broad"
+        
+        self.data['topic_concentration'] = f"{topic_concentration:.2f}%"
+        self.data['topic_concentration_verdict'] = concentration_verdict
+        
+        if total_all_words < 300:
+            content_quality = "Thin Content - Increase word count to 500+ for better rankings"
+        elif total_all_words < 500:
+            content_quality = "Short Content - Consider expanding to 800+ words"
+        elif total_all_words < 800:
+            content_quality = "Moderate Content - Good for basic pages"
+        elif total_all_words < 1500:
+            content_quality = "Good Content Depth - Suitable for most topics"
+        elif total_all_words < 2500:
+            content_quality = "Excellent Content Depth - Strong for competitive topics"
+        else:
+            content_quality = "Comprehensive Content - Excellent for authority building"
+        
+        self.data['content_quality'] = content_quality
+        
+        stuffing_indicators = []
+        
+        for word, count in high[:10]:
+            density = (count / total_meaningful_words) * 100
+            if density > 4.0:
+                stuffing_indicators.append(f"'{word}' appears {count} times ({density:.1f}% density)")
+        
+        if high[0][1] / total_meaningful_words > 0.05:
+            stuffing_indicators.append(f"Top keyword '{high[0][0]}' dominates content")
+        
+        if stuffing_indicators:
+            self.data['keyword_stuffing_risk'] = "⚠️ HIGH - " + "; ".join(stuffing_indicators)
+        else:
+            self.data['keyword_stuffing_risk'] = "✓ Low - Natural keyword usage detected"
+        
+        recommendations = []
+        
+        if total_all_words < 500:
+            recommendations.append("Increase content to minimum 500 words for better topical coverage")
+        
+        if len(dict_c) < 50:
+            recommendations.append("Expand vocabulary diversity for better semantic relevance")
+        
+        if topic_concentration > 25:
+            recommendations.append("Reduce keyword repetition and add supporting LSI keywords")
+        
+        if any(density > 4.0 for word, density in [(w, (c/total_meaningful_words)*100) for w, c in high[:5]]):
+            recommendations.append("Reduce primary keyword usage to under 4% density")
+        
+        if len(high) >= 2:
+            top_two_ratio = high[0][1] / high[1][1] if high[1][1] > 0 else 0
+            if top_two_ratio > 3:
+                recommendations.append("Balance keyword distribution - top keyword used 3x more than second")
+        
+        self.data['seo_recommendations'] = recommendations if recommendations else ["✓ Keyword usage appears natural and well-balanced"]
+        
+        self.conversion = dict(high[:5])
         self.lst = list(self.conversion)
-        # print('con',self.conversion)
+        
+        issues = len(stuffing_indicators) + len(recommendations)
+        
+        if issues == 0 and total_all_words >= 500:
+            self.data['density'] = "✓ Excellent - Natural keyword usage with good content depth"
+        elif issues <= 2 and total_all_words >= 300:
+            self.data['density'] = "✓ Good - Minor improvements recommended"
+        else:
+            self.data['density'] = "⚠️ Needs Optimization - See recommendations for improvements"
+        
+        return
 
     def get_missing_alt(self):
-        alt=""
-        for image in self.soup.find_all('img'):
-            # print(self.total_count)
+        """
+        ✅ MODERNIZED: Image accessibility and SEO optimization
+        Modern Google heavily weighs image accessibility (alt attributes)
+        - Missing alt = accessibility issue + SEO penalty
+        - Empty alt is valid for decorative images
+        - Descriptive alt text helps image search rankings
+        """
+        alt = ""
+        images_found = self.soup.find_all('img')
+        
+        if not images_found:
+            self.data['alt_check'] = 0
+            self.data['alt_links'] = "No images found on page"
+            self.data['alt_verdict'] = "✓ No images to optimize"
+            self.alt_count = 0
+            return
+        
+        total_images = len(images_found)
+        missing_alt_images = []
+        
+        for image in images_found:
             try:
-                if image['alt'] == "":
-                    alt+= str(self.alt_count+1)+")"+str(image)+"\n"
+                # ✅ Check if alt attribute exists
+                if 'alt' not in image.attrs:
+                    # Missing alt attribute entirely - Critical SEO issue
+                    missing_alt_images.append(image)
+                    alt += f"{self.alt_count + 1}) {str(image)}\n"
                     self.alt_count += 1
-            #                     print(image)
-            except:
-                image in self.soup
-                alt += str(self.alt_count + 1) + ")" + str(image) + "\n"
+                elif image.get('alt', '').strip() == "":
+                    # ✅ Empty alt is acceptable for decorative images (WCAG compliant)
+                    # Only flag if image has src (actual image, not placeholder)
+                    if image.get('src'):
+                        missing_alt_images.append(image)
+                        alt += f"{self.alt_count + 1}) {str(image)}\n"
+                        self.alt_count += 1
+            except Exception as e:
+                # ✅ Handle malformed image tags
+                print(f"Error processing image tag: {str(e)}")
+                missing_alt_images.append(image)
+                alt += f"{self.alt_count + 1}) {str(image)}\n"
                 self.alt_count += 1
-        #                 print(image)
-        self.data['alt_check']=self.alt_count
-        self.data['alt_links']=alt
-        # print("Missing Image ALT Attribute:", self.alt_count)
-        #         Img_score=(self.alt_count/self.total_count)*100
-        # #         Img_score =round(Img_score)
-        #         self.Img_score= Img_score
-        #         print(self.Img_score)
+        
+        # ✅ Calculate image optimization score
+        if total_images > 0:
+            optimized_images = total_images - self.alt_count
+            optimization_percentage = (optimized_images / total_images) * 100
+            self.data['image_optimization'] = round(optimization_percentage, 2)
+        else:
+            self.data['image_optimization'] = 100
+        
+        self.data['alt_check'] = self.alt_count
+        self.data['total_images'] = total_images
+        self.data['alt_links'] = alt if alt else "✓ All images have alt attributes"
+        
+        # ✅ Modern SEO verdict
+        if self.alt_count == 0:
+            self.data['alt_verdict'] = f"✓ Excellent - All {total_images} images have alt attributes"
+        elif self.alt_count <= total_images * 0.2:  # Less than 20% missing
+            self.data['alt_verdict'] = f"⚠️ Good - {self.alt_count} of {total_images} images missing alt text"
+        elif self.alt_count <= total_images * 0.5:  # Less than 50% missing
+            self.data['alt_verdict'] = f"⚠️ Needs Improvement - {self.alt_count} of {total_images} images missing alt text"
+        else:
+            self.data['alt_verdict'] = f"❌ Critical - {self.alt_count} of {total_images} images missing alt text (Accessibility & SEO issue)"
+        
         return
+
 
     def get_links(self):
-        external_links=""
-        internal_links=""
-        pageurl = self.url
-        pageurl1 = pageurl.replace("www.", "")
-        pageurl2 = pageurl.replace("https", "http")
-        pageurl3 = pageurl2.replace("www.", "")
-        pageurl4 = pageurl.replace("com/", "com")
-
+        """
+        ✅ MODERNIZED: Accurate internal vs external link detection
+        Fixed major logic flaws in original code:
+        - Now works with subpage URLs (not just homepage)
+        - Uses proper URL parsing (not string matching)
+        - Correctly identifies internal/external links
+        - Handles relative URLs properly
+        """
+        external_links = ""
+        internal_links = ""
+        
+        # ✅ Use normalized base URL and domain from __init__
+        base_url = self.base_url  # e.g., https://example.com
+        domain = self.domain      # e.g., example.com
+        
         links = self.soup.findAll('a')
-        if len(links) ==1:
-            for i in links:
-                href_link= i.get("href")
-                if href_link == None:
-                    self.internal_links="Not Allow to Scrap!"
-                    self.external_links="Not Allow to Scrap!"
-        for i in links:
-            href_link = i.get("href")
+        
+        # ✅ Reset counters (they might be initialized as 0 or string)
+        self.internal_links = 0
+        self.external_links = 0
+        
+        if len(links) == 0:
+            self.data['Internal_links'] = 0
+            self.data['External_links'] = 0
+            self.data['i_url'] = "No links found on page"
+            self.data['e_url'] = "No links found on page"
+            self.data['links_verdict'] = "⚠️ No links found - Consider adding internal linking"
+            return
+        
+        # ✅ Track link quality metrics
+        broken_links = 0
+        nofollow_count = 0
+        
+        for link in links:
             try:
-                if href_link == "":
-                    pass
-                elif href_link.startswith(pageurl) or href_link.startswith(pageurl3) or href_link.startswith(
-                        pageurl2) or href_link.startswith(pageurl1) or href_link.startswith(
-                        "/") or href_link.startswith("#"):
-                    # print("i",href_link)
+                href_link = link.get("href", "").strip()
+                
+                # ✅ Skip empty or None hrefs
+                if not href_link or href_link == "":
+                    continue
+                
+                # ✅ Skip javascript: and mailto: links
+                if href_link.startswith(('javascript:', 'mailto:', 'tel:')):
+                    continue
+                
+                # ✅ Check if link is nofollow (SEO metric)
+                rel = link.get('rel', [])
+                if 'nofollow' in rel or 'nofollow' in str(rel).lower():
+                    nofollow_count += 1
+                
+                # ✅ Handle anchor links (same page navigation)
+                if href_link.startswith('#'):
                     self.internal_links += 1
-                    internal_links+=f"{self.internal_links}){href_link}\n"
-
-                elif href_link.startswith("http") is False or href_link.startswith(pageurl4):
-                    # print("i",href_link)
+                    internal_links += f"{self.internal_links}) {href_link} (anchor link)\n"
+                    continue
+                
+                # ✅ Handle relative URLs (internal by definition)
+                if href_link.startswith('/'):
                     self.internal_links += 1
-                    internal_links += f"{self.internal_links}){href_link}\n"
-
+                    full_url = urljoin(base_url, href_link)
+                    internal_links += f"{self.internal_links}) {full_url}\n"
+                    continue
+                
+                # ✅ Handle protocol-relative URLs (//example.com)
+                if href_link.startswith('//'):
+                    href_link = 'https:' + href_link
+                
+                # ✅ Parse URL to check domain
+                try:
+                    parsed_href = urlparse(href_link)
+                    
+                    # ✅ Relative URL without leading slash (e.g., "about.html")
+                    if not parsed_href.netloc:
+                        self.internal_links += 1
+                        full_url = urljoin(self.final_url, href_link)
+                        internal_links += f"{self.internal_links}) {full_url}\n"
+                        continue
+                    
+                    # ✅ Compare domains (handle www and non-www)
+                    link_domain = parsed_href.netloc.lower()
+                    site_domain = domain.lower()
+                    
+                    # Remove www for comparison
+                    link_domain_clean = link_domain.replace('www.', '')
+                    site_domain_clean = site_domain.replace('www.', '')
+                    
+                    if link_domain_clean == site_domain_clean:
+                        # Internal link
+                        self.internal_links += 1
+                        internal_links += f"{self.internal_links}) {href_link}\n"
+                    else:
+                        # External link
+                        self.external_links += 1
+                        external_links += f"{self.external_links}) {href_link}\n"
+                        
+                except Exception as e:
+                    # ✅ If URL parsing fails, treat as internal (safer)
+                    print(f"Error parsing URL {href_link}: {str(e)}")
+                    self.internal_links += 1
+                    internal_links += f"{self.internal_links}) {href_link} (parse error)\n"
+                    
+            except Exception as e:
+                print(f"Error processing link: {str(e)}")
+                continue
+        
+        # ✅ Store results
+        self.data['Internal_links'] = self.internal_links
+        self.data['External_links'] = self.external_links
+        self.data['i_url'] = internal_links if internal_links else "No internal links found"
+        self.data['e_url'] = external_links if external_links else "No external links found"
+        self.data['total_links'] = self.internal_links + self.external_links
+        self.data['nofollow_links'] = nofollow_count
+        
+        # ✅ Modern SEO analysis
+        total_links = self.internal_links + self.external_links
+        
+        if total_links == 0:
+            links_verdict = "⚠️ No links found - Add internal linking for better SEO"
+        elif self.internal_links == 0:
+            links_verdict = "⚠️ No internal links - Add internal linking structure"
+        elif self.internal_links < 3:
+            links_verdict = "⚠️ Low internal linking - Increase to improve site structure"
+        else:
+            # ✅ Check internal to external ratio
+            if self.external_links == 0:
+                links_verdict = f"✓ Good - {self.internal_links} internal links found"
+            else:
+                ratio = self.internal_links / self.external_links
+                if ratio >= 2:
+                    links_verdict = f"✓ Excellent - Good internal/external ratio ({self.internal_links}:{self.external_links})"
+                elif ratio >= 1:
+                    links_verdict = f"✓ Good - Balanced linking ({self.internal_links}:{self.external_links})"
                 else:
-                    # print("e",href_link)
-                    self.external_links += 1
-                    external_links += f"{self.external_links}){href_link}\n"
-
-            except:
-                pass
-        self.data['Internal_links']=self.internal_links
-        self.data['External_links']=self.external_links
-        self.data['i_url']=internal_links
-        self.data['e_url'] = external_links
-        # print("Internal Links :", self.internal_links)
-        # print("External_links :", self.external_links)
+                    links_verdict = f"⚠️ More external than internal links ({self.internal_links}:{self.external_links}) - Consider more internal linking"
+        
+        self.data['links_verdict'] = links_verdict
+        
         return
+
 
     def get_Status(self):
-        statuses = {200: "Website Available", 301: "Permanent Redirect", 302: "Temporary Redirect", 404: "Not Found",
-                    500: "Internal Server Error", 503: "Service Unavailable", 403: "Forbidden"}
+        """
+        ✅ MODERNIZED: Enhanced HTTP status code detection
+        - Uses existing session (no new session creation)
+        - Provides detailed status information
+        - Tracks redirect chains
+        """
+        statuses = {
+            200: "Website Available",
+            201: "Created",
+            204: "No Content",
+            301: "Permanent Redirect",
+            302: "Temporary Redirect",
+            303: "See Other",
+            304: "Not Modified",
+            307: "Temporary Redirect",
+            308: "Permanent Redirect",
+            400: "Bad Request",
+            401: "Unauthorized",
+            403: "Forbidden",
+            404: "Not Found",
+            405: "Method Not Allowed",
+            408: "Request Timeout",
+            410: "Gone",
+            429: "Too Many Requests",
+            500: "Internal Server Error",
+            502: "Bad Gateway",
+            503: "Service Unavailable",
+            504: "Gateway Timeout"
+        }
+        
         try:
-            web_response = requests.get(self.url)
-            status=web_response.status_code, statuses[web_response.status_code]
-            self.data['status']=status
-        except:
-            status="No Status Found!"
-            self.data['status']=status
-            # print("No Status")
+            # ✅ Use existing session from __init__ (already has User-Agent)
+            web_response = self.session.get(self.url, timeout=30, allow_redirects=True)
+            status_code = web_response.status_code
+            status_text = statuses.get(status_code, "Unknown Status")
+            
+            # ✅ Format status for display
+            status = f"{status_code} - {status_text}"
+            self.data['status'] = status
+            self.data['status_code'] = status_code
+            
+            # ✅ Provide SEO verdict based on status
+            if status_code == 200:
+                self.data['status_verdict'] = "✓ Excellent - Page loads successfully"
+            elif status_code in [301, 302, 307, 308]:
+                self.data['status_verdict'] = f"⚠️ Redirect detected - Consider fixing redirect chain"
+                # Track redirect URL if available
+                if hasattr(self, 'redirect_url') and self.redirect_url:
+                    self.data['redirected_to'] = self.redirect_url
+            elif status_code == 404:
+                self.data['status_verdict'] = "❌ Critical - Page not found (404 error)"
+            elif status_code >= 500:
+                self.data['status_verdict'] = "❌ Critical - Server error detected"
+            elif status_code >= 400:
+                self.data['status_verdict'] = "⚠️ Client error - Page may not be accessible"
+            else:
+                self.data['status_verdict'] = "✓ Page accessible"
+                
+        except requests.exceptions.Timeout:
+            status = "Timeout - Server took too long to respond"
+            self.data['status'] = status
+            self.data['status_code'] = 0
+            self.data['status_verdict'] = "⚠️ Timeout error - Check server performance"
+        except requests.exceptions.ConnectionError:
+            status = "Connection Error - Cannot reach server"
+            self.data['status'] = status
+            self.data['status_code'] = 0
+            self.data['status_verdict'] = "❌ Cannot connect to server"
+        except Exception as e:
+            status = f"Error: {str(e)}"
+            self.data['status'] = status
+            self.data['status_code'] = 0
+            self.data['status_verdict'] = "⚠️ Status check failed"
+            print(f"Status check error: {str(e)}")
+        
         return
 
-    def Score_Graph(self,name,tag,score):
-        # data
-        if name == 'Alt_Image':
-            if score<=50:
-                shape1='rgba(0,0,0,0)'
-                shape2='red'
-            else:
-                shape1='red'
-                shape2='rgba(0,0,0,0)'
-        else:
-            if score<=50:
-                shape1='rgba(0,0,0,0)'
-                shape2='red'
-            else:
-                shape1='green'
-                shape2='rgba(0,0,0,0)'
-        df = pd.DataFrame({'values' :[100-score,score]})
 
-        # plotly
-        fig = px.pie(df, values ='values', hole = 0.7,
-                     color_discrete_sequence = [shape1,shape2],title=name+'Score',width=350,height=350)
-
-        fig.data[0].textfont.color = 'white'
-        # fig.show()
-        fig.write_image(tag)
+    def Score_Graph(self, name, tag, score):
+        """
+        ✅ MODERNIZED: Score visualization with better error handling
+        - Added validation for score values
+        - Better color coding for modern SEO metrics
+        - Error handling for file operations
+        """
+        try:
+            # ✅ Validate score is within 0-100 range
+            score = max(0, min(100, score))
+            
+            # ✅ Determine colors based on metric type
+            if name == 'Alt_Image':
+                # For alt images, lower is better (fewer missing alts)
+                if score <= 50:
+                    shape1 = 'rgba(0,0,0,0)'
+                    shape2 = 'red'
+                else:
+                    shape1 = 'red'
+                    shape2 = 'rgba(0,0,0,0)'
+            else:
+                # For other metrics, higher is better
+                if score <= 50:
+                    shape1 = 'rgba(0,0,0,0)'
+                    shape2 = 'red'
+                else:
+                    shape1 = 'green'
+                    shape2 = 'rgba(0,0,0,0)'
+            
+            # ✅ Create DataFrame
+            df = pd.DataFrame({'values': [100 - score, score]})
+            
+            # ✅ Create plotly chart
+            fig = px.pie(
+                df,
+                values='values',
+                hole=0.7,
+                color_discrete_sequence=[shape1, shape2],
+                title=name + ' Score',
+                width=350,
+                height=350
+            )
+            
+            fig.data[0].textfont.color = 'white'
+            
+            # ✅ Save with error handling
+            try:
+                fig.write_image(tag)
+            except Exception as e:
+                print(f"Error saving chart image {tag}: {str(e)}")
+                # ✅ Try alternative format if image save fails
+                try:
+                    html_tag = tag.replace('.png', '.html').replace('.jpg', '.html')
+                    fig.write_html(html_tag)
+                    print(f"Saved as HTML instead: {html_tag}")
+                except Exception as e2:
+                    print(f"Could not save chart in any format: {str(e2)}")
+            
+        except Exception as e:
+            print(f"Error creating score graph for {name}: {str(e)}")
+        
         return
 
-        # Structured Analysis
 
     def check_robot_txt(self):
-        if self.url.endswith('/'):
-            path = self.url
-        else:
-            path = self.url + '/'
-        session = requests.Session()
-        req = session.get(path + "robots.txt", headers={"User-Agent": "Mozila/5.0"}).text
-        format_robot = "User-agent: *"
+        """
+        ✅ MODERNIZED: Robots.txt detection for all page types
+        - Works with subpages (uses base_url, not current page URL)
+        - Uses existing session
+        - Better validation
+        - Modern SEO recommendations
+        """
+        try:
+            # ✅ CRITICAL FIX: Use base_url for robots.txt (always at domain root)
+            # Original code would check /page/subpage/robots.txt which is wrong
+            robots_url = self.base_url.rstrip('/') + '/robots.txt'
+            
+            # ✅ Use existing session from __init__
+            try:
+                req = self.session.get(robots_url, timeout=10)
+                req_text = req.text
+                
+                # ✅ Better validation of robots.txt format
+                # Check for valid User-agent directive
+                valid_patterns = [
+                    "User-agent:",
+                    "user-agent:",
+                    "USER-AGENT:",
+                    "Disallow:",
+                    "Allow:",
+                    "Sitemap:"
+                ]
+                
+                is_valid = any(pattern in req_text for pattern in valid_patterns)
+                
+                if req.status_code == 200 and is_valid:
+                    robot_verdict = "✓ Found - Website has robots.txt file"
+                    self.robot_flag = True
+                    
+                    # ✅ Additional analysis
+                    if "Disallow: /" in req_text and "User-agent: *" in req_text:
+                        robot_verdict += " (Warning: Site is blocking all crawlers)"
+                        
+                    # Check for sitemap reference
+                    if "Sitemap:" in req_text or "sitemap:" in req_text:
+                        self.data['robots_has_sitemap'] = True
+                        
+                else:
+                    robot_verdict = "⚠️ Not Found - Consider adding robots.txt file"
+                    self.robot_flag = False
+                    
+            except requests.exceptions.RequestException as e:
+                robot_verdict = "⚠️ Not Found - Consider adding robots.txt file"
+                self.robot_flag = False
+                print(f"Error checking robots.txt: {str(e)}")
+                
+        except Exception as e:
+            robot_verdict = "⚠️ Error checking robots.txt"
+            self.robot_flag = False
+            print(f"Unexpected error in robots.txt check: {str(e)}")
+        
+        self.data['robot'] = robot_verdict
+        self.data['robots_url'] = robots_url if 'robots_url' in locals() else None
+        
+        return
 
-        if req.startswith(format_robot) or format_robot in req:
-            robot_verdict="Found! Website have robot.txt file."
-            self.robot_flag = True
-        else:
-            robot_verdict = "Not Found! Website don't have robot.txt file."
-        self.data['robot']=robot_verdict
 
     def get_sitemap(self):
-        if self.url.endswith('/'):
-            path = self.url
-        else:
-            path = self.url + '/'
-        session = requests.Session()
-        req = session.get(path + "sitemap.xml", headers={"User-Agent": "Mozila/5.0"}).text
-        format_sitemap = "sitemap.xml"
-        if format_sitemap in req:
-            #         print(req)
-            sitemap_verdict="Found! Website have sitemap."
-            self.data['sitemap'] = sitemap_verdict
-        else:
-            req = session.get(path + "sitemaps/sitemap.xml", headers={"User-Agent": "Mozila/5.0"}).text
-            if format_sitemap in req:
-                sitemap_verdict = "Found! Website have sitemap."
-                self.sitemap_flag = True
-                self.data['sitemap'] = sitemap_verdict
-            else:
-                # print("Sitemap not found!")
-                sitemap_verdict = "Not Found! Website don't have sitemap."
-                self.data['sitemap'] = sitemap_verdict
-
-    def get_broken_links(self):
-        Broken_links = ""
-        # Create a requests session to reuse the same TCP connection for multiple requests
-        session = requests.Session()
-        # Make a request to the URL
-        response = session.get(self.url, headers={"User-Agent": "Mozila/5.0"})
-        soup = BeautifulSoup(response.text, "html.parser")
-        links = soup.find_all("a")
-        count=1
-        for link in links:
-            href = link.get("href")
-            if href == None:
-                pass
-            elif href.startswith("http"):
+        """
+        ✅ MODERNIZED: Comprehensive sitemap detection
+        - Works with subpages (uses base_url)
+        - Checks multiple common sitemap locations
+        - Validates sitemap XML format
+        - Uses existing session
+        """
+        try:
+            # ✅ CRITICAL FIX: Use base_url (sitemaps always at domain root)
+            base = self.base_url.rstrip('/')
+            
+            # ✅ Common sitemap locations to check (in priority order)
+            sitemap_paths = [
+                '/sitemap.xml',
+                '/sitemap_index.xml',
+                '/sitemap1.xml',
+                '/sitemaps/sitemap.xml',
+                '/sitemap/sitemap.xml'
+            ]
+            
+            sitemap_found = False
+            sitemap_location = None
+            
+            for path in sitemap_paths:
                 try:
-                    # Make a request to the link using the same session object
-                    statusCode = requests.get(href, headers={"User-Agent": "Mozila/5.0"}).status_code
-                    if statusCode != 200:
-                        self.b_links = self.b_links+1
-                        Broken_links+=f"{count})Broken link: {href}\n"
-                        count+=1
+                    sitemap_url = base + path
+                    req = self.session.get(sitemap_url, timeout=10)
+                    req_text = req.text
+                    
+                    # ✅ Better validation - check for XML sitemap format
+                    valid_sitemap = (
+                        req.status_code == 200 and
+                        (
+                            '<urlset' in req_text or
+                            '<sitemapindex' in req_text or
+                            'sitemap.xml' in req_text.lower()
+                        ) and
+                        ('<?xml' in req_text or '<urlset' in req_text or '<sitemapindex' in req_text)
+                    )
+                    
+                    if valid_sitemap:
+                        sitemap_found = True
+                        sitemap_location = sitemap_url
+                        self.sitemap_flag = True
+                        
+                        # ✅ Count URLs in sitemap for additional insight
+                        url_count = req_text.count('<loc>')
+                        sitemap_index_count = req_text.count('<sitemap>')
+                        
+                        if sitemap_index_count > 0:
+                            sitemap_verdict = f"✓ Found - Sitemap index with {sitemap_index_count} sitemaps at {path}"
+                        elif url_count > 0:
+                            sitemap_verdict = f"✓ Found - Sitemap with {url_count} URLs at {path}"
+                        else:
+                            sitemap_verdict = f"✓ Found - Sitemap at {path}"
+                        
+                        break
+                        
                 except requests.exceptions.RequestException:
-                    Broken_links+=f"{count})Error connecting to link: {href}\n"
-                    count+=1
-        self.data['b_links']=self.b_links
-        self.data['b_url']=Broken_links
+                    continue
+                except Exception as e:
+                    print(f"Error checking sitemap at {path}: {str(e)}")
+                    continue
+            
+            if not sitemap_found:
+                sitemap_verdict = "⚠️ Not Found - Consider adding XML sitemap for better crawlability"
+                self.sitemap_flag = False
+                
+                # ✅ Provide helpful recommendation
+                sitemap_verdict += " (Recommended: /sitemap.xml)"
+                
+        except Exception as e:
+            sitemap_verdict = "⚠️ Error checking sitemap"
+            self.sitemap_flag = False
+            print(f"Unexpected error in sitemap check: {str(e)}")
+        
+        self.data['sitemap'] = sitemap_verdict
+        self.data['sitemap_location'] = sitemap_location if sitemap_found else None
+        
         return
+
+    def get_broken_links(self, max_workers: int = 10, timeout: int = 8) -> Dict[str, any]:
+        """
+        ✅ MODERNIZED: Comprehensive broken link checker
+        - Concurrent link checking for performance
+        - Distinguishes internal vs external broken links
+        - Tracks 403 restricted links separately
+        - Provides SEO-focused recommendations
+        - Handles relative URLs properly
+        
+        Modern SEO Impact:
+        - Internal broken links = Critical SEO issue (crawlability)
+        - External broken links = User experience issue
+        - Excessive redirects = Page speed penalty
+        """
+        broken_links = []
+        restricted_links = []
+        working_links = []
+        
+        try:
+            # ✅ Use existing soup from __init__ if available
+            if hasattr(self, 'soup') and self.soup:
+                soup = self.soup
+            else:
+                response = self.session.get(self.url, timeout=10)
+                soup = BeautifulSoup(response.text, "html.parser")
+        except Exception as e:
+            self.data.update({
+                'b_links': 0,
+                'b_url': f"Error fetching main page: {str(e)}",
+                'b_verdict': "Unable to check links"
+            })
+            return self.data
+        
+        links = soup.find_all("a", href=True)
+        total_links = len(links)
+        
+        if total_links == 0:
+            self.data.update({
+                'b_links': 0,
+                'b_url': "No links found on this page.",
+                'b_verdict': "✓ No links to check"
+            })
+            return self.data
+        
+        # ✅ Get unique URLs and resolve relative URLs
+        unique_urls = set()
+        link_map = {}  # Map URL to anchor text
+        
+        for link in links:
+            href = link.get("href", "").strip()
+            if not href:
+                continue
+            
+            # ✅ Skip non-HTTP links (javascript:, mailto:, tel:, etc.)
+            if href.startswith(('javascript:', 'mailto:', 'tel:', '#')):
+                continue
+            
+            # ✅ Resolve relative URLs to absolute
+            if href.startswith('/'):
+                href = urljoin(self.base_url, href)
+            elif not href.startswith(('http://', 'https://')):
+                # Relative URL without leading slash
+                href = urljoin(self.final_url, href)
+            
+            # ✅ Only check HTTP(S) URLs
+            if href.startswith(('http://', 'https://')):
+                anchor = link.get_text(strip=True) or "[No Text]"
+                unique_urls.add(href)
+                if href not in link_map:
+                    link_map[href] = anchor
+        
+        if len(unique_urls) == 0:
+            self.data.update({
+                'b_links': 0,
+                'b_url': "No external links found to check.",
+                'b_verdict': "✓ No external links"
+            })
+            return self.data
+        
+        print(f"Checking {len(unique_urls)} unique links out of {total_links} total links...")
+        
+        def check_link(url: str) -> Optional[Dict]:
+            """Check individual link status with improved error handling."""
+            anchor_text = link_map.get(url, "[No Text]")
+            
+            # ✅ Determine if internal or external using proper domain comparison
+            try:
+                url_domain = urlparse(url).netloc.lower().replace('www.', '')
+                site_domain = self.domain.lower().replace('www.', '')
+                link_type = "internal" if url_domain == site_domain else "external"
+            except:
+                link_type = "external"
+            
+            try:
+                start_time = time.time()
+                # ✅ Use HEAD first (faster), fallback to GET if needed
+                try:
+                    r = self.session.head(
+                        url, 
+                        timeout=timeout, 
+                        allow_redirects=True
+                    )
+                    # Some servers don't support HEAD, check status
+                    if r.status_code == 405 or r.status_code == 501:
+                        # Method not allowed, try GET
+                        r = self.session.get(
+                            url, 
+                            timeout=timeout, 
+                            allow_redirects=True,
+                            stream=True
+                        )
+                        r.close()
+                except:
+                    # Fallback to GET
+                    r = self.session.get(
+                        url, 
+                        timeout=timeout, 
+                        allow_redirects=True,
+                        stream=True
+                    )
+                    r.close()
+                
+                response_time = round((time.time() - start_time) * 1000, 2)
+                redirects = len(r.history)
+                
+                # ✅ Handle 403 specially (restricted, not broken)
+                if r.status_code == 403:
+                    return {
+                        "url": url,
+                        "status": 403,
+                        "reason": "Forbidden / Access Restricted",
+                        "anchor_text": anchor_text,
+                        "type": link_type,
+                        "response_time": f"{response_time} ms",
+                        "restricted": True,
+                        "is_broken": False,
+                        "redirects": redirects
+                    }
+                
+                # ✅ Consider 200-299 as success
+                if 200 <= r.status_code < 300:
+                    # ✅ Warn about excessive redirects (SEO issue)
+                    if redirects > 3:
+                        return {
+                            "url": url,
+                            "status": r.status_code,
+                            "reason": f"⚠️ Excessive Redirects ({redirects}x)",
+                            "anchor_text": anchor_text,
+                            "type": link_type,
+                            "response_time": f"{response_time} ms",
+                            "restricted": False,
+                            "is_broken": True,  # Too many redirects is an issue
+                            "redirects": redirects
+                        }
+                    # Working link
+                    return {
+                        "url": url,
+                        "status": r.status_code,
+                        "reason": "OK" + (f" (Redirected {redirects}x)" if redirects > 0 else ""),
+                        "anchor_text": anchor_text,
+                        "type": link_type,
+                        "response_time": f"{response_time} ms",
+                        "restricted": False,
+                        "is_broken": False,
+                        "redirects": redirects
+                    }
+                
+                # ✅ Any other status is considered broken
+                status_reasons = {
+                    404: "Not Found",
+                    410: "Gone (Permanently Deleted)",
+                    500: "Internal Server Error",
+                    502: "Bad Gateway",
+                    503: "Service Unavailable",
+                    504: "Gateway Timeout"
+                }
+                reason = status_reasons.get(r.status_code, r.reason)
+                
+                return {
+                    "url": url,
+                    "status": r.status_code,
+                    "reason": reason + (f" (Redirected {redirects}x)" if redirects > 0 else ""),
+                    "anchor_text": anchor_text,
+                    "type": link_type,
+                    "response_time": f"{response_time} ms",
+                    "restricted": False,
+                    "is_broken": True,
+                    "redirects": redirects
+                }
+                
+            except requests.exceptions.SSLError:
+                return {
+                    "url": url,
+                    "status": "SSL Error",
+                    "reason": "SSL Certificate Error",
+                    "anchor_text": anchor_text,
+                    "type": link_type,
+                    "response_time": "-",
+                    "restricted": False,
+                    "is_broken": True,
+                    "redirects": 0
+                }
+            except requests.exceptions.Timeout:
+                return {
+                    "url": url,
+                    "status": "Timeout",
+                    "reason": f"Connection timed out ({timeout}s)",
+                    "anchor_text": anchor_text,
+                    "type": link_type,
+                    "response_time": "-",
+                    "restricted": False,
+                    "is_broken": True,
+                    "redirects": 0
+                }
+            except requests.exceptions.ConnectionError:
+                return {
+                    "url": url,
+                    "status": "Connection Error",
+                    "reason": "Unable to establish connection",
+                    "anchor_text": anchor_text,
+                    "type": link_type,
+                    "response_time": "-",
+                    "restricted": False,
+                    "is_broken": True,
+                    "redirects": 0
+                }
+            except Exception as e:
+                return {
+                    "url": url,
+                    "status": "Error",
+                    "reason": str(e)[:100],
+                    "anchor_text": anchor_text,
+                    "type": link_type,
+                    "response_time": "-",
+                    "restricted": False,
+                    "is_broken": True,
+                    "redirects": 0
+                }
+        
+        # ✅ Check links concurrently for performance
+        try:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+                results = list(executor.map(check_link, unique_urls))
+        except Exception as e:
+            print(f"Error in concurrent link checking: {str(e)}")
+            results = [check_link(url) for url in unique_urls]  # Fallback to sequential
+        
+        # ✅ Categorize results
+        for result in results:
+            if result is None:
+                continue
+            if result.get("restricted"):
+                restricted_links.append(result)
+            elif result.get("is_broken"):
+                broken_links.append(result)
+            else:
+                working_links.append(result)
+        
+        # ✅ Calculate statistics
+        total_broken = len(broken_links)
+        total_working = len(working_links)
+        internal_broken = sum(1 for link in broken_links if link["type"] == "internal")
+        external_broken = sum(1 for link in broken_links if link["type"] == "external")
+        
+        # ✅ Group errors by type for better analysis
+        error_groups = {
+            "404": [],
+            "500": [],
+            "SSL": [],
+            "Timeout": [],
+            "Connection": [],
+            "Redirects": [],
+            "Other": []
+        }
+        
+        for link in broken_links:
+            status = str(link["status"])
+            if "404" in status or "410" in status:
+                error_groups["404"].append(link)
+            elif "500" in status or "502" in status or "503" in status or "504" in status:
+                error_groups["500"].append(link)
+            elif "SSL" in status:
+                error_groups["SSL"].append(link)
+            elif "Timeout" in status:
+                error_groups["Timeout"].append(link)
+            elif "Connection" in status:
+                error_groups["Connection"].append(link)
+            elif "Redirects" in link.get("reason", ""):
+                error_groups["Redirects"].append(link)
+            else:
+                error_groups["Other"].append(link)
+        
+        # ✅ Modern SEO verdict with priority for internal broken links
+        if total_broken == 0 and len(restricted_links) == 0:
+            verdict = "✓ Perfect - No broken links detected"
+        elif internal_broken > 0:
+            verdict = f"❌ Critical - {internal_broken} internal broken link(s) detected (High SEO Impact)"
+        elif total_broken <= 3:
+            verdict = f"⚠️ Minor - {total_broken} external broken link(s) found"
+        else:
+            verdict = f"❌ High Priority - {total_broken} broken links detected (Fix for better UX)"
+        
+        # ✅ Format output
+        formatted_broken = "\n".join([
+            f"{i+1}) [{link['type'].upper()}] {link['url']}\n"
+            f"   Status: {link['status']} - {link['reason']}\n"
+            f"   Anchor: {link['anchor_text']}\n"
+            f"   Response Time: {link['response_time']}"
+            for i, link in enumerate(broken_links[:50])
+        ]) if broken_links else "No broken links found."
+        
+        formatted_restricted = "\n".join([
+            f"{i+1}) [{link['type'].upper()}] {link['url']}\n"
+            f"   Status: {link['status']} - {link['reason']}\n"
+            f"   Anchor: {link['anchor_text']}"
+            for i, link in enumerate(restricted_links[:20])
+        ]) if restricted_links else "No restricted links found."
+        
+        # ✅ Calculate link health score
+        health_score = round((total_working / len(unique_urls) * 100), 1) if unique_urls else 0
+        
+        # ✅ Store comprehensive data
+        self.b_links = total_broken  # For backward compatibility
+        
+        self.data.update({
+            'b_links': total_broken,
+            'b_url': formatted_broken,
+            'b_verdict': verdict,
+            'total_links_checked': len(unique_urls),
+            'working_links': total_working,
+            'internal_broken': internal_broken,
+            'external_broken': external_broken,
+            'restricted_links_count': len(restricted_links),
+            'restricted_links': formatted_restricted,
+            'link_health_score': health_score,
+            'broken_summary': {
+                "404 Not Found": len(error_groups["404"]),
+                "500 Server Error": len(error_groups["500"]),
+                "SSL Error": len(error_groups["SSL"]),
+                "Timeout": len(error_groups["Timeout"]),
+                "Connection Error": len(error_groups["Connection"]),
+                "Excessive Redirects": len(error_groups["Redirects"]),
+                "Other": len(error_groups["Other"])
+            },
+            'checked_at': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            'broken_links_detail': broken_links[:20],
+            'priority_fixes': [link for link in broken_links if link["type"] == "internal"]
+        })
+        
+        return self.data
+
 
     def get_schema(self):
-        session_obj = requests.Session()
-        response = session_obj.get(self.url, headers={"User-Agent": "Mozilla/5.0"}).text
-        soup = BeautifulSoup(response, 'html.parser')
-        tag = soup.findAll('script')
-        content = ""
-        for i in tag:
-            content += str(i)
-        content = content.split(' ')
-
-        for i in content:
-            if "schema.org" in i or 'yoast-schema-graph' in i:
-                self.schema_flag = True
-                schema_verdict="Found! Website have Schema.org."
-                self.data['schema']=schema_verdict
-                # print("Schema.org found!")
-                return
+        """
+        ✅ MODERNIZED: Schema.org structured data detection
+        - Uses existing soup (no new session)
+        - Detects JSON-LD, Microdata, and RDFa formats
+        - Identifies specific schema types
+        - Provides modern SEO recommendations
+        
+        Modern SEO Impact:
+        - Schema.org = Rich snippets in SERPs
+        - Critical for: Local Business, Products, Articles, Events, FAQs
+        """
+        try:
+            # ✅ Use existing soup from __init__
+            if not hasattr(self, 'soup') or not self.soup:
+                try:
+                    response = self.session.get(self.url, timeout=10)
+                    soup = BeautifulSoup(response.text, 'html.parser')
+                except Exception as e:
+                    self.data['schema'] = f"Error checking schema: {str(e)}"
+                    self.schema_flag = False
+                    return
             else:
-                pass
-        schema_verdict = "Not Found! Website don't have Schema.org."
-        self.data['schema'] = schema_verdict
-        # print("Not found!")
+                soup = self.soup
+            
+            schema_types = []
+            schema_formats = []
+            
+            # ✅ Method 1: JSON-LD (Modern preferred method)
+            json_ld_scripts = soup.find_all('script', type='application/ld+json')
+            if json_ld_scripts:
+                schema_formats.append("JSON-LD")
+                for script in json_ld_scripts:
+                    try:
+                        schema_data = json.loads(script.string)
+                        # Extract @type
+                        if isinstance(schema_data, dict):
+                            schema_type = schema_data.get('@type', '')
+                            if schema_type:
+                                schema_types.append(schema_type)
+                            # Handle @graph
+                            if '@graph' in schema_data:
+                                for item in schema_data['@graph']:
+                                    if isinstance(item, dict) and '@type' in item:
+                                        schema_types.append(item['@type'])
+                        elif isinstance(schema_data, list):
+                            for item in schema_data:
+                                if isinstance(item, dict) and '@type' in item:
+                                    schema_types.append(item['@type'])
+                    except json.JSONDecodeError:
+                        pass
+            
+            # ✅ Method 2: Check for schema.org in any script or meta tags
+            all_scripts = soup.find_all('script')
+            for script in all_scripts:
+                script_text = script.string if script.string else ""
+                if 'schema.org' in script_text:
+                    self.schema_flag = True
+                    if "JSON-LD" not in schema_formats:
+                        schema_formats.append("Embedded")
+                if 'yoast-schema-graph' in str(script.get('class', [])):
+                    self.schema_flag = True
+                    schema_formats.append("Yoast SEO")
+            
+            # ✅ Method 3: Microdata (itemscope, itemtype)
+            microdata_items = soup.find_all(attrs={"itemtype": True})
+            if microdata_items:
+                schema_formats.append("Microdata")
+                self.schema_flag = True
+                for item in microdata_items:
+                    itemtype = item.get('itemtype', '')
+                    if 'schema.org' in itemtype:
+                        type_name = itemtype.split('/')[-1]
+                        schema_types.append(type_name)
+            
+            # ✅ Method 4: RDFa (vocab attribute)
+            rdfa_items = soup.find_all(attrs={"vocab": True})
+            if rdfa_items:
+                for item in rdfa_items:
+                    if 'schema.org' in item.get('vocab', ''):
+                        schema_formats.append("RDFa")
+                        self.schema_flag = True
+            
+            # ✅ Generate verdict
+            if self.schema_flag:
+                # Remove duplicates and format
+                schema_types = list(set(schema_types))
+                schema_formats = list(set(schema_formats))
+                
+                schema_verdict = f"✓ Found - Schema.org structured data detected"
+                
+                if schema_formats:
+                    schema_verdict += f" ({', '.join(schema_formats)})"
+                
+                if schema_types:
+                    top_types = schema_types[:5]  # Show top 5 types
+                    self.data['schema_types'] = top_types
+                    schema_verdict += f"\nTypes: {', '.join(top_types)}"
+                
+                # ✅ Additional recommendations
+                recommendations = []
+                
+                # Prefer JSON-LD
+                if "JSON-LD" not in schema_formats and schema_formats:
+                    recommendations.append("Consider migrating to JSON-LD (Google's preferred format)")
+                
+                # Check for common important types
+                important_types = ['Organization', 'WebSite', 'WebPage', 'Article', 'Product', 
+                                'LocalBusiness', 'BreadcrumbList', 'FAQPage']
+                missing_important = []
+                
+                schema_types_lower = [t.lower() for t in schema_types]
+                for imp_type in important_types:
+                    if imp_type.lower() not in schema_types_lower:
+                        missing_important.append(imp_type)
+                
+                if missing_important and len(missing_important) <= 3:
+                    recommendations.append(f"Consider adding: {', '.join(missing_important[:3])}")
+                
+                self.data['schema_recommendations'] = recommendations if recommendations else ["Schema implementation looks good"]
+                
+            else:
+                schema_verdict = "⚠️ Not Found - No Schema.org structured data detected"
+                self.data['schema_recommendations'] = [
+                    "Add JSON-LD structured data for better search visibility",
+                    "Recommended types: Organization, WebSite, WebPage, BreadcrumbList",
+                    "Use Google's Rich Results Test to validate: https://search.google.com/test/rich-results"
+                ]
+            
+            self.data['schema'] = schema_verdict
+            self.data['schema_format'] = schema_formats if schema_formats else None
+            
+        except Exception as e:
+            print(f"Error in schema detection: {str(e)}")
+            self.schema_flag = False
+            self.data['schema'] = f"⚠️ Error checking schema: {str(e)}"
+        
         return
 
+
     def get_Open_GP(self):
-        self.ogp_flag = False
-        session_obj = requests.Session()
-        response = session_obj.get(self.url, headers={"User-Agent": "Mozilla/5.0"}).text
-        soup = BeautifulSoup(response, 'html.parser')
-        # og:title
-        if soup.findAll("meta", property="og:title"):
-            if soup.find("meta", property="og:title")["content"] != None:
-                self.ogp_flag = True
-        else:
-            pass
-        #         print(None)
-        # og:locale
-        if soup.findAll("meta", property="og:locale"):
-            if soup.find("meta", property="og:locale")["content"] != None:
-                self.ogp_flag = True
-        else:
-            pass
+        """
+        ✅ MODERNIZED: Open Graph Protocol detection
+        - Uses existing soup (no new session)
+        - Checks all required and recommended OG tags
+        - Provides specific missing tag recommendations
+        - Validates tag content
+        
+        Modern SEO Impact:
+        - OG tags = Better social media sharing (Facebook, LinkedIn, etc.)
+        - Critical for content marketing and social engagement
+        - Increases click-through rates from social platforms
+        """
+        try:
+            # ✅ Use existing soup from __init__
+            if not hasattr(self, 'soup') or not self.soup:
+                try:
+                    response = self.session.get(self.url, timeout=10)
+                    soup = BeautifulSoup(response.text, 'html.parser')
+                except Exception as e:
+                    self.data['open_gp'] = f"Error checking Open Graph tags: {str(e)}"
+                    self.ogp_flag = False
+                    return
+            else:
+                soup = self.soup
+            
+            # ✅ Define OG tags to check with priority
+            og_tags = {
+                # Required tags (Core 4)
+                'og:title': {'found': False, 'content': None, 'required': True},
+                'og:type': {'found': False, 'content': None, 'required': True},
+                'og:url': {'found': False, 'content': None, 'required': True},
+                'og:image': {'found': False, 'content': None, 'required': True},
+                # Recommended tags
+                'og:description': {'found': False, 'content': None, 'required': False},
+                'og:site_name': {'found': False, 'content': None, 'required': False},
+                'og:locale': {'found': False, 'content': None, 'required': False},
+                # Additional useful tags
+                'og:image:width': {'found': False, 'content': None, 'required': False},
+                'og:image:height': {'found': False, 'content': None, 'required': False},
+                'og:image:alt': {'found': False, 'content': None, 'required': False}
+            }
+            
+            # ✅ Check each OG tag
+            for tag_name in og_tags.keys():
+                try:
+                    tag = soup.find("meta", property=tag_name)
+                    if tag and tag.get("content"):
+                        content = tag.get("content", "").strip()
+                        if content:  # Non-empty content
+                            og_tags[tag_name]['found'] = True
+                            og_tags[tag_name]['content'] = content
+                except Exception as e:
+                    print(f"Error checking {tag_name}: {str(e)}")
+                    continue
+            
+            # ✅ Calculate OG implementation score
+            found_tags = [tag for tag, data in og_tags.items() if data['found']]
+            required_tags = [tag for tag, data in og_tags.items() if data['required']]
+            found_required = [tag for tag in required_tags if og_tags[tag]['found']]
+            
+            total_tags = len(og_tags)
+            found_count = len(found_tags)
+            
+            # Set flag based on required tags
+            self.ogp_flag = len(found_required) >= 4  # All 4 required tags
+            
+            # ✅ Generate detailed verdict
+            if len(found_required) == 4:
+                # All required tags present
+                open_gp = f"✓ Excellent - All required Open Graph tags found ({found_count}/{total_tags} total)"
+                
+                # Check image dimensions (recommended)
+                if not og_tags['og:image:width']['found'] or not og_tags['og:image:height']['found']:
+                    open_gp += "\n⚠️ Tip: Add og:image:width and og:image:height for better image rendering"
+                
+                # Check description
+                if not og_tags['og:description']['found']:
+                    open_gp += "\n⚠️ Tip: Add og:description for better social shares"
+                    
+            elif len(found_required) >= 2:
+                # Some required tags present
+                missing_required = [tag for tag in required_tags if not og_tags[tag]['found']]
+                open_gp = f"⚠️ Partial - {len(found_required)}/4 required OG tags found"
+                open_gp += f"\nMissing required: {', '.join(missing_required)}"
+                
+            elif found_count > 0:
+                # Some OG tags but missing required ones
+                open_gp = f"⚠️ Incomplete - Found {found_count} OG tags but missing required tags"
+                open_gp += f"\nRequired tags: og:title, og:type, og:url, og:image"
+                
+            else:
+                # No OG tags found
+                open_gp = "❌ Not Found - No Open Graph Protocol tags detected"
+            
+            # ✅ Store detailed data
+            self.data['open_gp'] = open_gp
+            self.data['og_tags_found'] = found_tags
+            self.data['og_tags_missing'] = [tag for tag, data in og_tags.items() if not data['found']]
+            self.data['og_required_complete'] = len(found_required) == 4
+            
+            # ✅ Store actual OG values for reference
+            og_values = {}
+            for tag, data in og_tags.items():
+                if data['found'] and data['content']:
+                    # Store only first 100 chars for display
+                    og_values[tag] = data['content'][:100]
+            
+            if og_values:
+                self.data['og_values'] = og_values
+            
+            # ✅ Provide recommendations
+            recommendations = []
+            
+            if not self.ogp_flag:
+                recommendations.append("Add all 4 required OG tags: og:title, og:type, og:url, og:image")
+                recommendations.append("Recommended image size: 1200x630px for best social media display")
+            else:
+                if not og_tags['og:description']['found']:
+                    recommendations.append("Add og:description (recommended)")
+                if not og_tags['og:image:alt']['found']:
+                    recommendations.append("Add og:image:alt for accessibility")
+            
+            self.data['og_recommendations'] = recommendations if recommendations else ["✓ Open Graph implementation is complete"]
+            
+        except Exception as e:
+            print(f"Error in Open Graph detection: {str(e)}")
+            self.ogp_flag = False
+            self.data['open_gp'] = f"⚠️ Error checking Open Graph tags: {str(e)}"
+        
+        return
 
-        # og:description
-        if soup.findAll("meta", property="og:description"):
-            if soup.find("meta", property="og:description")["content"] != None:
-                self.ogp_flag = True
-        else:
-            pass
-
-        # og:site_name
-        if soup.findAll("meta", property="og:site_name"):
-            if soup.find("meta", property="og:site_name")["content"] != None:
-                self.ogp_flag = True
-        else:
-            pass
-
-        # og:image
-        if soup.findAll("meta", property="og:image"):
-            if soup.find("meta", property="og:image")["content"] != None:
-                self.ogp_flag = True
-        else:
-            pass
-        # og:url
-        if soup.findAll("meta", property="og:url"):
-            if soup.find("meta", property="og:url")["content"] != None:
-                self.ogp_flag = True
-        else:
-            pass
-
-        if self.ogp_flag == True:
-            open_gp="Found! Website support Open Graph Protocol."
-
-            # print("Website support Open Graph Protocol!")
-        else:
-            open_gp = "Not Found! Website does'nt support Open Graph Protocol."
-            # print("Website does'nt support Open Graph Protocol!")
-
-        self.data['open_gp'] =open_gp
 
     def get_favicon(self):
-        icons = favicon.get(self.url)
+        """
+        ✅ MODERNIZED: Favicon detection and validation
+        - Better error handling
+        - Validates favicon accessibility
+        - Checks multiple favicon formats
+        - Security improvements (validates URLs)
+        
+        Modern SEO Impact:
+        - Favicon = Brand recognition in browser tabs and bookmarks
+        - Appears in Google search results (mobile)
+        - Critical for user trust and brand consistency
+        """
         try:
-            icon = icons[0]
-            icon = urllib.request.urlopen(icon[0])
-
-            with open("test.jpg","wb") as f:
-                f.write(icon.read())
-                Favicon = "Found! Website have favicon icon."
-                self.icon_flag = True
-        except:
-            Favicon = "Not Found! Website does'nt favicon icon."
+            # ✅ Method 1: Use favicon library (checks multiple sources)
+            try:
+                icons = favicon.get(self.url, timeout=10)
+                
+                if icons and len(icons) > 0:
+                    # Sort by size (prefer larger icons)
+                    icons_sorted = sorted(icons, key=lambda x: (x.width or 0) * (x.height or 0), reverse=True)
+                    icon = icons_sorted[0]
+                    
+                    # ✅ Validate icon URL
+                    icon_url = icon.url
+                    if not icon_url.startswith(('http://', 'https://')):
+                        # Relative URL, make absolute
+                        icon_url = urljoin(self.base_url, icon_url)
+                    
+                    # ✅ Get file extension
+                    ext = 'ico'  # default
+                    if '.' in icon_url:
+                        ext = icon_url.split('.')[-1].split('?')[0].lower()
+                        # Validate extension
+                        if ext not in ['ico', 'png', 'jpg', 'jpeg', 'gif', 'svg']:
+                            ext = 'ico'
+                    
+                    # ✅ Try to download favicon (with size limit for security)
+                    try:
+                        # Use session with timeout
+                        response = self.session.get(icon_url, timeout=5, stream=True)
+                        
+                        # Check file size (limit to 1MB for security)
+                        content_length = response.headers.get('content-length')
+                        if content_length and int(content_length) > 1024 * 1024:
+                            raise ValueError("Favicon too large (>1MB)")
+                        
+                        # Download with size limit
+                        filename = f"favicon.{ext}"
+                        with open(filename, "wb") as f:
+                            downloaded = 0
+                            for chunk in response.iter_content(chunk_size=8192):
+                                downloaded += len(chunk)
+                                if downloaded > 1024 * 1024:  # 1MB limit
+                                    raise ValueError("Favicon too large")
+                                f.write(chunk)
+                        
+                        # ✅ Success with details
+                        size_info = ""
+                        if icon.width and icon.height:
+                            size_info = f" ({icon.width}x{icon.height}px)"
+                        
+                        Favicon = f"✓ Found - Website has favicon{size_info}"
+                        self.icon_flag = True
+                        self.data['favicon_url'] = icon_url
+                        self.data['favicon_size'] = f"{icon.width}x{icon.height}" if icon.width and icon.height else "Unknown"
+                        self.data['favicon_format'] = ext.upper()
+                        
+                    except Exception as download_error:
+                        # Favicon exists but couldn't download
+                        Favicon = f"✓ Found - Favicon detected at {icon_url} (download failed: {str(download_error)})"
+                        self.icon_flag = True
+                        self.data['favicon_url'] = icon_url
+                        
+                else:
+                    raise ValueError("No favicon found")
+                    
+            except Exception as e:
+                # ✅ Method 2: Manual check for common favicon locations
+                favicon_locations = [
+                    '/favicon.ico',
+                    '/favicon.png',
+                    '/apple-touch-icon.png',
+                    '/apple-touch-icon-precomposed.png'
+                ]
+                
+                favicon_found = False
+                for location in favicon_locations:
+                    try:
+                        favicon_url = self.base_url.rstrip('/') + location
+                        response = self.session.head(favicon_url, timeout=5)
+                        
+                        if response.status_code == 200:
+                            Favicon = f"✓ Found - Favicon available at {location}"
+                            self.icon_flag = True
+                            self.data['favicon_url'] = favicon_url
+                            favicon_found = True
+                            break
+                    except:
+                        continue
+                
+                if not favicon_found:
+                    # ✅ Check link tags in HTML
+                    if hasattr(self, 'soup') and self.soup:
+                        favicon_links = self.soup.find_all('link', rel=lambda x: x and 'icon' in x.lower())
+                        if favicon_links:
+                            favicon_href = favicon_links[0].get('href', '')
+                            if favicon_href:
+                                Favicon = f"✓ Found - Favicon referenced in HTML"
+                                self.icon_flag = True
+                                self.data['favicon_url'] = urljoin(self.base_url, favicon_href)
+                            else:
+                                raise ValueError("Favicon link found but no href")
+                        else:
+                            raise ValueError("No favicon found")
+                    else:
+                        raise ValueError("No favicon found")
+        
+        except Exception as e:
+            Favicon = f"⚠️ Not Found - No favicon detected"
             self.icon_flag = False
-        self.data['Favicon']=Favicon
+            self.data['favicon_recommendations'] = [
+                "Add a favicon.ico file to your website root",
+                "Recommended sizes: 16x16, 32x32, 48x48px",
+                "Also add apple-touch-icon.png (180x180px) for iOS devices",
+                "Use PNG or ICO format for best compatibility"
+            ]
+        
+        self.data['Favicon'] = Favicon
+        
         return
 
     def Social(self):
-        verdict_fb = ""
-        verdict_insta = ""
-        verdict_twit = ""
-        verdict_link = ""
+        social_platforms = {
+            "facebook": ["facebook.com/", "fb.com/"],
+            "instagram": ["instagram.com/"],
+            "twitter": ["twitter.com/", "x.com/"],
+            "linkedin": ["linkedin.com/in/", "linkedin.com/company/"],
+        }
 
-        facebook = 'facebook.com/'
-        insta = 'instagram.com/'
-        twitter = 'twitter.com/'
-        linkedin = 'linkedin.com/'
 
-        session_obj = requests.Session()
-        response = session_obj.get(self.url, headers={"User-Agent": "Mozilla/5.0"}).text
-        soup = BeautifulSoup(response, 'html.parser')
-        content = soup.findAll('a')
-        for i in content:
-            href_link = i.get("href")
-            if href_link==None:
-                verdict_fb = "Not Allow to Scrap!"
-                verdict_insta = "Not Allow to Scrap!"
-                verdict_twit = "Not Allow to Scrap!"
-                verdict_link = "Not Allow to Scrap!"
-                break
-        for i in content:
-            href_link = i.get("href")
-            # facebook
-            if href_link == "" or href_link == None:
-                pass
-            elif facebook in href_link:
-                verdict_fb = "Facebook found!"
-                self.s_count = self.s_count + 25
-                self.fb_flag = True
-                break
-            else:
-                verdict_fb = "Facebook not found!"
-        for i in content:
-            href_link = i.get("href")
-            # Insta
-            if href_link == "" or href_link == None:
-                pass
-            elif insta in href_link:
-                verdict_insta = "Instagram found!"
-                self.s_count = self.s_count + 25
-                self.insta_flag = True
-                break
-            else:
-                verdict_insta = "Instagram not found!"
-        for i in content:
-            href_link = i.get("href")
-            # Twitter
-            if href_link == "" or href_link == None:
-                pass
-            elif twitter in href_link:
-                verdict_twit = "Twitter found!"
-                self.s_count = self.s_count + 25
-                self.twitter_flag = True
-                break
-            else:
-                verdict_twit = "Twitter not found!"
-        for i in content:
-            href_link = i.get("href")
-            # Linkedin
-            if href_link == "" or href_link == None:
-                pass
-            elif linkedin in href_link:
-                verdict_link = "Linkedin found!"
-                self.s_count = self.s_count + 25
-                self.linkedin_flag = True
-                break
-            else:
-                verdict_link = "Linkedin not found!"
+        self.s_count = 0
+        found_links = {key: set() for key in social_platforms}
+        verdicts = {}
 
-        # print(verdict_fb)
-        # print(verdict_insta)
-        # print(verdict_twit)
-        # print(verdict_link)
-        # print(self.s_count)
-        self.data['facebook']=verdict_fb
-        self.data['insta']=verdict_insta
-        self.data['twitter']=verdict_twit
-        self.data['linkedin']=verdict_link
-        self.data['social_verdict']="Score: "+str(self.s_count)+"%"
+        try:
+            response = self.session.get(self.url, timeout=15)
+            response.raise_for_status()
+            soup = BeautifulSoup(response.text, "html.parser")
+        except Exception:
+            for platform in social_platforms:
+                verdicts[platform] = "Not allowed to scrape!"
+            self.data.update(verdicts)
+            self.data["social_verdict"] = "Score: 0%"
+            self.data["social_links"] = {}
+            return
+
+        # 🔥 MAGIC STARTS HERE
+        for tag in soup.find_all("a", href=True):
+
+            raw_link = tag["href"].strip()
+            link = raw_link.lower()
+
+            # 1️⃣ Convert relative → absolute
+            full_link = urljoin(self.url, raw_link)
+
+            # 2️⃣ Check via href
+            for platform, patterns in social_platforms.items():
+
+                matched = False
+
+                # A. Direct domain match
+                if any(p in link for p in patterns):
+                    matched = True
+
+                # B. Path based match
+                path = urlparse(full_link).path.lower()
+                if any(p in path for p in patterns):
+                    matched = True
+
+                # C. Text match (inside <a>)
+                text = tag.get_text().lower()
+                if any(p in text for p in patterns):
+                    matched = True
+
+                # D. aria-label / title match
+                aria = (tag.get("aria-label") or "").lower()
+                title = (tag.get("title") or "").lower()
+
+                if any(p in aria or p in title for p in patterns):
+                    matched = True
+
+                if matched:
+                    if self._is_valid_social_link(full_link, platform):
+                        found_links[platform].add(full_link)
+
+        # Score system
+        for platform, links in found_links.items():
+            if links:
+                verdicts[platform] = f"{platform.capitalize()} found!"
+                self.s_count += 25
+                setattr(self, f"{platform}_flag", True)
+            else:
+                verdicts[platform] = f"{platform.capitalize()} not found!"
+                setattr(self, f"{platform}_flag", False)
+
+        self.data.update(verdicts)
+        self.data["social_links"] = {k: list(v) for k, v in found_links.items()}
+        self.data["social_accounts_found"] = sum(1 for v in found_links.values() if v)
+        self.data["social_verdict"] = f"Score: {self.s_count}%"    
+    def _is_valid_social_link(self, link, platform):
+        """Elite level filter – no more clown results"""
+
+        excluded = [
+            "sharer.php", "share?", "intent/tweet", 
+            "shareArticle", "sharing", "share-button",
+            ".js", ".css", "cdn.", "static.",
+            "sitemap", ".xml", ".json"
+        ]
+
+        if any(exc in link for exc in excluded):
+            return False
+
+        # Domain extract karo
+        parsed = urlparse(link)
+        domain = parsed.netloc.lower()
+        path = parsed.path.lower()
+
+        # 🔥 PLATFORM WISE PRO CHECKS
+
+        if platform == "twitter":
+            return (
+                domain in ["twitter.com", "www.twitter.com", "x.com", "www.x.com"]
+                and len(path.split("/")) >= 2
+                and not path.startswith("/share")
+                and not path.startswith("/intent")
+            )
+
+        if platform == "facebook":
+            return (
+                "facebook.com" in domain or "fb.com" in domain
+            ) and len(path) > 2
+
+        if platform == "instagram":
+            return (
+                "instagram.com" in domain
+            ) and len(path) > 2
+
+        if platform == "linkedin":
+            return (
+                "linkedin.com" in domain
+            ) and any(x in path for x in ["/in/", "/company/"])
+
+        return False
 
     def get_technology(self):
         dict={}
         try:
-            technology = requests.get(self.url)
-            self.webserver = technology.headers['Server']
+            technology = requests.get(self.url, timeout=15)
+            technology.raise_for_status()
+            self.webserver = technology.headers.get('Server', 'Not Found!')
             dict['Server']=self.webserver
             self.data['technology']=dict
-            self.tech_flag = True
-        except:
+            self.tech_flag = True if self.webserver != 'Not Found!' else False
+        except Exception:
+            self.webserver = "Not Found!"
             dict['Server'] = self.webserver
             self.data['technology'] = dict
+            self.tech_flag = False
         return
 
 
@@ -691,19 +3325,24 @@ class Website_Audit(object):
         a = self.soup.findAll("script", src=True)
         if a ==[]:
             self.data['analytics'] = "Not Found!"
+            self.analytics_flag = False
             return
         analytics=""
+        found = False
         for i in a:
-            if "UA-" in i["src"] and "google" in i["src"]:
+            src = i.get("src", "")
+            if "UA-" in src and "google" in src:
                 self.analytics_flag = True
                 analytics="Google Analytics found!"
                 self.data['analytics'] = analytics
-                # print("Google Analytics Found")
+                found = True
                 break
-            else:
-                analytics = "Google Analytics not found!"
-                self.data['analytics'] = analytics
-                # print("Website Does'nt have google analytics")
+        
+        if not found:
+            analytics = "Google Analytics not found!"
+            self.data['analytics'] = analytics
+            self.analytics_flag = False
+
 
 
     def w3c_validation(self):
@@ -714,34 +3353,47 @@ class Website_Audit(object):
             warnings = vld.warnings
             self.error_len = len(error)
             self.warn_len = len(warnings)
-            self.data['w3c']="Errors: "+str(self.error_len),"Warnings: "+str(self.warn_len)
-        except:
+            self.data['w3c']=("Errors: "+str(self.error_len),"Warnings: "+str(self.warn_len))
+        except Exception:
             self.data['w3c']="None"
-        # print("Errors:", self.error_len)
-        # print("Warnings:", self.warn_len)
+            self.error_len = 0
+            self.warn_len = 0
+
 
     def get_content(self):
-        #Doctype and encoding
-        response = requests.get(self.url)
-        a=response.headers['Content-Type']
-        a=a.split()
         try:
-            self.Doctype=a[0]
-            self.doc_flag =True
-            # print("DocType:",self.Doctype)
-        except:
-            self.Doctype="Not Found!"
-            # print("Doctype:",self.Doctype)
-        try:
-            self.Encoding=a[1]
-            self.encod_flag =True
-            # print("Encoding:",self.Encoding)
-        except:
-            self.Encoding="Not Found!"
-            # print("Encoding:",self.Encoding)
+            response = requests.get(self.url, timeout=15)
+            response.raise_for_status()
+            a=response.headers.get('Content-Type', '')
+            a=a.split(';')
+            try:
+                self.Doctype=a[0].strip()
+                self.doc_flag = True if self.Doctype else False
+            except (IndexError, AttributeError):
+                self.Doctype="Not Found!"
+                self.doc_flag = False
+            try:
+                # Extract charset from second part
+                encoding_part = a[1].strip() if len(a) > 1 else ""
+                if 'charset=' in encoding_part:
+                    self.Encoding = encoding_part.split('=')[1].strip()
+                    self.encod_flag = True
+                else:
+                    self.Encoding = "Not Found!"
+                    self.encod_flag = False
+            except (IndexError, AttributeError):
+                self.Encoding="Not Found!"
+                self.encod_flag = False
 
-        self.data['doctype']=self.Doctype
-        self.data['encoding']=self.Encoding
+            self.data['doctype']=self.Doctype
+            self.data['encoding']=self.Encoding
+        except Exception:
+            self.Doctype="Not Found!"
+            self.Encoding="Not Found!"
+            self.doc_flag = False
+            self.encod_flag = False
+            self.data['doctype']=self.Doctype
+            self.data['encoding']=self.Encoding
 
 
 
@@ -752,2133 +3404,661 @@ class Website_Audit(object):
             url=self.url.replace("http://","")
         else:
             url=self.url
+        
+        # Remove path and query parameters
+        url = url.split('/')[0].split('?')[0].strip()
+        
         try:
             ip_address = socket.gethostbyname(url)
             g = geocoder.ip(ip_address)
-            server_location = g.country
-            hostname = socket.getfqdn(url)
-            if len(ip_address) != 0:
+            server_location = g.country if g.country else "Not Found!"
+            try:
+                hostname = socket.getfqdn(url)
+            except Exception:
+                hostname = "Not Found!"
+            
+            if len(ip_address) != 0 and ip_address:
                 self.ip=ip_address
                 self.ip_flag=True
             else:
                 self.ip="Not Found!"
-            if len(server_location) != 0:
+                self.ip_flag=False
+            
+            if server_location and server_location != "Not Found!":
                 self.loc_name=server_location
                 self.server_loc_flag=True
             else:
                 self.loc_name="Not Found!"
-        except:
+                self.server_loc_flag=False
+        except Exception:
             self.ip = "Not Found!"
             self.loc_name = "Not Found!"
             hostname="Not Found!"
+            self.ip_flag=False
+            self.server_loc_flag=False
+        
         self.data['s_ip'] = self.ip
         self.data['s_loc'] = self.loc_name
         self.data['hostname'] = hostname
 
     def SSL(self):
-        if 'https://' in self.url:
-            url = self.url.replace('https://', '')
-        elif 'http://' in self.url:
-            url = self.url.replace('http://', '')
-        else:
-            url = self.url
+        import ssl, socket, datetime, requests
 
+        url = self.url.replace("https://", "").replace("http://", "")
+        host = url.split("/")[0].split("?")[0].strip()
+
+        # defaults
+        self.data['ssl_name'] = "Not Found!"
+        self.data['ssl_verdict'] = "Website doesn't have a valid SSL!"
+        self.data['ssl_organ'] = "Not Found!"
+        self.data['ssl_expiry'] = "Not Found!"
+        self.data['http_redir'] = "Not checked"
+        self.ssl = False
+
+        # ---------------------------
+        # ✔ HTTPS REDIRECTION CHECK
+        # ---------------------------
+        try:
+            test_urls = [f"http://{host}", f"http://www.{host}"]
+
+            for url in test_urls:
+                try:
+                    r = requests.get(url, timeout=5, allow_redirects=True)
+                    if r.url.startswith("https://"):
+                        self.data['http_redir'] = f"Yes, HTTP → HTTPS redirection is enabled ✔ (Final URL: {r.url})"
+                        break  # stop loop but continue to SSL check
+                except requests.exceptions.SSLError:
+                    self.data['http_redir'] = f"Yes, HTTPS enforced (SSL error on HTTP access) ✔"
+                    break
+                except requests.RequestException:
+                    continue
+            else:
+                # If loop completes with no break
+                self.data['http_redir'] = "No, website does NOT redirect to HTTPS ❌"
+
+        except Exception:
+            self.data['http_redir'] = "Could not check redirection"
+
+        # ---------------------------
+        # ✔ SSL CERTIFICATE CHECK
+        # ---------------------------
         try:
             context = ssl.create_default_context()
-            sock = socket.create_connection((url, 443))
-            ssock = context.wrap_socket(sock, server_hostname=url)
-            cert = ssock.getpeercert()
+            conn = socket.create_connection((host, 443), timeout=5)
+            sock = context.wrap_socket(conn, server_hostname=host)
+            cert = sock.getpeercert()
 
-            subject = dict(x[0] for x in cert['subject'])
-            issuer = dict(x[0] for x in cert['issuer'])
-            if 'commonName' in subject:
-                self.ssl = True
-                self.data['ssl_name']=subject['commonName']
-                self.data['ssl_verdict']="Website have SSL certification!"
-                self.name=subject['commonName']
+            subject = dict(x[0] for x in cert.get("subject", []))
+            issuer = dict(x[0] for x in cert.get("issuer", []))
+
+            cn = subject.get("commonName")
+            issuer_cn = issuer.get("commonName")
+            issuer_org = issuer.get("organizationName", issuer_cn)
+            expiry = cert.get("notAfter")
+            
+            # Handle different datetime formats
+            try:
+                expires = datetime.datetime.strptime(expiry, "%b %d %H:%M:%S %Y %Z")
+            except ValueError:
+                try:
+                    expires = datetime.datetime.strptime(expiry, "%b %d %H:%M:%S %Y")
+                except ValueError:
+                    # Fallback for other formats
+                    expires = datetime.datetime.utcnow() + datetime.timedelta(days=365)
+            
+            days_left = (expires - datetime.datetime.utcnow()).days
+
+            self.data['ssl_name'] = cn or "Not Found!"
+            self.data['ssl_organ'] = issuer_org or "Not Found!"
+            self.data['ssl_expiry'] = expiry
+
+            # Check if SSL is valid and not expired
+            if days_left < 0:
+                self.data['ssl_verdict'] = "SSL certificate is EXPIRED!"
+                self.ssl = False
+            elif days_left < 15:
+                self.data['ssl_verdict'] = f"SSL expiring soon! ({days_left} days left)"
+                self.ssl = True  # Still valid but expiring soon
             else:
-                self.data['ssl_name']="Not Found!"
-                self.data['ssl_verdict'] = "Website does'nt have SSL certification!"
-
-            if 'commonName' in issuer:
-                self.data['ssl_organ']=issuer['commonName']
-                self.organization=issuer['commonName']
-            else:
-                self.data['ssl_organ']="Not Found!"
-
-            if 'notAfter' in cert:
-                self.data['ssl_expiry']=cert['notAfter']
-                self.expiry_date=cert['notAfter']
-            else:
-                self.data['ssl_expiry']="Not Found!"
-
-        except:
-            self.data['ssl_name'] = "Not Found!"
-            self.data['ssl_verdict'] = "Website does'nt have SSL certification!"
-            self.data['ssl_organ'] = "Not Found!"
-            self.data['ssl_expiry'] = "Not Found!"
-
-    def Https_Redirection(self):
-        if "www." in self.url:
-            url=self.url.replace("www.","")
-        try:
-            response = requests.get(url, allow_redirects=False)
-            if response.status_code == 301 or response.status_code == 302:
-                if response.headers.get('Location').startswith('https://'):
-                    self.data['http_redir'] = "The website is using HTTPS redirection"
-                    self.https = True
-                    return
+                if self.data.get('ssl_name') != "Not Found!" and self.data.get('ssl_organ') != "Not Found!":
+                    self.data['ssl_verdict'] = "SSL certificate is valid!"
+                    self.ssl = True
                 else:
-                    pass
-            else:
-                pass
-        except:
-            self.data['http_redir'] = "The website is not using HTTPS redirection"
-            return
-        self.data['http_redir'] = "The website is not using HTTPS redirection"
+                    self.data['ssl_verdict'] = "SSL not found or invalid."
+                    self.ssl = False
+
+            sock.close()
+        except ssl.CertificateError:
+            self.data['ssl_verdict'] = "Hostname mismatch (Invalid SSL)"
+            self.ssl = False
+        except ssl.SSLError:
+            self.data['ssl_verdict'] = "SSL Handshake error (Invalid or broken SSL)"
+            self.ssl = False
+        except socket.timeout:
+            self.data['ssl_verdict'] = "Connection timed out"
+            self.ssl = False
+        except ConnectionRefusedError:
+            self.data['ssl_verdict'] = "SSL not supported on this domain"
+            self.ssl = False
+        except Exception:
+            self.data['ssl_verdict'] = "Could not verify SSL"
+            self.ssl = False
+
 
     def DMCA(self):
-        response = requests.get(self.url)
-        content = response.text
-        dmca_terms = ['DMCA', 'Digital Millennium Copyright Act']
-        for term in dmca_terms:
-            match = re.search(term, content, re.IGNORECASE)
-            if match:
-                self.data['dmca']="The website is protected by DMCA."
-                self.dmca=True
-                # print(f"The website is protected by DMCA.")
-        self.data['dmca'] = "The website is not protected by DMCA."
-        # print(f"The website is not protected by DMCA.")
+        try:
+            response = requests.get(self.url, headers={"User-Agent": "Mozilla/5.0"}, timeout=15)
+            response.raise_for_status()
+            content = response.text
 
-    def measure_website_speed(self):
-        start_time = time.time()
-        session_obj = requests.Session()
-        response = session_obj.get(self.url, headers={"User-Agent": "Mozilla/5.0"}).text
-        end_time = time.time()
-        self.speed = end_time - start_time
-        self.speed=round(self.speed,2)
-        self.data['website_speed']=self.speed
-        if self.speed < 2.5:
-            self.data['speed_verdit']="The website speed is good!"
-        else:
-            self.data['speed_verdit'] = "The website speed is not good!"
+            # Single regex for multiple terms
+            dmca_pattern = re.compile(r"DMCA|Digital Millennium Copyright Act", re.IGNORECASE)
 
+            if dmca_pattern.search(content):
+                self.data['dmca'] = "The website is protected by DMCA."
+                self.dmca = True
+            else:
+                self.data['dmca'] = "The website is not protected by DMCA."
+                self.dmca = False
+
+        except requests.exceptions.RequestException as e:
+            self.data['dmca'] = f"Error fetching page: {str(e)}"
+            self.dmca = False
+
+
+    async def measure_website_speed(self):
+        """
+        Measure website speed and fetch Core Web Vitals (LCP, CLS, INP, Full Page Load)
+        using Google PageSpeed Insights API.
+        """
+
+        # --------------------------
+        # Step 1: Basic server response time
+        # --------------------------
+        try:
+            start_time = asyncio.get_event_loop().time()
+            async with aiohttp.ClientSession() as session:
+                async with session.get(
+                    self.url, 
+                    headers={"User-Agent": "Mozilla/5.0"}, 
+                    timeout=aiohttp.ClientTimeout(total=120)
+                ) as response:
+                    await response.text()  # Fetch content to complete request
+                    end_time = asyncio.get_event_loop().time()
+                    self.speed = round(end_time - start_time, 2)
+
+            self.data['website_speed'] = self.speed
+            
+            # More granular speed assessment based on Google's recommendations
+            if self.speed < 1.0:
+                self.data['speed_verdict'] = "Excellent! Server response time is very fast."
+            elif self.speed < 2.5:
+                self.data['speed_verdict'] = "Good! Server response time is acceptable."
+            elif self.speed < 4.0:
+                self.data['speed_verdict'] = "Fair. Server response could be improved."
+            else:
+                self.data['speed_verdict'] = "Poor. Server response time needs optimization."
+                
+        except asyncio.TimeoutError:
+            self.speed = 0
+            self.data['website_speed'] = 0
+            self.data['speed_verdict'] = "The request timed out!"
+        except aiohttp.ClientError as e:
+            self.speed = 0
+            self.data['website_speed'] = 0
+            self.data['speed_verdict'] = f"An error occurred: {e}"
+        except Exception as e:
+            self.speed = 0
+            self.data['website_speed'] = 0
+            self.data['speed_verdict'] = f"Unexpected error: {e}"
+
+        # --------------------------
+        # Step 2: Core Web Vitals via Google PageSpeed Insights API
+        # --------------------------
+        try:
+            API_KEY = "AIzaSyB6HmPxrc8gcdp6zvElkyYvnULXy6f4Rmw"
+            
+            # Fetch both mobile and desktop for comprehensive analysis
+            psi_url_mobile = f"https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url={self.url}&strategy=mobile&key={API_KEY}"
+            psi_url_desktop = f"https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url={self.url}&strategy=desktop&key={API_KEY}"
+
+            def fetch_psi(url): 
+                response = requests.get(url, timeout=180)
+                response.raise_for_status()
+                return response.json()
+            
+            # Fetch mobile data (primary for SEO)
+            psi_data = await asyncio.to_thread(fetch_psi, psi_url_mobile)
+            audits = psi_data.get("lighthouseResult", {}).get("audits", {})
+            
+            # Extract performance score (0-100)
+            performance_score = psi_data.get("lighthouseResult", {}).get("categories", {}).get("performance", {}).get("score", 0)
+            self.data['performance_score'] = round(performance_score * 100) if performance_score else 0
+
+            # Extract Core Web Vitals with proper error handling
+            lcp_value = audits.get("largest-contentful-paint", {}).get("numericValue", 0)
+            self.data['lcp'] = round(lcp_value / 1000, 2) if lcp_value else 0
+            
+            cls_value = audits.get("cumulative-layout-shift", {}).get("numericValue", 0)
+            self.data['cls'] = round(cls_value, 3) if cls_value is not None else 0
+            
+            inp_val = audits.get("interaction-to-next-paint", {}).get("numericValue")
+            self.data['inp'] = round(inp_val / 1000, 2) if inp_val else "N/A"
+            
+            speed_index = audits.get("speed-index", {}).get("numericValue", 0)
+            self.data['full_page_load'] = round(speed_index / 1000, 2) if speed_index else 0
+            
+            # First Contentful Paint (FCP) - Important for SEO
+            fcp_value = audits.get("first-contentful-paint", {}).get("numericValue", 0)
+            self.data['fcp'] = round(fcp_value / 1000, 2) if fcp_value else 0
+            
+            # Time to Interactive (TTI) - User experience metric
+            tti_value = audits.get("interactive", {}).get("numericValue", 0)
+            self.data['tti'] = round(tti_value / 1000, 2) if tti_value else 0
+            
+            # Total Blocking Time (TBT) - Affects interactivity
+            tbt_value = audits.get("total-blocking-time", {}).get("numericValue", 0)
+            self.data['tbt'] = round(tbt_value, 2) if tbt_value else 0
+            
+            # Add Core Web Vitals assessment based on Google thresholds
+            vitals_assessment = []
+            
+            # LCP Assessment (Good: <2.5s, Needs Improvement: 2.5-4s, Poor: >4s)
+            if self.data['lcp'] > 0:
+                if self.data['lcp'] <= 2.5:
+                    vitals_assessment.append("LCP: Good ✓")
+                elif self.data['lcp'] <= 4.0:
+                    vitals_assessment.append("LCP: Needs Improvement ⚠")
+                else:
+                    vitals_assessment.append("LCP: Poor ✗")
+            
+            # CLS Assessment (Good: <0.1, Needs Improvement: 0.1-0.25, Poor: >0.25)
+            if self.data['cls'] >= 0:
+                if self.data['cls'] <= 0.1:
+                    vitals_assessment.append("CLS: Good ✓")
+                elif self.data['cls'] <= 0.25:
+                    vitals_assessment.append("CLS: Needs Improvement ⚠")
+                else:
+                    vitals_assessment.append("CLS: Poor ✗")
+            
+            # FCP Assessment (Good: <1.8s, Needs Improvement: 1.8-3s, Poor: >3s)
+            if self.data['fcp'] > 0:
+                if self.data['fcp'] <= 1.8:
+                    vitals_assessment.append("FCP: Good ✓")
+                elif self.data['fcp'] <= 3.0:
+                    vitals_assessment.append("FCP: Needs Improvement ⚠")
+                else:
+                    vitals_assessment.append("FCP: Poor ✗")
+            
+            self.data['vitals_assessment'] = ", ".join(vitals_assessment) if vitals_assessment else "Unable to assess"
+            
+            # SEO Score from PageSpeed Insights
+            seo_score = psi_data.get("lighthouseResult", {}).get("categories", {}).get("seo", {}).get("score", 0)
+            self.data['seo_score'] = round(seo_score * 100) if seo_score else 0
+            
+            # Accessibility Score (affects SEO indirectly)
+            accessibility_score = psi_data.get("lighthouseResult", {}).get("categories", {}).get("accessibility", {}).get("score", 0)
+            self.data['accessibility_score'] = round(accessibility_score * 100) if accessibility_score else 0
+            
+            # Best Practices Score
+            best_practices_score = psi_data.get("lighthouseResult", {}).get("categories", {}).get("best-practices", {}).get("score", 0)
+            self.data['best_practices_score'] = round(best_practices_score * 100) if best_practices_score else 0
+
+        except requests.exceptions.Timeout:
+            print(f"Error: PageSpeed API request timed out")
+            self.data['lcp'] = self.data['cls'] = self.data['inp'] = self.data['full_page_load'] = "Timeout"
+            self.data['fcp'] = self.data['tti'] = self.data['tbt'] = "Timeout"
+            self.data['performance_score'] = self.data['seo_score'] = 0
+        except requests.exceptions.RequestException as e:
+            print(f"Error fetching Core Web Vitals: {e}")
+            self.data['lcp'] = self.data['cls'] = self.data['inp'] = self.data['full_page_load'] = "Error"
+            self.data['fcp'] = self.data['tti'] = self.data['tbt'] = "Error"
+            self.data['performance_score'] = self.data['seo_score'] = 0
+        except Exception as e:
+            print(f"Unexpected error in Core Web Vitals: {e}")
+            self.data['lcp'] = self.data['cls'] = self.data['inp'] = self.data['full_page_load'] = "Error"
+            self.data['fcp'] = self.data['tti'] = self.data['tbt'] = "Error"
+            self.data['performance_score'] = self.data['seo_score'] = 0
 
     def CSS_minification(self):
         try:
-            session_obj = requests.Session()
-            response = session_obj.get(self.url, headers={"User-Agent": "Mozilla/5.0"}).text
-            css_code = response
-            compressed_css = csscompressor.compress(css_code)
-            if len(compressed_css) < len(css_code):
-                self.data['css_minified'] = "CSS code for the website is not minified."
-            else:
-                self.data['css_minified'] = "CSS code for the website is minified."
+            css_links = []
+            soup = BeautifulSoup(self.response, "html.parser")
+            
+            # Find all external CSS links
+            for link in soup.find_all("link", rel="stylesheet"):
+                href = link.get("href")
+                if href:
+                    # Skip data URIs and external CDN links that are already minified
+                    if href.startswith('data:') or 'min.css' in href.lower():
+                        continue
+                    full_url = urljoin(self.url, href)
+                    css_links.append(full_url)
+            
+            # Also check for inline styles (SEO consideration)
+            inline_styles = soup.find_all("style")
+            has_inline_css = len(inline_styles) > 0
+            
+            if not css_links and not has_inline_css:
+                self.data['css_minified'] = "No CSS found to check."
+                self.css = True  # No CSS is technically "optimized"
+                return
+            
+            if not css_links:
+                self.data['css_minified'] = "Only inline CSS found (not optimal for caching)."
+                self.css = False
+                return
+            
+            total_css = 0
+            minified_css = 0
+            unminified_files = []
+            
+            for css_url in css_links[:10]:  # Limit to first 10 to avoid timeout
+                try:
+                    r = self.session.get(css_url, timeout=10)
+                    r.raise_for_status()
+                    css_code = r.text
+                    
+                    # Skip if already empty or very small
+                    if len(css_code.strip()) < 50:
+                        continue
+                    
+                    total_css += 1
+                    compressed_css = csscompressor.compress(css_code)
+                    
+                    # Calculate compression ratio (minified files have <5% reduction)
+                    reduction = ((len(css_code) - len(compressed_css)) / len(css_code)) * 100
+                    
+                    if reduction > 5:  # More than 5% reduction means it wasn't minified
+                        unminified_files.append(css_url)
+                    else:
+                        minified_css += 1
+                        
+                except requests.RequestException:
+                    # Skip this file if it can't be fetched
+                    continue
+            
+            if total_css == 0:
+                self.data['css_minified'] = "Unable to verify CSS minification."
+                self.css = False
+                return
+            
+            minification_ratio = (minified_css / total_css) * 100 if total_css > 0 else 0
+            
+            if minification_ratio >= 80:
+                self.data['css_minified'] = f"Good! {minified_css}/{total_css} CSS files are minified ({int(minification_ratio)}%)."
                 self.css = True
-        except:
-            self.data['css_minified'] = "CSS code for the website is given Error."
+            elif minification_ratio >= 50:
+                self.data['css_minified'] = f"Partial. {minified_css}/{total_css} CSS files are minified ({int(minification_ratio)}%)."
+                self.css = False
+            else:
+                self.data['css_minified'] = f"Poor. Only {minified_css}/{total_css} CSS files are minified ({int(minification_ratio)}%)."
+                self.css = False
+            
+            # Add additional CSS optimization checks for SEO
+            self.data['inline_css_count'] = len(inline_styles)
+            self.data['external_css_count'] = len(css_links)
+            
+        except Exception as e:
+            self.data['css_minified'] = f"Error analyzing CSS: {str(e)}"
+            self.css = False
 
     def JSS_minification(self):
         try:
-            response = requests.get(self.url)
-            js_code = response.text
-            compressed_js = jsmin(js_code)
-            if len(compressed_js) < len(js_code):
-                self.data['jss_minified'] = "JavaScript code for the website is not minified."
-            else:
-                self.data['jss_minified'] = "JavaScript code for the website is minified."
+            js_links = []
+            soup = BeautifulSoup(self.response, "html.parser")
+            
+            # Find all external JS scripts
+            for script in soup.find_all("script", src=True):
+                src = script.get("src")
+                if src:
+                    # Skip data URIs and already minified files
+                    if src.startswith('data:') or 'min.js' in src.lower():
+                        continue
+                    full_url = urljoin(self.url, src)
+                    js_links.append(full_url)
+            
+            # Check for inline scripts (bad for performance and SEO)
+            inline_scripts = soup.find_all("script", src=False)
+            has_inline_js = len([s for s in inline_scripts if s.string and len(s.string.strip()) > 50]) > 0
+            
+            if not js_links and not has_inline_js:
+                self.data['jss_minified'] = "No JS found to check."
+                self.jss = True  # No JS is technically "optimized"
+                return
+            
+            if not js_links:
+                self.data['jss_minified'] = "Only inline JS found (not optimal for caching)."
+                self.jss = False
+                return
+            
+            total_js = 0
+            minified_js = 0
+            unminified_files = []
+            
+            for js_url in js_links[:10]:  # Limit to first 10 to avoid timeout
+                try:
+                    r = self.session.get(js_url, timeout=10)
+                    r.raise_for_status()
+                    js_code = r.text
+                    
+                    # Skip if already empty or very small
+                    if len(js_code.strip()) < 50:
+                        continue
+                    
+                    total_js += 1
+                    compressed_js = jsmin(js_code)
+                    
+                    # Calculate compression ratio
+                    reduction = ((len(js_code) - len(compressed_js)) / len(js_code)) * 100
+                    
+                    if reduction > 5:  # More than 5% reduction means it wasn't minified
+                        unminified_files.append(js_url)
+                    else:
+                        minified_js += 1
+                        
+                except requests.RequestException:
+                    # Skip this file if it can't be fetched
+                    continue
+            
+            if total_js == 0:
+                self.data['jss_minified'] = "Unable to verify JS minification."
+                self.jss = False
+                return
+            
+            minification_ratio = (minified_js / total_js) * 100 if total_js > 0 else 0
+            
+            if minification_ratio >= 80:
+                self.data['jss_minified'] = f"Good! {minified_js}/{total_js} JS files are minified ({int(minification_ratio)}%)."
                 self.jss = True
+            elif minification_ratio >= 50:
+                self.data['jss_minified'] = f"Partial. {minified_js}/{total_js} JS files are minified ({int(minification_ratio)}%)."
+                self.jss = False
+            else:
+                self.data['jss_minified'] = f"Poor. Only {minified_js}/{total_js} JS files are minified ({int(minification_ratio)}%)."
+                self.jss = False
+            
+            # SEO-relevant JS checks
+            self.data['inline_js_count'] = len([s for s in inline_scripts if s.string and len(s.string.strip()) > 50])
+            self.data['external_js_count'] = len(js_links)
+            
+            # Check for render-blocking JS (bad for SEO)
+            render_blocking = []
+            for script in soup.find_all("script", src=True):
+                if not script.get("async") and not script.get("defer"):
+                    render_blocking.append(script.get("src"))
+            
+            self.data['render_blocking_js'] = len(render_blocking)
+            
+        except Exception as e:
+            self.data['jss_minified'] = f"Error analyzing JS: {str(e)}"
+            self.jss = False
 
-        except:
-            self.data['jss_minified'] = "JavaScript code for the website is given Error."
 
-
-    def Optmized_Plugins(self):
-        from bs4 import BeautifulSoup
-
-        response = requests.get(self.url)
-        html_content = response.content
-
-        # Parse the HTML content using BeautifulSoup
-        soup = BeautifulSoup(html_content, 'html.parser')
-
-        # Search for optimized plugins
-        optimized_plugins = soup.find_all('link', {'rel': 'preload'})
-
-        # Print the optimized plugins
-        if optimized_plugins:
-            self.data['opt_plugins']="The website is using the  optimized plugins"
-            self.plugins=True
-        else:
-            self.data['opt_plugins'] = "The website is not using the optimized plugins"
-
-    def Mobile_speed(self):
+    async def Optmized_Plugins(self):
         try:
-            url = 'https://www.googleapis.com/pagespeedonline/v5/runPagespeed'
-            params = {
-                'url': self.url,
-                'strategy': 'mobile',
-                'key': 'AIzaSyCpW9QRlTmh5nzQsN8tu3vJA1x1XQDvZW4'}
+            async with aiohttp.ClientSession() as session:
+                async with session.get(
+                    self.url, 
+                    timeout=aiohttp.ClientTimeout(total=60)
+                ) as response:
+                    if response.status == 200:
+                        html_content = await response.read()
 
-            response = requests.get(url, params=params)
-            data = json.loads(response.text)
+                        # Parse the HTML content using BeautifulSoup
+                        soup = BeautifulSoup(html_content, 'html.parser')
 
-            score = data['lighthouseResult']['categories']['performance']['score']
-            self.data["mobile_speed"]=score
-            self.mob_score = score
-        except:
-            score = 0
-            self.data["mobile_speed"] = score
-            self.mob_score = score
-        if score < 3 :
-            self.data["mobile_score_verdict"]="The mobile speed score is good"
-        else:
-            self.data["mobile_score_verdict"] = "The mobile speed score is not good"
-        self.mobile_speed=score
+                        # Search for various performance optimization techniques
+                        preload_links = soup.find_all('link', {'rel': 'preload'})
+                        prefetch_links = soup.find_all('link', {'rel': 'prefetch'})
+                        preconnect_links = soup.find_all('link', {'rel': 'preconnect'})
+                        dns_prefetch_links = soup.find_all('link', {'rel': 'dns-prefetch'})
+                        
+                        # Check for resource hints (important for performance)
+                        optimization_count = 0
+                        optimizations_found = []
+                        
+                        if preload_links:
+                            optimization_count += len(preload_links)
+                            optimizations_found.append(f"Preload ({len(preload_links)})")
+                        
+                        if prefetch_links:
+                            optimization_count += len(prefetch_links)
+                            optimizations_found.append(f"Prefetch ({len(prefetch_links)})")
+                        
+                        if preconnect_links:
+                            optimization_count += len(preconnect_links)
+                            optimizations_found.append(f"Preconnect ({len(preconnect_links)})")
+                        
+                        if dns_prefetch_links:
+                            optimization_count += len(dns_prefetch_links)
+                            optimizations_found.append(f"DNS-Prefetch ({len(dns_prefetch_links)})")
+                        
+                        # Check for lazy loading (SEO best practice)
+                        lazy_images = soup.find_all('img', {'loading': 'lazy'})
+                        if lazy_images:
+                            optimization_count += len(lazy_images)
+                            optimizations_found.append(f"Lazy Loading ({len(lazy_images)} images)")
+                        
+                        # Check for async/defer scripts
+                        async_scripts = soup.find_all('script', {'async': True})
+                        defer_scripts = soup.find_all('script', {'defer': True})
+                        if async_scripts or defer_scripts:
+                            script_count = len(async_scripts) + len(defer_scripts)
+                            optimization_count += script_count
+                            optimizations_found.append(f"Async/Defer Scripts ({script_count})")
+                        
+                        # Store detailed optimization info
+                        self.data['optimization_techniques'] = ", ".join(optimizations_found) if optimizations_found else "None"
+                        self.data['optimization_count'] = optimization_count
+                        
+                        if optimization_count >= 5:
+                            self.data['opt_plugins'] = f"Excellent! Website uses {optimization_count} performance optimizations: {', '.join(optimizations_found)}"
+                            self.plugins = True
+                        elif optimization_count >= 2:
+                            self.data['opt_plugins'] = f"Good. Website uses {optimization_count} optimizations: {', '.join(optimizations_found)}"
+                            self.plugins = True
+                        elif optimization_count > 0:
+                            self.data['opt_plugins'] = f"Basic optimizations found: {', '.join(optimizations_found)}"
+                            self.plugins = False
+                        else:
+                            self.data['opt_plugins'] = "No resource optimization techniques detected."
+                            self.plugins = False
+                    else:
+                        self.data['opt_plugins'] = f"Unable to fetch page (HTTP {response.status})"
+                        self.plugins = False
 
+        except asyncio.TimeoutError:
+            self.data['opt_plugins'] = "The request timed out!"
+            self.plugins = False
+        except aiohttp.ClientError as e:
+            self.data['opt_plugins'] = f"An error occurred: {str(e)}"
+            self.plugins = False
+        except Exception as e:
+            self.data['opt_plugins'] = f"Unexpected error: {str(e)}"
+            self.plugins = False
 
-    def AMP(self):
-        response = requests.get(self.url)
-        soup = BeautifulSoup(response.text, 'html.parser')
+    
 
-        # Check if the website is using AMP
-        if soup.find('html', {'amp': ''}):
-            self.data["amp"]="The website is using AMP"
-            self.amp=True
-        else:
-            self.data["amp"] = "The website is not using AMP"
+    
 
-
-    def Mobile_rendering(self):
-        # set the user agent for mobile device
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1'}
-
-        response = requests.get(self.url, headers=headers)
-
-        # check the response status code to determine if the website is working or not
-        if response.status_code == 200:
-            self.data["mobile_render"]="Mobile rendering is working."
-            self.render=True
-        else:
-            self.data["mobile_render"] = "Mobile rendering is not working."
-
-    def Mobile_preview(self):
-        #check the mobile usability
-
-        url = 'https://searchconsole.googleapis.com/v1/urlTestingTools/mobileFriendlyTest:run'
-        params = {
-            'url': self.url,
-            'key': "AIzaSyBHQ0tzn7Ox6e4OOWYPfwuV66TcTyM316Q"
-        }
-        x = requests.post(url, params=params)
-        data = json.loads(x.text)
+    def Report(self, dict, output_dir=None):
+        """Generate SEO report and optionally send via email"""
         try:
-            if data["mobileFriendliness"] == "NOT_MOBILE_FRIENDLY" or self.mobile_speed > 3:
-                self.data["mobile_prev"]="The mobile preview is not optimized."
+            # Get user email safely
+            current_user_email = self._get_user_email(dict)
+            
+            # Email credentials
+            sender_email = os.getenv('SENDER_EMAIL', 'moazzamrazaghori@gmail.com')
+            sender_password = os.getenv('SENDER_PASSWORD', 'ahdbwmrxdpiaxiew')
+            
+            # Set output directory
+            if output_dir is None:
+                try:
+                    from django.conf import settings
+                    output_dir = os.path.join(settings.MEDIA_ROOT, 'reports')
+                except:
+                    output_dir = os.path.join(os.getcwd(), 'reports')
+            
+            # Decide whether to send email
+            send_email = bool(current_user_email)
+            
+            # Generate PDF report
+            logger.info(f"Generating report for URL: {dict.get('url', 'Unknown')}")
+            result = generate_seo_report(
+                data_dict=dict,
+                user_email=current_user_email,
+                sender_email=sender_email,
+                sender_password=sender_password,
+                output_dir=output_dir,
+                send_email=send_email
+            )
+            
+            # Log the result
+            if result['success']:
+                logger.info(f"Report generated successfully: {result['pdf_path']}")
+                if result['email_sent']:
+                    logger.info(f"Email sent to: {current_user_email}")
             else:
-                self.data["mobile_prev"] = "The mobile preview is optimized."
-                self.mobpreview=True
-        except:
-            self.data["mobile_prev"]="The page is unreachable!"
-
-        return
-
-    def Report(self,dict):
-        #for mobile preview screenshot
-        chrome_options = Options()
-        chrome_options.add_argument("--headless")
-        chrome_options.add_argument("--window-size=375,812")
-        chrome_options.add_argument("--log-level=3")
-        mobile_emulation = {
-            "deviceMetrics": {"width": 375, "height": 812, "pixelRatio": 3.0},
-            "userAgent": "Mozilla/5.0 (Linux; Android 9; SM-G960U) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.121 Mobile Safari/537.36",
-        }
-        chrome_options.add_experimental_option("mobileEmulation", mobile_emulation)
-
-        driver = webdriver.Chrome(options=chrome_options)
-        driver.get(dict['url'])
-        driver.implicitly_wait(2)
-        driver.save_screenshot("mobile_view.png")
-        driver.quit()
-        image = Image.open("mobile_view.png")
-        resized_image = image.resize((375, 812), Image.ANTIALIAS)
-        resized_image.save("mobile_view.png")
-
-        import webbrowser
-        import random
-        from datetime import date
-        from fpdf import FPDF
-        pdf = FPDF()
-        pdf.add_page()
-        pdf.set_font('Times', 'B', 25)
-
-        # Header
-        pdf.set_font('Courier', 'BU', 45)
-        pdf.set_text_color(20, 100, 238)
-        pdf.text(17, 115, "SMART WEB ANALYZER")
-        pdf.set_font('Times', 'BU', 20)
-        pdf.set_text_color(0, 0, 0)
-        pdf.text(42, 145, "Summarized Recommendation Report")
-        pdf.set_font('Times', 'B', 20)
-        pdf.text(100, 160, " + ")
-        pdf.set_font('Times', 'BU', 20)
-        pdf.text(51, 175, "Detail Recommendation Report")
-        pdf.set_font('Times', '', 15)
-        pdf.text(167, 10, "Date:")
-        pdf.text(180, 10, str(date.today()))
-        pdf.text(5, 10, "Smart Web Analyzer")
-        # Content
-        pdf.set_font('Times', 'BU', 20)
-        pdf.text(58, 210, "URL:")
-        pdf.set_text_color(28, 134, 238)
-        pdf.set_font('Times', 'U', 20)
-        pdf.text(78, 210, dict['url'])
-        pdf.image('Supported/icon.png', 70, 15)
-
-        pdf.add_page()
-
-        # Content Analysis Summmary
-        pdf.set_text_color(0, 0, 0)
-        pdf.set_font('Times', 'B', 26)
-        pdf.text(30, 30, " Summarized Recommendation Report")
-        pdf.set_font('Times', 'BU', 18)
-        pdf.text(10, 54, "Content Analysis Recommendations:")
-        pdf.ln(60)
-        # Title Summary
-        pdf.set_font('Times', '', 16)
-        if dict['title_score'] < 30:
-            # title_txt = '1) Must increase the length of title it should be between 30 to 60 words.'
-            title_txt = '1) Length of title should be between 30 to 60 words.'
-            pdf.text(20, 70, title_txt)
-            pdf.ln(30)
-        elif 30 <= dict['title_score'] < 60:
-            # title_txt = '1) Perfect! No need to change title length.'
-            title_txt = '1) Length of title should be between 30 to 60 words.'
-            pdf.text(20, 70, title_txt)
-            pdf.ln(30)
-        else:
-            # title_txt = '1) Must decrease the length of title it should be between 30 to 60 words.'
-            title_txt = '1) Length of title should be between 30 to 60 words.'
-            pdf.text(20, 70, title_txt)
-            pdf.ln(30)
-
-        # Description Summary
-        pdf.set_font('Times', '', 16)
-        pdf.ln(60)
-        if dict['desc_score'] < 30:
-            # title_txt = '2) Must increase the length of description it should be between 50 to 160 words.'
-            title_txt = '2) Length of description should be between 50 to 160 words.'
-            pdf.text(20, 80, title_txt)
-            pdf.ln(30)
-        elif dict['desc_score'] == 0:
-            title_txt = '2) Description not found in meta tag!'
-            pdf.text(20, 80, title_txt)
-            pdf.ln(30)
-        elif 50 <= dict['desc_score'] < 160:
-            # title_txt = '2) Perfect! No need to change description length.'
-            title_txt = '2) Length of description should be between 50 to 160 words.'
-            pdf.text(20, 80, title_txt)
-            pdf.ln(30)
-        else:
-            # title_txt = '2) Must decrease the length of description it should be between 50 to 160 words.'
-            title_txt = '2) Length of description should be between 50 to 160 words.'
-            pdf.text(20, 80, title_txt)
-            pdf.ln(30)
-
-        # Heading Summary
-        pdf.set_text_color(0, 0, 0)
-        pdf.ln(60)
-        if dict['H'] == None:
-            pdf.set_font('Times', 'B', 16)
-            pdf.text(20, 90, "3) Heading tags not found!")
-            pdf.set_font('Times', '', 16)
-            pdf.text(20, 100, "     a) Add H1 tag to ensure clarity for the reader!")
-            pdf.text(20, 110, "     b) Add H2 tag to makes it easier for users to find what they are looking for!")
-            pdf.text(20, 120, "     c) H1 and H2 headings help improve the readability of a page.")
-
-        elif dict['H'] == "H1":
-            if dict['heading_score'] == 0:
-                pdf.set_font('Times', 'B', 16)
-                pdf.text(20, 90, "3) H1 Heading tag not found!")
-                pdf.set_font('Times', '', 16)
-                pdf.text(20, 100, "     The H1 tag is important for both search engines and users to understand ")
-                pdf.text(20, 110, "     the main topic or purpose of the page.Therefore, it is recommended to add ")
-                pdf.text(20, 120, "     an H1 tag that accurately reflects the content of the page.")
-            else:
-                pdf.set_font('Times', 'B', 16)
-                pdf.text(20, 90, "3) H1 Heading tag found!")
-                pdf.set_font('Times', '', 16)
-                pdf.text(20, 100, "     a) Make sure the h1 tag accurately reflects the content of the page.")
-                pdf.text(20, 110, "     b) Optimize the H1 tag for search engines.")
-                pdf.text(20, 120, "     c) Test page with different screen sizes to ensure that the h1 tag is visible.")
-
-        elif dict['H'] == "H2":
-            if dict['heading_score'] == 0:
-                pdf.set_font('Times', 'B', 16)
-                pdf.text(20, 90, "3) H1 tag and H2 not found!")
-                pdf.set_font('Times', '', 16)
-                pdf.text(20, 100, "     a) Add H1 tag to ensure clarity for the reader!")
-                pdf.text(20, 110, "     b) Add H2 tag to makes it easier for users to find what they are looking for!")
-                pdf.text(20, 120, "     c) H1 and H2 headings help structure and organize the content on a page.")
-            else:
-                pdf.set_font('Times', 'B', 16)
-                pdf.text(20, 90, "3) H1 Heading tag not found!")
-                pdf.text(20, 100,"    H2 Heading tag  found!")
-                pdf.set_font('Times', '', 16)
-                pdf.text(20, 110, "     a) Use your main keyword in the H2 heading.")
-                pdf.text(20, 120, "     b) H2 heading should accurately define the content of section it introduce.")
-
-        # Google preview summary
-        pdf.text(20, 130, '4) A good Google search preview must have')
-        pdf.set_font('Times', 'B', 16)
-        pdf.text(20, 140, '    Max title length:')
-        pdf.set_font('Times', '', 16)
-        pdf.text(20, 150, '    Recommended length is from 30 to 52 characters, up to 580 pixels.')
-        pdf.set_font('Times', 'B', 16)
-        pdf.text(   20, 160, '    Max meta description length:')
-        pdf.set_font('Times', '', 16)
-        pdf.text(20, 170, '    Recommended length is from 120 to 158 characters, up to 920 pixels.')
-
-        # Keyword Density Summary
-        if len(dict['lst']) == 0 or len(dict['lst']) < 5:
-            pdf.set_text_color(0, 0, 0)
-            pdf.set_font('Times', '', 16)
-            pdf.text(20, 180, "5) Website don't allow to crawl Keywords")
-            pdf.set_font('Times', '', 16)
-            pdf.text(20, 190, "     For this I recommend you! Add main keywords in target keywords and")
-            pdf.text(20, 200, "     add keywords in (title/desc/head) having higher count in your site!")
-        else:
-            title_txt = '5) I analyze the top 5 words that occur most in your website so they      must be in your website (Title, Description, Heading).'
-            pdf.text(20, 180, title_txt[0:70])
-            pdf.text(20, 190, title_txt[70:135])
-            pdf.set_font('Times', 'B', 16)
-            pdf.text(20, 200, '     Note: For more details check Detail Recommendation Report')
-
-        # Imag Alt Check Summary
-        pdf.set_font('Times', '', 16)
-        if dict['alt_count'] == 0:
-            pdf.text(20, 210, '6) Perfect! All Images in your website contain Alt attribute.')
-            pdf.text(20, 220, '     a) Make sure that the alt text accurately describes the image.')
-            pdf.text(20, 230, '     b) Use descriptive file names for your images.')
-            pdf.text(20, 240, '     c) Use Relevant keyword in alt text can improve your SEO.')
-        else:
-            pdf.text(20, 210, '6) '+str(dict['alt_count'])+ ' Images must contain Alt attribute')
-            pdf.text(20, 220, '     a) It provides alternative information for an image.')
-            pdf.text(20, 230, '     b) It provide better User Experience')
-            pdf.text(20, 240, '     c) Search engines use alt text to understand the content of images.')
-
-        # links Summary
-        pdf.set_font('Times', '', 16)
-        if dict['external_links'] == 0 or dict['external_links'] <= 8:
-            pdf.text(20, 250, '7) Add 1 or 2 external links for every 500 words content, It helps:')
-            pdf.text(20, 260, '     a) To improves your credibility and SEO.')
-            pdf.text(20, 270, '     b) To offers readers more value and create connections in a easy way.')
-        else:
-            pdf.text(20, 250, '6) Perfect! Website have a good number of external links its best practices are:')
-            pdf.text(20, 260, '     a) Make the links relevant to offers readers more value.')
-            pdf.text(20, 270, '     b) Link to reputable sources. Do not link to competing websites')
-
-        pdf.text(180, 288, 'Page | 01')
-        pdf.add_page()
-
-        # Structure Analysis Summary
-        pdf.set_font('Times', 'BU', 18)
-        pdf.text(10, 20, "Structure Analysis Recommendations:")
-
-
-        # Robot.txt
-        if dict['robot_flag'] == True:
-            pdf.set_font('Times', '', 16)
-            pdf.text(20, 35, '1)  Perfect! your website have a robot.txt file.')
-            pdf.text(20, 45, '      a) Tells search engine crawlers which URLs it can access on your site.')
-            pdf.text(20, 55, '      b) Mainly used to avoid overloading your site with requests')
-
-        else:
-            pdf.set_font('Times', '', 16)
-            pdf.text(20, 35, '1)  Your website have no Robot.txt file so:')
-            pdf.text(20, 45, '      a) Bot can crawl your website and index pages as it normally would.')
-            pdf.text(20, 55, '      b) Only needed if you want to have more control on what is being crawled.')
-
-        # sitemap summary
-        if dict['sitemap_flag'] == True:
-            pdf.text(20, 65, '2)  Sitemaps should be no larger than 10MB and can contain a maximum of 50,000 URLs.')
-            pdf.text(20, 75, '      a) If Bigger than 10MB, you must create multiple sitemap files.')
-
-        else:
-            pdf.text(20, 65, '2)  I recommend you to have a Sitemap file in your site! ')
-            pdf.text(20, 75, '      a) It will enhance the ranking of your website in search engine results.')
-
-        # broken link summary
-        if dict['b_links'] == 0:
-            pdf.text(20, 85, '3)  Perfect! Your site have no Broken Links.')
-            pdf.text(20, 95, '      a) Our recommendation is to analyze your website every-month to better check')
-            pdf.text(20, 105, '         for broken links as they have a huge impact on ranking')
-        else:
-            pdf.text(20, 85, '3)  Opps! Broken links found in your website.')
-            pdf.text(20, 95, '      a) Too many Broken Links sends signals to Google that your site is outdated,')
-            pdf.text(20, 105, '      b) Could harmful to rankings so maintain this problem ASAP!')
-
-        # Favicon Summary
-        if dict['icon_flag'] == True:
-            pdf.text(20, 115, '4)  Icon found! Keep it simple and recognizable.')
-        else:
-            pdf.text(20, 115, '4)  Sorry! We dont have access to analyze your icon.')
-
-        # opengraph Summary
-        if dict['ogp_flag'] == True:
-            pdf.text(20, 125,'5)  Perfect! Your site have Open Graph Protocol')
-            pdf.text(20, 135,'      a) I recommend to optimize your shared content to provides a better UX.')
-        else:
-            pdf.text(20, 125, '5)  Open graph tags not found! It may not directly affect your SEO but:')
-            pdf.text(20, 135, '      a) They can increase your traffic and social media discoverability.')
-
-        # Technology Analysis Summary
-        pdf.set_font('Times', 'BU', 18)
-        pdf.text(10, 155, "Technology Analysis Recommendations:")
-
-
-        # Webserver Summary
-
-        if dict['tech_flag'] == True:
-            pdf.set_font('Times', 'B', 16)
-            pdf.text(20, 170, "1) I found your website Webserver! I recommend you:")
-            pdf.set_font('Times', '', 16)
-            pdf.text(20, 180, '     a) Configure the server properly.')
-            pdf.text(20, 190, '     b) Optimize server performance.')
-            pdf.text(20, 200, '     c) Monitor server activity / Backup regularly')
-        else:
-            pdf.set_font('Times', 'B', 16)
-            pdf.text(20, 170, "1) I can't access your website webserver.")
-            pdf.set_font('Times', '', 16)
-            pdf.text(20, 180, '      I recommend you to select the webserver on base of your Website traffic,')
-            pdf.text(20, 190, '      Content management, Programming Language and Technologies used. Some ')
-            pdf.text(20, 200, '      commonly used Webserver are (Apache, Nginx, Microsoft IIS, Lighttpd)')
-
-        #Google Analytics Summary
-        if dict['analytics_flag'] == True:
-            pdf.set_font('Times', 'B', 16)
-            pdf.text(20, 210, "2) Google Analytics installed, I would recommend the following:")
-            pdf.set_font('Times', '', 16)
-            pdf.text(20, 220, '     a) Analyze traffic sources and Monitor user behavior.')
-            pdf.text(20, 230, '     b) Set up custom reports.')
-        else:
-            pdf.set_font('Times', 'B', 16)
-            pdf.text(20, 210, "2) First Install Google Analytics as it is important for several reasons:")
-            pdf.set_font('Times', '', 16)
-            pdf.text(20, 220,'       a) Track and optimize website performance.')
-            pdf.text(20, 230,'       b) Measure marketing effectiveness.')
-
-        #Doc type Summary
-        if dict['doc_flag'] == True:
-            pdf.set_font('Times', 'B', 16)
-            pdf.text(20, 240, "3) Doctype tag found in your website!")
-            pdf.set_font('Times', '', 16)
-            pdf.text(20, 250, '     I recommend you to use the HTML5 doctype for your website.')
-            pdf.text(20, 260,'      a) HTML5 is the latest version of HTML and it has several advantages.')
-            pdf.text(20, 270,'      b) HTML5 includes a number of new features and elements')
-        else:
-            pdf.set_font('Times', 'B', 16)
-            pdf.text(20, 240, "1) I recommend you to attach a doctype html tag in your website!")
-            pdf.set_font('Times', '', 16)
-            pdf.text(20, 250, '      Without a doctype, web browsers may have to guess which version of HTML')
-            pdf.text(20, 260, '      or XHTML the document is written in, which can lead to inconsistencies in')
-            pdf.text(20, 270, '      rendering, and may cause certain elements or styles to display incorrectly.')
-
-        pdf.text(180, 288, 'Page | 02')
-        pdf.add_page()
-
-        # Security Analysis Summary
-        pdf.set_font('Times', 'BU', 18)
-        pdf.text(10, 20, "Security Analysis Recommendations:")
-
-        # DMCA Summary
-        if dict['dmca'] == True:
-            pdf.set_font('Times', 'B', 16)
-            pdf.text(20, 35, '1) Website is protected by DMCA, I recommend you to:')
-            pdf.set_font('Times', '', 16)
-            pdf.text(20, 45, '      a) Display the DMCA badge prominently on your website.')
-            pdf.text(20, 55, '      b) Regularly monitor your website for infringing content and promptly')
-            pdf.text(20, 65, '          remove it when found (OR) Use Robust content management system ')
-            pdf.text(20, 75, '          to quickly remove infringing content from your website.')
-        else:
-            pdf.set_font('Times', 'B', 16)
-            pdf.text(20, 35, '1) I recommend you to protect your Website by DMCA!')
-            pdf.set_font('Times', '', 16)
-            pdf.text(20, 45, '      Without DMCA protection, website operators should be responsible for ')
-            pdf.text(20, 55, '      violate activities of their users, even if they had no knowledge of such')
-            pdf.text(20, 65, '      activities. This could lead to significant legal expenses, damages, and')
-            pdf.text(20, 75, '      reputational harm for the website operator.')
-
-        # HTTPS Redirection Summary
-        if dict['https'] == True:
-            pdf.set_font('Times', 'B', 16)
-            pdf.text(20, 85, '2) Website is HTTP Redirected! I Recommend you to:')
-            pdf.set_font('Times', '', 16)
-            pdf.text(20, 95,  '      a) Obtain / Install an SSL/TLS certificate.')
-            pdf.text(20, 105, '      b) Configure your web server to use HTTPS.')
-        else:
-            pdf.set_font('Times', 'B', 16)
-            pdf.text(20, 85, '2) I would recommend to consider implementing HTTP redirection!')
-            pdf.set_font('Times', '', 16)
-            pdf.text(20, 95,  '       HTTP redirection is important as it ensures that users are automatically ')
-            pdf.text(20, 105, '       directed to the correct version of a website, whether it is the HTTP version. ')
-
-        pdf.set_font('Times', 'B', 16)
-        pdf.text(20, 115, '3) Update your SSL Certificate: ')
-        pdf.set_font('Times', '', 16)
-        pdf.set_text_color(255, 0, 0)
-        pdf.text(100, 115,str(dict['expiry_date']))
-        # Social Analysis Summary
-        pdf.set_text_color(0, 0, 0)
-        pdf.set_font('Times', 'BU', 18)
-        pdf.text(10, 130, "Social Analysis Recommendations:")
-
-        # Facebook Summary
-        if dict['fb_flag'] == True:
-            pdf.set_font('Times', 'B', 16)
-            pdf.text(20, 143, '1) Website have a facebook link! I Recommend you to:')
-            pdf.set_font('Times', '', 16)
-            pdf.text(20, 153, '      a) Make sure the link is prominent and works properly.')
-            pdf.text(20, 163, '      c) Post regular updates on your Fb page to keep your followers engaged.')
-            pdf.text(20, 173, '      d) Use Facebook advertising to promote your website.')
-        else:
-            pdf.set_font('Times', 'B', 16)
-            pdf.text(20, 143, '1) Website not have a facebook link! I recommend you to add one because:')
-            pdf.set_font('Times', '', 16)
-            pdf.text(20, 153, '      a) It can provide social proof that your website is legitimate and active.')
-            pdf.text(20, 163, '      c) If you are running Facebook ads, having a Facebook link on your site can')
-            pdf.text(20, 173, '          be important for tracking and measuring the success of your campaigns.')
-
-        # Instagram Summary
-        if dict['insta_flag'] == True:
-            pdf.set_font('Times', 'B', 16)
-            pdf.text(20, 183, '2) Website have a Instagram link! I Recommend you to:')
-            pdf.set_font('Times', '', 16)
-            pdf.text(20, 193, '      a) Optimize the link placement.')
-            pdf.text(20, 203, '      b) Use a call-to-action (CTA).')
-            pdf.text(20, 213, '      c) Keep your Instagram content fresh and engaging.')
-            pdf.text(20, 223, '      d) Consider using Instagram advertising.')
-        else:
-            pdf.set_font('Times', 'B', 16)
-            pdf.text(20, 183, '2) Website not have a Instagram link! I recommend you to add one only if:')
-            pdf.set_font('Times', '', 16)
-            pdf.text(20, 193, '      Your target audience is active on Instagram and you want to increase your')
-            pdf.text(20, 203, '      social media presence, then adding an Instagram link to your website could')
-            pdf.text(20, 213, '      be beneficial. This allows visitors to easily find and follow your Instagram')
-            pdf.text(20, 223, '      account, which can help increase engagement and brand awareness.')
-
-
-        # Twitter Summary
-        if dict['twitter_flag'] == True:
-            pdf.set_font('Times', 'B', 16)
-            pdf.text(20, 233, '3) Website have a Twitter link! I Recommend you to:')
-            pdf.set_font('Times', '', 16)
-            pdf.text(20, 243, '      a) Ensure that the Twitter link is prominently displayed on the website.')
-            pdf.text(20, 253, '      b) Cross-promote your website on Twitter and use twitter cards.')
-        else:
-            pdf.set_font('Times', 'B', 16)
-            pdf.text(20, 233, '3) Twitter link not found adding it is not necessary, but it can be beneficial:')
-            pdf.set_font('Times', '', 16)
-            pdf.text(20, 243, '      a) It can help increase your social media presence and followers.')
-            pdf.text(20, 253, '      b) Add only if your website content is relevant to your Twitter followers.')
-
-
-        if dict['linkedin_flag'] == True:
-            pdf.set_font('Times', 'B', 16)
-            pdf.text(20, 263, '4) LinkedIn link Found! I Recommend you to:')
-            pdf.set_font('Times', '', 16)
-            pdf.text(20, 273, '      a) Check if the link is still valid and use descriptive anchor text.')
-        else:
-            pdf.set_font('Times', '', 16)
-            pdf.text(20, 263, '4) LinkedIn link not found adding it to your site is not necessary, but if your site ')
-            pdf.text(20, 273, '     is related to Second Life or virtual worlds in general, it could be useful.')
-
-        pdf.text(180, 288, 'Page | 03')
-        pdf.add_page()
-
-        #Performance Analysis Recommendations
-        pdf.set_font('Times', 'BU', 18)
-        pdf.text(10, 20, "Performance Analysis Recommendations:")
-
-        #website speed summary
-        if dict['speed'] >= 2.5:
-            pdf.set_font('Times', 'B', 16)
-            pdf.text(20, 35, '1) Some improvement can be made to improve website performance & speed!')
-            pdf.set_font('Times', '', 16)
-            pdf.text(20, 45, '      a) Optimize images.')
-            pdf.text(20, 55, '      b) Minimize HTTP requests.')
-            pdf.text(20, 65, '      c) Use a content delivery network (CDN).')
-        else:
-            pdf.set_font('Times', 'B', 16)
-            pdf.text(20, 35, '1) Website is performing well! I recommend you to:')
-            pdf.set_font('Times', '', 16)
-            pdf.text(20, 45, '      a) Regularly monitor and optimize website performance.')
-            pdf.text(20, 55, '      b) Minimize Plugins.')
-            pdf.text(20, 65, '      c) Use a faster web host if you want your site to perform more well.')
-
-        #CSS minification summary
-        if dict['css']==True:
-            pdf.set_font('Times', 'B', 16)
-            pdf.text(20, 75, '2) CSS Files Minified! For more better performance, I recommend you:')
-            pdf.set_font('Times', '', 16)
-            pdf.text(20, 85, '      Combine multiple CSS files into a single file, which can reduce the')
-            pdf.text(20, 95, '      number of HTTP requests needed to load the website.')
-        else:
-            pdf.set_font('Times', 'B', 16)
-            pdf.text(20, 75, '2) I recommend you to minify the CSS files, you can use various tools like:')
-            pdf.set_font('Times', '', 16)
-            pdf.text(20, 85, '      a) Online CSS minification tools (CSS Minifier or Online CSS Compressor).')
-            pdf.text(20, 95, '      b) Manually minify CSS code using text editor (Sublime Text or Notepad++).')
-
-        # JSS minification summary
-        if dict['jss']==True:
-            pdf.set_font('Times', 'B', 16)
-            pdf.text(20, 105, '3) JS Files Minified! For more better performance I recommend you:')
-            pdf.set_font('Times', '', 16)
-            pdf.text(20, 115, '      a) Enable gzip compression.')
-            pdf.text(20, 125, '      b) Combine multiple JavaScript files into single file.')
-        else:
-            pdf.set_font('Times', 'B', 16)
-            pdf.text(20, 105, '3)  Your website is not JS minified, I would recommend the following steps:')
-            pdf.set_font('Times', '', 16)
-            pdf.text(20, 115, '      a) Use tools such as (UglifyJS or Closure Compiler) to minify your JS code.')
-            pdf.text(20, 125, '      b) Remove unnecessary characters, white spaces and comments, from the code.')
-
-
-        #Mobile Usability Analysis Recommendations
-        pdf.set_font('Times', 'BU', 18)
-        pdf.text(10, 140, "Mobile Usability Analysis Recommendations:")
-
-        #mobile speed summary
-        if dict['mob_score'] >= 3:
-            pdf.set_font('Times', 'B', 16)
-            pdf.text(20, 155, '1) Some improvement can be made to improve mobile speed score!')
-            pdf.set_font('Times', '', 16)
-            pdf.text(20, 165, '      a) Reduce the number of images on a page.')
-            pdf.text(20, 175, '      b) Minimize render-blocking resources.')
-            pdf.text(20, 185, '      c) Reduce the number of plugins or third-party scripts used on the website.')
-        else:
-            pdf.set_font('Times', 'B', 16)
-            pdf.text(20, 155, '1) Mobile Speed score of your site is good! I recommend you to:')
-            pdf.set_font('Times', '', 16)
-            pdf.text(20, 165, '      a) Optimize your database queries.')
-            pdf.text(20, 175, '      b) Reduce server response time.')
-            pdf.text(20, 185, '      c) Regularly monitor website performance.')
-
-        #AMP summary
-        if dict['amp'] == True:
-            pdf.set_font('Times', 'B', 16)
-            pdf.text(20, 195, '1) Good! Your website is using AMP! I recommend you:')
-            pdf.set_font('Times', '', 16)
-            pdf.text(20, 205, '      a) Ensure that AMP has been implemented correctly on the website.')
-            pdf.text(20, 215, '      b) Use of preconnect & prefetch further improve loading speed of AMP pages.')
-            pdf.text(20, 225, '      c) Implement server-side rendering.')
-        else:
-            pdf.set_font('Times', 'B', 16)
-            pdf.text(20, 195, '2) Several things can be done to improve mobile-friendliness & performance:')
-            pdf.set_font('Times', '', 16)
-            pdf.text(20, 205, '      a) Minimize CSS and JavaScript files.')
-            pdf.text(20, 215, '      b) Optimize images for the web by reducing their file size.')
-            pdf.text(20, 225, '      c) Use a content delivery network (CDN)')
-
-        #Mobile Rendering summary
-        if dict['render'] == True:
-            pdf.set_font('Times', 'B', 16)
-            pdf.text(20, 235, '3) Great! Mobile Rendering is working for website, I recommend you:')
-            pdf.set_font('Times', '', 16)
-            pdf.text(20, 245, '      a) Avoid using pop-ups.')
-            pdf.text(20, 255, '      b) Improve readability.')
-            pdf.text(20, 265, '      c) Test your website on multiple devices.')
-        else:
-            pdf.set_font('Times', 'B', 16)
-            pdf.text(20, 235, '3) Mobile Rendering not working! some recommendations to improve it are:')
-            pdf.set_font('Times', '', 16)
-            pdf.text(20, 245, '      a) Prioritize content.')
-            pdf.text(20, 255, '      b) Simplify navigation.')
-            pdf.text(20, 265, '      c) Use responsive web design.')
-
-        pdf.text(180, 288, 'Page | 04')
-        pdf.add_page()
-
-        # Detail Report
-
-        pdf.set_text_color(0, 0, 0)
-        pdf.set_font('Times', 'B', 26)
-        pdf.text(36, 15, " Detail Recommendation Report")
-        pdf.set_font('Times', '', 18)
-        pdf.text(0, 25, "--------------------------------------------------------------------------------------------------------")
-        pdf.set_text_color(34, 139, 34)
-        pdf.set_font('Times', '', 16)
-        pdf.text(10, 30, "Green For Success: Great! Your website is performing good in specific analysis.")
-        pdf.set_text_color(255, 0, 0)
-        pdf.set_font('Times', '', 16)
-        pdf.text(10, 40, "Red For Warning  : Must work in specific area of your website as it effect your SEO.")
-        pdf.set_text_color(0, 0, 0)
-        pdf.set_font('Times', '', 18)
-        pdf.text(0, 45, "--------------------------------------------------------------------------------------------------------")
-
-
-
-        # Title Detail Recommendation
-        # title=self.soup.find('title').get_text()
-        pdf.set_text_color(0, 0, 0)
-        pdf.set_font('Times', 'BU', 20)
-        pdf.text(10, 59, "TITLE:")
-        pdf.set_font('Times', 'B', 18)
-        #         print(self.title)
-        pdf.text(37, 59, dict['title'][0:50] + '...')
-        pdf.set_font('Times', '', 18)
-        pdf.ln(60)
-        if dict['title_score'] == 0:
-            title_txt = 'The optimum page title length should be between 30 and 60 characters.'
-            pdf.multi_cell(65, 10, title_txt)
-            pdf.ln(30)
-            self.Score_Graph('Title', 'title.jpg', dict['title_score'])
-            pdf.image('title.jpg', 80, 62)
-            pdf.set_text_color(0, 0, 0)
-            pdf.set_font('Times', 'B', 35)
-            pdf.text(135, 114, '0%')
-            pdf.set_text_color(255, 0, 0)
-            pdf.set_font('Times', 'B', 18)
-            pdf.text(125, 134, 'Not Found!')
-        elif dict['title_score'] < 30:
-            title_txt = 'The optimum page title length should be between 30 and 60 characters.'
-            pdf.multi_cell(65, 10, title_txt)
-            pdf.ln(30)
-            self.Score_Graph('Title', 'title.jpg', dict['title_score'])
-            pdf.image('title.jpg', 80, 62)
-        else:
-            title_txt = 'You must always use modifiers like "best", "guide", "fast" and "checklist" along with the targeted keyword in the title of your page. It can help you rank for long tail versions of your target keyword.'
-            pdf.multi_cell(68, 8, title_txt)
-            self.Score_Graph('Title', 'title.jpg', dict['title_score'])
-            pdf.image('title.jpg', 80, 62)
-
-
-        # Description Detail Recommendation
-        pdf.set_font('Times', 'BU', 20)
-        pdf.text(10, 156, "DESC:")
-        pdf.set_font('Times', 'B', 18)
-        #         print(self.desc)
-        pdf.text(37, 156, dict['desc'])
-        pdf.ln(30)
-        pdf.set_font('Times', '', 18)
-        if dict['desc_score'] == 0:
-            title_txt = 'The meta description can impact a pages click-through rate (CTR) in Google SERPs, which can positively impact a pages ability to rank.'
-            pdf.multi_cell(70, 10, title_txt)
-            self.Score_Graph('Description', 'desc.jpg', self.desc_score)
-            pdf.image('desc.jpg', 85, 158)
-            pdf.set_text_color(0, 0, 0)
-            pdf.set_font('Times', 'B', 35)
-            pdf.text(140, 210, '0%')
-            pdf.set_text_color(255, 0, 0)
-            pdf.set_font('Times', 'B', 18)
-            pdf.text(130, 230, 'Not Found!')
-        elif dict['desc_score'] < 30:
-            title_txt = 'The optimum meta description length should be between 50 and 160 characters.'
-            pdf.multi_cell(75, 8, title_txt)
-            self.Score_Graph('Description', 'desc.jpg', dict['desc_score'])
-            pdf.image('desc.jpg', 85, 158)
-        else:
-            title_txt = 'The meta description can impact a pages click-through rate (CTR) in Google SERPs, which can positively impact a pages ability to rank.'
-            pdf.multi_cell(70, 10, title_txt)
-            self.Score_Graph('Description', 'desc.jpg', dict['desc_score'])
-            pdf.image('desc.jpg', 85, 158)
-
-        pdf.set_text_color(0, 0, 0)
-        pdf.text(180, 288, 'Page | 05')
-        pdf.add_page()
-
-        # Heading Detail Recommendation
-        pdf.set_text_color(0, 0, 0)
-        pdf.set_font('Times', 'UB', 20)
-        pdf.text(10, 15, "HEADING:")
-        pdf.set_font('Times', 'B', 18)
-        pdf.text(50, 15, dict['heading'])
-
-        if dict['H'] == None:
-            pdf.set_text_color(255, 0, 0)
-            pdf.set_font('Times', 'B', 17)
-            pdf.text(50, 30, "Warning!")
-            pdf.text(78, 30, "H1 and H2 Heading tag is missing!")
-            pdf.set_text_color(0, 0, 0)
-            pdf.set_font('Times', '', 18)
-
-        elif dict['H'] == "H1":
-            if dict['heading_score'] == 0:
-                pdf.set_text_color(255, 0, 0)
-                pdf.set_font('Times', 'B', 18)
-                pdf.text(50, 30, "Warning!")
-                pdf.text(78, 30, "H1 Tag is Empty!")
-                pdf.set_text_color(0, 0, 0)
-                pdf.set_font('Times', '', 18)
-            else:
-                pdf.set_text_color(34, 139, 34)
-                pdf.set_font('Times', 'B', 18)
-                pdf.text(50, 30, "Success!")
-                pdf.text(78, 30, dict['H'] + ' Found')
-                pdf.set_text_color(0, 0, 0)
-                pdf.set_font('Times', '', 18)
-
-        elif dict['H'] == "H2":
-            pdf.set_text_color(255, 0, 0)
-            pdf.set_font('Times', 'B', 18)
-            pdf.text(50, 30, "Warning!")
-            pdf.text(78, 30, "H1 Heading is missing!")
-            if dict['heading_score'] == 0:
-                pdf.set_text_color(255, 0, 0)
-                pdf.set_font('Times', 'B', 18)
-                pdf.text(50, 40, "Warning!")
-                pdf.text(78, 40, "H2 Tag is Empty!")
-                pdf.set_text_color(0, 0, 0)
-                pdf.set_font('Times', '', 18)
-            else:
-                pdf.set_text_color(34, 139, 34)
-                pdf.set_font('Times', 'B', 18)
-                pdf.text(50, 40, "Success!")
-                pdf.text(78, 40, dict['H'] + ' Found')
-                pdf.set_text_color(0, 0, 0)
-                pdf.set_font('Times', '', 18)
-
-        pdf.ln(32)
-        if dict['H'] == None:
-            pdf.text(10, 45, 'H1 tag should be used once or twice and H2 tag should be used twice and')
-            pdf.text(10, 55, 'thrice per page as it provide semantic structure to a webpage.')
-            pdf.text(10, 70, 'Add H1 and H2 as it helps')
-            pdf.text(10, 80, 'search engines understand')
-            pdf.text(10, 90, 'the content of the webpage')
-            pdf.text(10, 100, 'and improve accessibility')
-            pdf.text(10, 110, 'of the webpage and are good')
-            pdf.text(10, 120, 'indicator of what the most')
-            pdf.text(10, 130, 'important text on a page is')
-            self.Score_Graph('Heading', 'head.jpg', self.heading_score)
-            pdf.image('head.jpg', 90, 60)
-            pdf.set_text_color(0, 0, 0)
-            pdf.set_font('Times', 'B', 35)
-            pdf.text(140, 100, '0%')
-            pdf.set_text_color(255, 0, 0)
-            pdf.set_font('Times', 'B', 18)
-            pdf.text(130, 120, 'Not Found!')
-        elif dict['H'] == "H1":
-            if dict['heading_score'] == 0:
-                title_txt = 'H1 tag should be used once or twice per page for better results and the H2 tag should be used twice or thrice.'
-                pdf.multi_cell(70, 10, title_txt)
-            elif dict['heading_score'] < 30:
-                title_txt = 'The optimum meta heading length should be between 20 and 60 characters.'
-                pdf.multi_cell(70, 8, title_txt)
-            else:
-                title_txt = 'The h1 tag should contain your targeted keywords, ones that closely relate to the page title, and are relevant to your content. The h2 tag is a subheading and should contain similar keywords to your h1 tag.'
-                pdf.multi_cell(75, 10, title_txt)
-
-            self.Score_Graph('Heading', 'head.jpg', dict['heading_score'])
-            pdf.image('head.jpg', 90, 35)
-
-        else:
-            pdf.set_text_color(0, 0, 0)
-            pdf.set_font('Times', '', 18)
-            pdf.ln(5)
-            title_txt = 'H1 tag should be used once or twice per page for better results and the H2 tag should be used twice or thrice.'
-            pdf.multi_cell(180, 8, title_txt)
-            pdf.ln(10)
-            if dict['heading_score'] < 30:
-                title_txt = 'The optimum meta heading length should be between 20 and 60 characters.'
-                pdf.multi_cell(70, 8, title_txt)
-            else:
-                title_txt = 'The h2 tag is a subheading and should contain similar keywords to your h1 tag.Relevant subheads should use an H2 tag. Use headers as they make sense, they may reinforce other ranking factors.'
-                pdf.multi_cell(80, 10, title_txt)
-
-            self.Score_Graph('Heading', 'head.jpg', dict['heading_score'])
-            pdf.image('head.jpg', 90, 62)
-
-        # Google Preview Detail Recommendation
-        pdf.set_text_color(0, 0, 0)
-        pdf.set_font('Times', 'BU', 20)
-        pdf.text(10, 162, "GOOGLE PREVIEW:")
-        pdf.image('Supported/preview.jpeg', 1, 170)
-
-
-        pdf.set_font('Times', '', 14)
-        pdf.text(55, 232, dict['url'])
-        title=dict['title']
-        show_title = title.split(" ")
-        if len(show_title) > 2:
-            show_title = show_title[0] + ' ' + show_title[1]+ ' ' + show_title[2]
-        elif len(show_title) > 1:
-            show_title = show_title[0] + ' ' + show_title[1]
-        else:
-            show_title = show_title[0]
-                # show_title=show_title+' '+title.split(' ', 1)[1]
-        pdf.set_font('Times', '', 14)
-        pdf.text(60, 187, show_title)
-        pdf.set_text_color(26, 13, 171)
-        pdf.set_font('Times', 'U', 16)
-        pdf.text(55, 242, title)
-        pdf.set_text_color(0, 0, 0)
-        pdf.set_font('Times', '', 14)
-        if dict['comp_desc']==None:
-            pass
-        else:
-            pdf.text(55, 250, dict['comp_desc'][0:67])
-            pdf.text(55, 257, dict['comp_desc'][67:135])
-            pdf.text(55, 264, dict['comp_desc'][135:200]+'...')
-
-        pdf.text(180, 288, 'Page | 06')
-        pdf.add_page()
-
-        # Keyword Density Detail Recommendation
-        pdf.set_font('Times', 'BU', 20)
-        pdf.text(10, 15, "KEYWORD DENSITY:")
-
-        pdf.ln(15)
-        pdf.set_text_color(0, 0, 0)
-        pdf.set_font('Times', '', 18)
-        key_txt = "Keyword density is the percentage calculated based on the number of times a keyword occurs inside the content of webpage divided by the total word count. Keyword density / keyword frequency is still a pretty strong indicator to determine the main focus keywords and keyword phrases for a specific webpage."
-        pdf.multi_cell(65, 10, key_txt)
-        pdf.ln(10)
-
-        if len(dict['lst']) == 0 or len(dict['lst']) < 5:
-            pdf.set_text_color(255, 0, 0)
-            pdf.set_font('Times', '', 22)
-            pdf.text(110, 100, "Website don't allow to")
-            pdf.text(110, 110, "  crawl Keywords")
-        else:
-            pdf.set_text_color(0, 0, 0)
-            pdf.set_font('Times', '', 18)
-            pdf.text(0, 180, "--------------------------------------------------------------------------------------------------------")
-            pdf.set_text_color(34, 139, 34)
-            pdf.set_font('Times', '', 15)
-            pdf.text(5, 185, "Word Found in (Title, Desc & Head) : Yes |")
-            pdf.set_text_color(255, 0, 0)
-            pdf.set_font('Times', '', 15)
-            pdf.text(105, 185, "| Word Not Found in (Title, Desc & Head) : No")
-            pdf.set_text_color(0, 0, 0)
-            pdf.set_font('Times', '', 18)
-            pdf.text(0, 190, "--------------------------------------------------------------------------------------------------------")
-            pdf.set_font('Times', 'B', 18)
-            pdf.text(73, 198, "Title")
-            pdf.text(110, 198, "Description")
-            pdf.text(170, 198, "Heading")
-            pdf.set_font('Times', 'B', 18)
-            pdf.text(10, 198, "Words")
-            pdf.set_font('Times', '', 18)
-            pdf.text(10, 210, str(dict['lst'][0]))
-            pdf.text(10, 225, str(dict['lst'][1]))
-            pdf.text(10, 240, str(dict['lst'][2]))
-            pdf.text(10, 255, str(dict['lst'][3]))
-            pdf.text(10, 270, str(dict['lst'][4]))
-            # self.lst0
-            if len(dict['title']) > 1:
-                dict['title']=dict['title'].lower()
-            if len(dict['comp_desc']) >1:
-                dict['comp_desc']=dict['comp_desc'].lower()
-            if len(dict['comp_head']) >1:
-                dict['comp_head']=dict['comp_head'].lower()
-
-            if dict['lst'][0] in dict['title']:
-                pdf.set_text_color(34, 139, 34)
-                pdf.text(75, 210, "Yes")
-            else:
-                pdf.set_text_color(255, 0, 0)
-                pdf.text(75, 210, "No")
-            if dict['lst'][0] in dict['comp_desc']:
-                pdf.set_text_color(34, 139, 34)
-                pdf.text(120, 210, "Yes")
-            else:
-                pdf.set_text_color(255, 0, 0)
-                pdf.text(120, 210, "No")
-
-            if dict['lst'][0] in dict['comp_head']:
-                pdf.set_text_color(34, 139, 34)
-                pdf.text(180, 210, "Yes")
-            else:
-                pdf.set_text_color(255, 0, 0)
-                pdf.text(180, 210, "No")
-
-            # self.lst1
-            if dict['lst'][1] in dict['title']:
-                pdf.set_text_color(34, 139, 34)
-                pdf.text(75, 225, "Yes")
-            else:
-                pdf.set_text_color(255, 0, 0)
-                pdf.text(75, 225, "No")
-            if dict['lst'][1] in dict['comp_desc']:
-                pdf.set_text_color(34, 139, 34)
-                pdf.text(120, 225, "Yes")
-            else:
-                pdf.set_text_color(255, 0, 0)
-                pdf.text(120, 225, "No")
-
-            if dict['lst'][1] in dict['comp_head']:
-                pdf.set_text_color(34, 139, 34)
-                pdf.text(180, 225, "Yes")
-            else:
-                pdf.set_text_color(255, 0, 0)
-                pdf.text(180, 225, "No")
-
-            # self.lst2
-            if dict['lst'][2] in dict['title']:
-                pdf.set_text_color(34, 139, 34)
-                pdf.text(75, 240, "Yes")
-            else:
-                pdf.set_text_color(255, 0, 0)
-                pdf.text(75, 240, "No")
-            if dict['lst'][2] in dict['comp_desc']:
-                pdf.set_text_color(34, 139, 34)
-                pdf.text(120, 240, "Yes")
-            else:
-                pdf.set_text_color(255, 0, 0)
-                pdf.text(120, 240, "No")
-
-            if dict['lst'][2] in dict['comp_head']:
-                pdf.set_text_color(34, 139, 34)
-                pdf.text(180, 240, "Yes")
-            else:
-                pdf.set_text_color(255, 0, 0)
-                pdf.text(180, 240, "No")
-
-            # self.lst3
-            if dict['lst'][3] in dict['title']:
-                pdf.set_text_color(34, 139, 34)
-                pdf.text(75, 255, "Yes")
-            else:
-                pdf.set_text_color(255, 0, 0)
-                pdf.text(75, 255, "No")
-            if dict['lst'][3] in dict['comp_desc']:
-                pdf.set_text_color(34, 139, 34)
-                pdf.text(120, 255, "Yes")
-            else:
-                pdf.set_text_color(255, 0, 0)
-                pdf.text(120, 255, "No")
-
-            if dict['lst'][3] in dict['comp_head']:
-                pdf.set_text_color(34, 139, 34)
-                pdf.text(180, 255, "Yes")
-            else:
-                pdf.set_text_color(255, 0, 0)
-                pdf.text(180, 255, "No")
-
-            # self.lst4
-            if dict['lst'][4] in dict['title']:
-                pdf.set_text_color(34, 139, 34)
-                pdf.text(75, 270, "Yes")
-            else:
-                pdf.set_text_color(255, 0, 0)
-                pdf.text(75, 270, "No")
-            if dict['lst'][4] in dict['comp_desc']:
-                pdf.set_text_color(34, 139, 34)
-                pdf.text(120, 270, "Yes")
-            else:
-                pdf.set_text_color(255, 0, 0)
-                pdf.text(120, 270, "No")
-
-            if dict['lst'][4] in dict['comp_head']:
-                pdf.set_text_color(34, 139, 34)
-                pdf.text(180, 270, "Yes")
-            else:
-                pdf.set_text_color(255, 0, 0)
-                pdf.text(180, 270, "No")
-
-            courses = []
-            for i in dict['conversion'].keys():
-                if len(i) > 5:
-                    courses.append(i[:5]+'...')
-                else:
-                    courses.append(i)
-            values = list(dict['conversion'].values())
-            fig = plt.figure(figsize=(3.7, 3.7))
-            # creating the bar plot
-            plt.bar(courses, values, color='#1C86EE', width=0.4)
-            plt.xlabel("Keyword")
-            plt.ylabel("Count")
-            plt.savefig("graph.png")
-            pdf.image('graph.png', 84, 25)
-
-        pdf.set_text_color(0, 0, 0)
-        pdf.set_font('Times', '', 16)
-        pdf.text(180, 288, 'Page | 07')
-        pdf.add_page()
-
-        # Internal & External link Detail Recommendation:
-        pdf.set_text_color(0, 0, 0)
-        pdf.set_font('Times', 'BU', 20)
-        pdf.text(10, 15, "LINKS:")
-        pdf.set_font('times', '', 18)
-        pdf.ln(15)
-        key_txt = "External links boost the visibility on various Search Engine Results pages.External links you add can assist search engines in determining quality of your pages. High quality pages usually link to other quality pages. Thus, search engines will look your content favorably, helping you rank higher."
-        key_txt = "External links boost the visibility on various Search Engine Results pages.External links you add can assist search engines in determining quality of your pages. High quality pages usually link to other quality pages. Thus, search engines will look your content favorably, helping you rank higher."
-        pdf.multi_cell(65, 10, key_txt)
-        pdf.ln(10)
-
-        link_dict = {"Internal_link": dict['internal_links'], "External_link": dict['external_links']}
-        x_axis = list(link_dict.keys())
-        y_axis = list(link_dict.values())
-        fig = plt.figure(figsize=(3.7, 3.7))
-        # creating the bar plot
-        plt.bar(x_axis, y_axis, color=['#1C86EE', 'green'], width=0.4)
-        plt.xlabel("Links")
-        plt.ylabel("Total_links found")
-        plt.savefig("Links.png")
-        pdf.image('Links.png', 85, 15)
-
-        # Robot.txt Detail Recommendation
-        pdf.set_text_color(0, 0, 0)
-        pdf.set_font('Times', 'BU', 20)
-        pdf.text(10, 165, "ROBOT.txt:")
-        pdf.set_font('times', '', 18)
-        pdf.ln(10)
-
-        if dict['robot_flag'] == True:
-            pdf.set_text_color(34, 139, 34)
-            pdf.set_font('Times', 'B', 18)
-            pdf.text(63, 175, "Success!")
-            pdf.set_text_color(0, 0, 0)
-            pdf.set_font('Times', '', 18)
-            pdf.text(92, 175, 'Robot.txt found')
-        else:
-            pdf.set_text_color(255, 0, 0)
-            pdf.set_font('Times', 'B', 18)
-            pdf.text(63, 175, "Warning!")
-            pdf.set_text_color(0, 0, 0)
-            pdf.set_font('Times', '', 18)
-            pdf.text(92, 175, 'Robot.txt not found')
-        pdf.ln(5)
-        if dict['robot_flag'] == True:
-            robot_text = "The robots.txt file, also known as the robots exclusion protocol or standard, is a text file that tells web robots (search engines) which pages on your site to crawl or not to crawl."
-            pdf.multi_cell(180, 10, robot_text)
-
-        else:
-            robot_text = "It should be created and researched carefully in order to avoid a decrease in ranking or to speedup your profile during crawling."
-            pdf.multi_cell(180, 10, robot_text)
-
-        # Sitemap Detail Recommendation
-        pdf.set_font('Times', 'BU', 20)
-        pdf.text(10, 220, "SITEMAP:")
-        pdf.set_font('times', '', 18)
-        pdf.ln(22)
-
-        if dict['sitemap_flag'] == True:
-            pdf.set_text_color(34, 139, 34)
-            pdf.set_font('Times', 'B', 18)
-            pdf.text(63, 230, "Success!")
-            pdf.set_text_color(0, 0, 0)
-            pdf.set_font('Times', '', 18)
-            pdf.text(92, 230, 'Sitemap found')
-        else:
-            pdf.set_text_color(255, 0, 0)
-            pdf.set_font('Times', 'B', 18)
-            pdf.text(63, 230, "Warning!")
-            pdf.set_text_color(0, 0, 0)
-            pdf.set_font('Times', '', 18)
-            pdf.text(92, 230, 'Sitemap not found')
-        pdf.ln(12)
-        if dict['sitemap_flag'] == True:
-            pdf.text(10, 245,'In simple terms, an XML sitemap is a list of your websites URLs. It')
-            pdf.text(10, 255,'acts as a roadmap to tell search engines what content is available and')
-            pdf.text(10, 265,'how to reach it. A search engine will find all nine pages in a sitemap')
-            pdf.text(10, 275,'with one visit to the XML sitemap file.')
-        else:
-            sitemap_text = "It is important to optimize the site map of the website so that the search engine can find it and gather information."
-            pdf.multi_cell(180, 10, sitemap_text)
-
-        pdf.set_font('Times', '', 16)
-        pdf.text(180, 288, 'Page | 08')
-        pdf.add_page()
-
-        #Btroken Links Detail Recommendation
-        pdf.set_font('Times', 'BU', 20)
-        pdf.text(10, 15, "BROKEN LINKS:")
-        pdf.set_font('times', '', 18)
-        pdf.ln(15)
-        link_txt = "Broken links are not only bad for user experience but can also be harmful to your sites loving relationship with Google, i.e., your SEO. Avoid linking out to broken content and avoid having pages on your site that are broken. "
-        pdf.multi_cell(65, 10, link_txt)
-        pdf.ln(10)
-        fig, ax = plt.subplots(figsize=(4,4), subplot_kw={'projection': 'polar'})
-        x = (dict['b_links'] * pi * 2) / 100
-        left = (0 * pi * 2) / 360  # this is to control where the bar starts
-        plt.xticks([])
-        plt.yticks([])
-        ax.spines.clear()
-        ax.barh(1, x, left=left, height=1, color='#FF0000')
-        plt.ylim(-3, 3)
-        plt.text(0, -3, str(dict['b_links']) + "%", ha='center', va='center', fontsize=42)
-        plt.savefig('b_links.png')
-
-        pdf.image('b_links.png', 80, 10)
-
-        pdf.set_font('Times', 'BU', 20)
-        pdf.text(10, 155, "FAVICON:")
-        pdf.set_font('times', '', 18)
-        pdf.ln(30)
-        #
-        if dict['icon_flag'] == True:
-            pdf.set_text_color(34, 139, 34)
-            pdf.set_font('Times', 'B', 18)
-            pdf.text(63, 170, "Success!")
-            pdf.set_text_color(0, 0, 0)
-            pdf.set_font('Times', '', 18)
-            pdf.ln(2)
-            pdf.text(92, 170, 'Icon found')
-            try:
-                image = Image.open('test.jpg')
-                im = image.convert('RGB')
-                im.save("test.jpg")
-
-                pdf.image('test.jpg', 130, 158, 15, 15)
-                pdf.ln(2)
-            except:
-                pdf.set_text_color(255, 0, 0)
-                pdf.set_font('Times', 'B', 18)
-                pdf.text(63, 180, "Warning!")
-                pdf.set_text_color(0, 0, 0)
-                pdf.set_font('Times', '', 18)
-                # pdf.image('test1.png', 110, 158, 15, 15)
-                pdf.text(92, 180, 'Icon format have Error')
-
-        elif dict['icon_flag'] == False:
-            pdf.set_text_color(255, 0, 0)
-            pdf.set_font('Times', 'B', 18)
-            pdf.text(63, 170, "Warning!")
-            pdf.set_text_color(0, 0, 0)
-            pdf.set_font('Times', '', 18)
-            # pdf.image('test1.png', 110, 158, 15, 15)
-            pdf.text(92, 170, 'Icon not found')
-        pdf.ln(2)
-        pdf.set_font('times', '', 18)
-        icon_txt = "A favicon is a visual representation of your website and business, so users will identify with your brand based on the favicon you use. SEO is all about branding and marketing and the more visible your website is, the more users are likely to click on your website and remember who you are."
-        pdf.multi_cell(170, 12, icon_txt)
-        pdf.ln(2)
-
-        pdf.set_font('Times', '', 16)
-        pdf.text(180, 288, 'Page | 09')
-        pdf.add_page()
-
-        # Schema Detail Recommendation
-        pdf.set_font('Times', 'BU', 20)
-        pdf.text(10, 15, "SCHEMA:")
-        pdf.set_font('times', '', 18)
-        pdf.ln(30)
-
-        if dict['schema_flag'] == True:
-            pdf.set_text_color(34, 139, 34)
-            pdf.set_font('Times', 'B', 18)
-            pdf.text(63, 30, "Success!")
-            pdf.set_text_color(0, 0, 0)
-            pdf.set_font('Times', '', 18)
-            pdf.text(92, 30, 'Schema found')
-        else:
-            pdf.set_text_color(255, 0, 0)
-            pdf.set_font('Times', 'B', 18)
-            pdf.text(63, 30, "Warning!")
-            pdf.set_text_color(0, 0, 0)
-            pdf.set_font('Times', '', 18)
-            pdf.text(92, 30, 'Schema not found')
-
-        if dict['schema_flag'] == True:
-            schema_text = " Schema markup is code (semantic vocabulary) that you place on your website to help the search engines return more informative results for users."
-            pdf.multi_cell(180, 10, schema_text)
-
-        else:
-            schema_text = "The web we know is changing and the only way to remain visible on the new layer of the web is providing semantically described structured data. Schema.org is helping us."
-            pdf.multi_cell(180, 10, schema_text)
-
-        # OpenGraph Protocol Detail Recommendation
-        pdf.set_font('Times', 'BU', 20)
-        pdf.text(10, 85, "OPEN GRAPH PROTOCOL:")
-        pdf.set_font('times', '', 18)
-        pdf.ln(38)
-
-        if dict['ogp_flag'] == True:
-            pdf.set_text_color(34, 139, 34)
-            pdf.set_font('Times', 'B', 18)
-            pdf.text(48, 100, "Success!")
-            pdf.set_text_color(0, 0, 0)
-            pdf.set_font('Times', '', 18)
-            pdf.text(75, 100, ' Open Graph Protocol found')
-        else:
-            pdf.set_text_color(255, 0, 0)
-            pdf.set_font('Times', 'B', 18)
-            pdf.text(48, 100, "Warning!")
-            pdf.set_text_color(0, 0, 0)
-            pdf.set_font('Times', '', 18)
-            pdf.text(75, 100, ' Open Graph Protocol not found')
-
-        if dict['ogp_flag'] == True:
-            ogp_text = "Open Graph is a protocol that allows developers to control what content is shown when their websites are linked on Facebook or another social media platform. If you lack these tags, then there is a good chance that an unrelated image will appear when your website isshared, or the description will be inaccurate."
-            pdf.multi_cell(180, 10, ogp_text)
-
-        else:
-            ogp_text = "Open Graph Protocol has advantages for website owners: they can more precisely track who has visited the website and which elements have been viewed on an individual page."
-            pdf.multi_cell(180, 10, ogp_text)
-
-        # Facebook
-        pdf.set_font('Times', 'BU', 20)
-        pdf.text(10, 175, "FACEBOOK:")
-        pdf.set_font('times', '', 18)
-
-        if dict['fb_flag'] == True:
-            pdf.set_text_color(34, 139, 34)
-            pdf.set_font('Times', 'B', 18)
-            pdf.text(10, 195, "Success!")
-            pdf.set_text_color(0, 0, 0)
-            pdf.set_font('Times', '', 18)
-            pdf.text(40, 195, 'Facebook found')
-        elif dict['fb_flag'] == False:
-            pdf.set_text_color(255, 0, 0)
-            pdf.set_font('Times', 'B', 18)
-            pdf.text(10, 195, "Warning!")
-            pdf.set_text_color(0, 0, 0)
-            pdf.set_font('Times', '', 18)
-            pdf.text(40, 195, 'Facebook not found')
-            pdf.text(10, 210,'One of the easiest way to')
-            pdf.text(10, 220,'expand your reach and spread')
-            pdf.text(10, 230,'information regarding your')
-            pdf.text(10, 240,'organization is to share')
-            pdf.text(10, 250,'website links on Facebook.')
-
-        # Instagram
-        pdf.set_font('Times', 'BU', 20)
-        pdf.text(110, 175, "INSTAGRAM:")
-        pdf.set_font('times', '', 18)
-        pdf.ln(38)
-
-        if dict['insta_flag'] == True:
-            pdf.set_text_color(34, 139, 34)
-            pdf.set_font('Times', 'B', 18)
-            pdf.text(110, 195, "Success!")
-            pdf.set_text_color(0, 0, 0)
-            pdf.set_font('Times', '', 18)
-            pdf.text(140, 195, 'Instagram found')
-        elif dict['insta_flag'] == False:
-            pdf.set_text_color(255, 0, 0)
-            pdf.set_font('Times', 'B', 18)
-            pdf.text(110, 195, "Warning!")
-            pdf.set_text_color(0, 0, 0)
-            pdf.set_font('Times', '', 18)
-            pdf.text(140, 195, 'Instagram not found')
-            pdf.text(110, 210,
-                     'One of your main instagram goals is to drive traffic to your website. The best way to do this is by inserting links on your instagram.'[
-                     0:36])
-            pdf.text(110, 220,
-                     'One of your main instagram goals is to drive traffic to your website. The best way to do this is by inserting links on your instagram.'[
-                     36:73])
-            pdf.text(110, 230,
-                     'One of your main instagram goals is to drive traffic to your website. The best way to do this is by inserting links on your instagram.'[
-                     74:109])
-            pdf.text(110, 240,
-                     'One of your main instagram goals is to drive traffic to your website. The best way to do this is by inserting links on your instagram and optimize'[
-                     110:])
-            pdf.text(110, 250, 'your content to increase visibility.')
-
-        pdf.set_font('Times', '', 16)
-        pdf.text(180, 288, 'Page | 10')
-        pdf.add_page()
-
-        # Twitter Detail Recommendation
-        pdf.set_font('Times', 'BU', 20)
-        pdf.text(10, 15, "TWITTER:")
-        pdf.set_font('times', '', 18)
-        pdf.ln(28)
-        if dict['twitter_flag'] == True:
-            pdf.set_text_color(34, 139, 34)
-            pdf.set_font('Times', 'B', 18)
-            pdf.text(10, 30, "Success!")
-            pdf.set_text_color(0, 0, 0)
-            pdf.set_font('Times', '', 18)
-            pdf.text(40, 30, 'Twitter found')
-        elif dict['twitter_flag'] == False:
-            pdf.set_text_color(255, 0, 0)
-            pdf.set_font('Times', 'B', 18)
-            pdf.text(10, 30, "Warning!")
-            pdf.set_text_color(0, 0, 0)
-            pdf.set_font('Times', '', 18)
-            pdf.text(40, 30, 'Twitter not found')
-            pdf.multi_cell(80, 10,
-                           'Posting a twitter backlink is for the traffic to your website. It improves your site SEO score and also increases your site authority.')
-
-        # Lindedin
-        pdf.set_font('Times', 'BU', 20)
-        pdf.text(110, 15, "LINKEDIN:")
-        pdf.set_font('times', '', 18)
-        pdf.ln(38)
-
-        if dict['linkedin_flag'] == True:
-            pdf.set_text_color(34, 139, 34)
-            pdf.set_font('Times', 'B', 18)
-            pdf.text(110, 30, "Success!")
-            pdf.set_text_color(0, 0, 0)
-            pdf.set_font('Times', '', 18)
-            pdf.text(140, 30, 'Linkedin found')
-        elif dict['linkedin_flag'] == False:
-            pdf.set_text_color(255, 0, 0)
-            pdf.set_font('Times', 'B', 18)
-            pdf.text(110, 30, "Warning!")
-            pdf.set_text_color(0, 0, 0)
-            pdf.set_font('Times', '', 18)
-            pdf.text(140, 30, 'Linkedin not found')
-            pdf.text(110, 44,
-                     'Set up your Linkedin Page to improve your reputation & drive more traffic to your website and optimize your Linkedin presence as part of your social media optimization.'[
-                     0:36])
-            pdf.text(110, 54,
-                     'Set up your Linkedin Page to improve your reputation & drive more traffic to your website and optimize your Linkedin presence as part of your social media optimization.'[
-                     37:73])
-            pdf.text(110, 64,
-                     'Set up your Linkedin Page to improve your reputation & drive more traffic to your website and optimize your Linkedin presence as part of your social media optimization.'[
-                     74:107])
-            pdf.text(110, 74,
-                     'Set up your Linkedin Page to improve your reputation & drive more traffic to your website and optimize your Linkedin presence as part of your social media optimization'[
-                     108:141])
-            pdf.text(110, 84,
-                     'Set up your Linkedin Page to improve your reputation & drive more traffic to your website and optimize your Linkedin presence as part of your social media optimization efforts.'[
-                     142:])
-        fig, ax = plt.subplots(figsize=(2.5,2.5), subplot_kw={'projection': 'polar'})
-        x = (dict['s_count'] * pi * 2) / 100
-        left = (0 * pi * 2) / 360  # this is to control where the bar starts
-        plt.xticks([])
-        plt.yticks([])
-        ax.spines.clear()
-        ax.barh(1, x, left=left, height=1, color='#1874CD')
-        plt.ylim(-3, 3)
-        plt.text(0, -3, str(dict['s_count']) + "%", ha='center', va='center', fontsize=24)
-        plt.savefig('social.png')
-        pdf.image('social.png', 110, 98)
-
-
-        pdf.set_font('Times', '', 20)
-        pdf.text(10, 95, "-----------------------------------")
-        pdf.text(10, 115,"-----------------------------------")
-        pdf.set_font('Times', 'BU', 16)
-        pdf.text(10,105 , "SOCIAL ANALYSIS SCORE")
-        pdf.text(132, 105, "YOUR SCORE:")
-
-        pdf.set_font('Times', '', 16)
-        pdf.text(10, 125,"All 4 links found:")
-        pdf.text(10, 135,"Any 3 links found:")
-        pdf.text(10, 145,"Any 2 links found:")
-        pdf.text(10, 155,"Only 1 link found:")
-        pdf.text(10, 165,"Zero!! link found:")
-
-        pdf.set_text_color(34, 139, 34)
-        pdf.text(60, 125, "100%")
-        pdf.text(60, 135, "75%")
-        pdf.text(60, 145, "50%")
-        pdf.set_text_color(255, 0, 0)
-        pdf.text(60, 155, "25%")
-        pdf.text(60, 165, "0%")
-
-        #Technology Analysis
-
-        #ServerIP Detail Recommendation
-        pdf.set_text_color(0, 0, 0)
-        pdf.set_font('Times', 'BU', 20)
-        pdf.text(10, 185, "SERVER IP:")
-        pdf.set_font('times', '', 18)
-
-        if dict['ip_flag'] == True:
-            pdf.set_text_color(34, 139, 34)
-            pdf.set_font('Times', 'B', 18)
-            pdf.text(63, 200, "IP Found!")
-            pdf.set_text_color(0, 0, 0)
-            pdf.text(93, 200, dict['ip'])
-        else:
-            pdf.set_text_color(255, 0, 0)
-            pdf.set_font('Times', 'B', 18)
-            pdf.text(63, 200, "Warning!")
-            pdf.set_text_color(0, 0, 0)
-            pdf.text(93, 200, 'Server IP not found')
-
-        pdf.ln(75)
-        pdf.set_font('Times', '', 18)
-        pdf.text(10, 215,
-                 'According to the SEO experts Server IP have no impact on ranking.If your website is targeting a specific geographic region, hosting your website on a server located in that region could potentially improve your local SEO efforts.'[
-                 0:72])
-        pdf.text(10, 225,
-                 'According to the SEO experts Server IP have no impact on ranking.If your website is targeting a specific geographic region, hosting your website on a server located in that region could potentially improve your local SEO efforts.'[
-                 73:147])
-        pdf.text(10, 235,
-                 'According to the SEO experts Server IP have no impact on ranking.If your website is targeting a specific geographic region, hosting your website on a server located in that region could potentially improve your local SEO efforts.'[
-                 148:220])
-        pdf.text(10, 245,
-                 'According to the SEO experts Server IP have no impact on ranking.If your website is targeting a specific geographic region, hosting your website on a server located in that region could potentially improve your local SEO efforts.'[
-                 221:])
-        pdf.set_font('Times', '', 16)
-        pdf.text(180, 288, 'Page | 11')
-        pdf.add_page()
-
-        # Server location Detail Recommendation
-        pdf.set_font('Times', 'BU', 20)
-        pdf.text(10, 15, "SERVER LOCATION:")
-        pdf.set_font('times', '', 18)
-        pdf.ln(26)
-
-        if dict['server_loc_flag'] == True:
-            pdf.set_text_color(34, 139, 34)
-            pdf.set_font('Times', 'B', 18)
-            pdf.text(43, 30, "Success!")
-            pdf.set_text_color(0, 0, 0)
-            pdf.set_font('Times', '', 18)
-            pdf.text(73, 30, "Server Location Found!")
-            pdf.text(135, 30, "(" + dict['loc_name'] + ")")
-        else:
-            pdf.set_text_color(255, 0, 0)
-            pdf.set_font('Times', 'B', 18)
-            pdf.text(43, 30, "Warning!")
-            pdf.set_text_color(0, 0, 0)
-            pdf.set_font('Times', '', 18)
-            pdf.text(73, 30, 'Server Location not found')
-
-        pdf.multi_cell(180, 10,
-                       'Although the server location is not much important in SEO, but if you are targeting a specific audience in a country, then the location must be near the region.')
-
-        # Technology Detail Recommendation
-        pdf.set_font('Times', 'BU', 20)
-        pdf.text(10, 80, "TECHNOLOGY:")
-        pdf.set_font('times', '', 18)
-        pdf.ln(43)
-        if dict['tech_flag'] == True:
-            pdf.set_text_color(34, 139, 34)
-            pdf.set_font('Times', 'B', 17)
-            pdf.text(30, 95, "Webserver Found!")
-            pdf.set_text_color(0, 0, 0)
-            pdf.set_font('Times', '', 17)
-            pdf.text(92, 95, dict['webserver'])
-
-        elif dict['tech_flag'] == False:
-            pdf.set_text_color(255, 0, 0)
-            pdf.set_font('Times', 'B', 17)
-            pdf.text(30, 95, "Warning!")
-            pdf.set_text_color(0, 0, 0)
-            pdf.set_font('Times', '', 18)
-            pdf.text(92, 95, 'Webserver not found')
-
-        pdf.multi_cell(180, 10,
-                       'The technology used on the website is one of the most important factors in SEO. Since the new technologies are getting improved day by day, it is better for the websites to use tech like Ext JS, Angular,React,Jquery etc.')
-
-        # w3c Validation Detail Recommendation
-        pdf.set_font('Times', 'BU', 20)
-        pdf.text(10, 160, "W3C VALIDATION:")
-        pdf.set_font('times', '', 18)
-        pdf.ln(26)
-        key_txt = "Validating your website is important because there are code errors that can cause serious styling issues from a web design perspective.Errors in your code can affect your site's performance and make a big impact on your site's SEO."
-        pdf.multi_cell(72, 10, key_txt)
-        pdf.ln(26)
-
-        link_dict = {"Error": dict['error_len'], "Warning": dict['warn_len']}
-        x_axis = list(link_dict.keys())
-        y_axis = list(link_dict.values())
-        fig = plt.figure(figsize=(3, 3))
-        # creating the bar plot
-
-        plt.bar(x_axis, y_axis, color=['red', '#1C86EE'], width=0.4)
-        plt.xlabel("")
-        plt.ylabel("")
-        plt.savefig("w3c.png")
-        pdf.image('w3c.png', 90, 160)
-
-        pdf.set_font('Times', '', 16)
-        pdf.text(180, 288, 'Page | 12')
-        pdf.add_page()
-
-        # Google Analytics
-        pdf.set_font('Times', 'BU', 20)
-        pdf.text(10, 15, "GOOGLE ANALYTICS:")
-        pdf.set_font('times', '', 18)
-        pdf.ln(30)
-
-        if dict['analytics_flag'] == True:
-            pdf.set_text_color(34, 139, 34)
-            pdf.set_font('Times', 'B', 18)
-            pdf.text(57, 30, "Success!")
-            pdf.set_text_color(0, 0, 0)
-            pdf.set_font('Times', '', 18)
-            pdf.text(82, 30, 'Google Analytics found')
-        else:
-            pdf.set_text_color(255, 0, 0)
-            pdf.set_font('Times', 'B', 18)
-            pdf.text(49, 30, "Warning!")
-            pdf.set_text_color(0, 0, 0)
-            pdf.set_font('Times', '', 18)
-            pdf.text(82, 30, 'Google Analytics not found')
-
-        if dict['analytics_flag'] == True:
-            ana_text = "SEO analytics refers to the process of collecting, tracking, and analyzing your marketing data with the core aim of growing your websites organic traffic. The website must have a search engine analytics such as Google analytics."
-            pdf.multi_cell(180, 10, ana_text)
-
-        else:
-            ana_text = "You do really need to have some form of analytics on your website. Without analytics, you can not draw conclusions about how people are using your site. Without data, you can not make the improvements that are going to grow your business or brand."
-            pdf.multi_cell(180, 10, ana_text)
-
-        # Content Detail Recommendation
-        pdf.set_font('Times', 'BU', 20)
-        pdf.text(10, 90, "CONTENT:")
-        pdf.set_font('times', '', 18)
-        pdf.ln(38)
-
-        # Doctype Detail Recommendation
-        if dict['doc_flag'] == True:
-            pdf.set_text_color(34, 139, 34)
-            pdf.set_font('Times', 'B', 18)
-            pdf.text(10, 105, "DocType Found!")
-            pdf.set_text_color(0, 0, 0)
-            pdf.set_font('Times', '', 18)
-            pdf.text(60, 105,dict['Doctype'][0:9])
-        elif dict['doc_flag'] == False:
-            pdf.set_text_color(255, 0, 0)
-            pdf.set_font('Times', 'B', 18)
-            pdf.text(10, 105, "Warning!")
-            pdf.set_text_color(0, 0, 0)
-            pdf.set_font('Times', '', 18)
-            pdf.text(50, 105, 'DocType not found')
-        pdf.multi_cell(80, 10,
-                       'A document type declaration, defines which version of (X)HTML your webpage is using.It lets the browser know how the document should be interpreted ')
-
-        #Encoding Detail Recommendation
-        if dict['encod_flag'] == True:
-            pdf.set_text_color(34, 139, 34)
-            pdf.set_font('Times', 'B', 18)
-            pdf.text(110, 105, "Encoding Found!")
-            pdf.set_text_color(0, 0, 0)
-            pdf.set_font('Times', '', 18)
-            pdf.text(160, 105, dict['Encoding'])
-        elif dict['encod_flag'] == False:
-            pdf.set_text_color(255, 0, 0)
-            pdf.set_font('Times', 'B', 18)
-            pdf.text(110, 105, "Warning!")
-            pdf.set_text_color(0, 0, 0)
-            pdf.set_font('Times', '', 18)
-            pdf.text(145, 105, 'Encoding not found')
-        text = 'The encoding type refers to the character encoding, which is the method of converting a sequence of bytes into a sequence of characters. The website should have content that is rightly encoded.'
-        pdf.text(110, 125, text[0:32])
-        pdf.text(110, 135, text[32:65])
-        pdf.text(110, 145, text[65:97])
-        pdf.text(110, 155, text[97:125])
-        pdf.text(110, 165, text[125:161])
-        pdf.text(110, 175, text[161:])
-
-        # PERFORMANCE ANALYSIS
-
-        # Optimized plugins Detail Recommendation
-        pdf.set_font('Times', 'BU', 20)
-        pdf.text(10, 195, "OPTIMIZED PLUGINS:")
-        pdf.set_font('times', '', 18)
-
-        if dict['plugins'] == True:
-            pdf.set_text_color(34, 139, 34)
-            pdf.set_font('Times', 'B', 18)
-            pdf.text(35, 210, "Success!")
-            pdf.set_text_color(0, 0, 0)
-            pdf.set_font('Times', '', 18)
-            pdf.text(63, 210, 'Website is using optimized plugins.')
-        else:
-            pdf.set_text_color(255, 0, 0)
-            pdf.set_font('Times', 'B', 18)
-            pdf.text(35, 210, "Warning!")
-            pdf.set_text_color(0, 0, 0)
-            pdf.set_font('Times', '', 18)
-            pdf.text(63, 210, 'Website is not using any optimized plugins.')
-
-        pdf.ln(40)
-        if dict['plugins'] == True:
-            plug_text = "Congratulations, your website is using optimized plugins which can lead to increased traffic, improved search engine rankings, and higher conversion rates."
-            pdf.multi_cell(180, 10, plug_text)
-        else:
-            plug_text = "Website is not using any optimized plugins so it may cause performance issues and security vulnerabilities. Optimized plugins can greatly enhance their websites performance and make it more competitive in their industry."
-            pdf.multi_cell(180, 10, plug_text)
-
-        pdf.set_font('Times', '', 16)
-        pdf.text(180, 288, 'Page | 13')
-        pdf.add_page()
-
-        # Website speed Detail Recommendation
-        pdf.set_font('Times', 'BU', 20)
-        pdf.text(10, 15, "WEBSITE SPEED:")
-        pdf.set_font('times', '', 18)
-        pdf.ln(28)
-        title_txt = 'A good website should aim to load as quickly as possible, ideally within 3 seconds or less.'
-        pdf.text(10, 30, title_txt[0:75])
-        pdf.text(10, 40, title_txt[75:])
-
-        pdf.ln(32)
-        if dict['speed'] >= 2.5:
-            pdf.set_text_color(255, 0, 0)
-            pdf.set_font('Times', 'B', 18)
-            pdf.text(55, 53, "Warning!")
-            pdf.set_text_color(0, 0, 0)
-            pdf.set_font('Times', '', 18)
-            pdf.text(82, 53, 'Wesbite speed score is not good')
-            pdf.ln(7)
-            title_txt = 'Research has shown that users tend to lose interest and abandon websites that take longer than 3 seconds to load.'
-            pdf.multi_cell(70, 10, title_txt)
-            pdf.ln(40)
-
-            fig, ax = plt.subplots(figsize=(2, 2), subplot_kw={'projection': 'polar'})
-            x = (dict['speed'] * pi * 2) / 100
-            left = (0 * pi * 2) / 360  # this is to control where the bar starts
-            plt.xticks([])
-            plt.yticks([])
-            ax.spines.clear()
-            ax.barh(1, x, left=left, height=1, color='#FFFFFF')
-            plt.ylim(-3, 3)
-            plt.text(0, -3, str(dict['speed']), ha='center', va='center', fontsize=42)
-            plt.savefig('webspeed.png')
-            # self.Score_Graph('webspeed_Image', 'webspeed.jpg', dict['speed'])
-            pdf.set_text_color(0, 0, 0)
-            pdf.image('webspeed.png', 120, 55)
-            pdf.set_text_color(255, 0, 0)
-            pdf.set_font('Times', 'B', 18)
-            pdf.text(142, 110, "SECONDS")
-
-        else:
-            pdf.set_text_color(34, 139, 34)
-            pdf.set_font('Times', 'B', 18)
-            pdf.text(50, 53, "Success!")
-            pdf.set_text_color(0, 0, 0)
-            pdf.set_font('Times', '', 18)
-            pdf.text(78, 53, "Website speed score is good")
-            pdf.ln(5)
-            title_txt = 'Your website is optimized for speed and it should provide a fast and seamless user experience.'
-            pdf.multi_cell(70, 10, title_txt)
-
-            pdf.ln(35)
-            fig, ax = plt.subplots(figsize=(2, 2), subplot_kw={'projection': 'polar'})
-            x = (dict['speed'] * pi * 2) / 100
-            left = (0 * pi * 2) / 360  # this is to control where the bar starts
-            plt.xticks([])
-            plt.yticks([])
-            ax.spines.clear()
-            ax.barh(1, x, left=left, height=1, color='#FFFFFF')
-            plt.ylim(-3, 3)
-            plt.text(0, -3, str(dict['speed']), ha='center', va='center', fontsize=42)
-            plt.savefig('webspeed.png')
-            # self.Score_Graph('webspeed_Image', 'webspeed.jpg', dict['speed'])
-            pdf.set_text_color(0, 0, 0)
-            pdf.image('webspeed.png', 120, 55)
-            pdf.set_text_color(34, 139, 34)
-            pdf.set_font('Times', 'B', 18)
-            pdf.text(142, 110, "SECONDS")
-
-
-            # css minified Detail Recommendation
-        pdf.set_text_color(0, 0, 0)
-        pdf.set_font('Times', 'BU', 20)
-        pdf.text(10, 160, "CSS MINIFICATION:")
-        pdf.set_font('times', '', 18)
-
-        if dict['css'] == True:
-            pdf.set_text_color(34, 139, 34)
-            pdf.set_font('Times', 'B', 18)
-            pdf.text(45, 175, "Success!")
-            pdf.set_text_color(0, 0, 0)
-            pdf.set_font('Times', '', 18)
-            pdf.text(78, 175, 'CSS code for the website is minified')
-        else:
-            pdf.set_text_color(255, 0, 0)
-            pdf.set_font('Times', 'B', 18)
-            pdf.text(45, 175, "Warning!")
-            pdf.set_text_color(0, 0, 0)
-            pdf.set_font('Times', '', 18)
-            pdf.text(78, 175, 'CSS code for the website is not minified')
-
-        if dict['css'] == True:
-            pdf.ln(35)
-            css_text = "Congratulations, your website minified CSS code is helping to provide a faster and smoother experience to your users."
-            pdf.multi_cell(195, 10, css_text)
-        else:
-            pdf.ln(35)
-            css_text = "Non-minified CSS code may increase file size, slow down website loading speed and performance. We recommend minifying your websites CSS code to improve its loading speed and overall performance for better user experience."
-            pdf.multi_cell(195, 10, css_text)
-
-        pdf.set_font('Times', '', 16)
-        pdf.text(180, 288, 'Page | 14')
-        pdf.add_page()
-
-        # jss minified Detail Recommendation
-        pdf.set_font('Times', 'BU', 20)
-        pdf.text(10, 15, "JSS MINIFICATION:")
-        pdf.set_font('times', '', 18)
-        if dict['jss'] == True:
-            pdf.set_text_color(34, 139, 34)
-            pdf.set_font('Times', 'B', 18)
-            pdf.text(45, 30, "Success!")
-            pdf.set_text_color(0, 0, 0)
-            pdf.set_font('Times', '', 18)
-            pdf.text(78, 30, 'JSS code for the website is minified')
-        else:
-            pdf.set_text_color(255, 0, 0)
-            pdf.set_font('Times', 'B', 18)
-            pdf.text(45, 30, "Warning!")
-            pdf.set_text_color(0, 0, 0)
-            pdf.set_font('Times', '', 18)
-            pdf.text(78, 30, 'JSS code for the website is not minified')
-
-        if dict['jss'] == True:
-            pdf.ln(25)
-            jss_text = "Minifying JavaScript code means removing unnecessary characters from the code to make it smaller and faster to load.It provides a smoother user experience for your customers."
-            pdf.multi_cell(180, 10, jss_text)
-        else:
-            pdf.ln(25)
-            jss_text = "The js code includes unnecessary characters such as whitespace and comments, which can make it larger and slower to load. This may result in slower website performance and longer load times for your customers."
-            pdf.multi_cell(180, 10, jss_text)
-
-            # Mobile speed Detail Recommendation
-        pdf.set_font('Times', 'BU', 20)
-        pdf.text(10, 90, "MOBILE SPEED:")
-        pdf.set_font('times', '', 18)
-        pdf.ln(26)
-        link_txt = "Its important to note that the score can vary depending on the websites content, functionality, and design. A website that has a lot of high-quality images or complex functionality may have a slightly lower score, but still be considered fast enough for users."
-        pdf.multi_cell(65, 10, link_txt)
-        pdf.ln(50)
-        fig, ax = plt.subplots(figsize=(3, 3), subplot_kw={'projection': 'polar'})
-        x = (dict['mob_score'] * pi * 2) / 100
-        left = (0 * pi * 2) / 360  # this is to control where the bar starts
-        plt.xticks([])
-        plt.yticks([])
-        ax.spines.clear()
-        ax.barh(1, x, left=left, height=1, color='#FFFFFF')
-        plt.ylim(-3, 3)
-        plt.text(0, -3, str(dict['mob_score']), ha='center', va='center', fontsize=42)
-        plt.savefig('mob_speed.png')
-        # self.Score_Graph('mob_speed_Image', 'mob_speed.jpg', dict['mob_score'])
-        pdf.image('mob_speed.png', 91, 90)
-        pdf.set_text_color(34, 139, 34)
-        if dict['mob_score'] < 3:
-            pdf.set_font('Times', 'B', 18)
-            pdf.text(131, 160, "SECONDS")
-        else:
-            pdf.set_text_color(255, 0, 0)
-            pdf.set_font('Times', 'B', 18)
-            pdf.text(131, 160, "SECONDS")
-
-        pdf.set_text_color(0, 0, 0)
-        pdf.set_font('Times', '', 16)
-        pdf.text(180, 288, 'Page | 15')
-        pdf.add_page()
-
-        # AMP
-        pdf.set_font('Times', 'BU', 20)
-        pdf.text(10, 15, "AMP:")
-        pdf.set_font('times', '', 18)
-
-        if dict['amp'] == True:
-            pdf.set_text_color(34, 139, 34)
-            pdf.set_font('Times', 'B', 18)
-            pdf.text(50, 25, "Success!")
-            pdf.set_text_color(0, 0, 0)
-            pdf.set_font('Times', '', 18)
-            pdf.text(80, 25, 'Website using AMP')
-        else:
-            pdf.set_text_color(255, 0, 0)
-            pdf.set_font('Times', 'B', 18)
-            pdf.text(50, 25, "Warning!")
-            pdf.set_text_color(0, 0, 0)
-            pdf.set_font('Times', '', 18)
-            pdf.text(80, 25, 'Website not using AMP')
-
-        if dict['amp'] == True:
-            pdf.ln(20)
-            amp_text = "Website is optimized for fast page load times, improved mobile SEO, and a better mobile user experience."
-            pdf.multi_cell(195, 10, amp_text)
-
-        else:
-            pdf.ln(20)
-            amp_text = "AMP can improve their websites mobile user experience and search engine rankings, resulting in increased traffic and engagement."
-            pdf.multi_cell(195, 10, amp_text)
-
-            # Mobile Rendering
-        pdf.set_font('Times', 'BU', 20)
-        pdf.text(10, 65, "MOBILE RENDERING:")
-        pdf.set_font('times', '', 18)
-
-        if dict['render'] == True:
-            pdf.set_text_color(34, 139, 34)
-            pdf.set_font('Times', 'B', 18)
-            pdf.text(32, 80, "Success!")
-            pdf.set_text_color(0, 0, 0)
-            pdf.set_font('Times', '', 18)
-            pdf.text(65, 80, 'Mobile rendering is working for wesbite')
-        else:
-            pdf.set_text_color(255, 0, 0)
-            pdf.set_font('Times', 'B', 18)
-            pdf.text(32, 80, "Warning!")
-            pdf.set_text_color(0, 0, 0)
-            pdf.set_font('Times', '', 18)
-            pdf.text(65, 80, 'Mobile rendering is not working for wesbite')
-
-        if dict['render'] == True:
-            pdf.ln(37)
-            render_text = "Mobile Rendering is the process where Googlebot retrieves your pages,runs your code, and assesses your content to understand the layout or structure of your site.The mobile version of the website must be stable and well functional."
-            pdf.multi_cell(195, 10, render_text)
-
-        else:
-            pdf.ln(37)
-            render_text = "Having a website that is optimized for mobile devices is crucial for SEO as it improves user experience, increases engagement, and can positively impact the website's search engine rankings. Not having mobile rendering available for a website can negatively impact its performance and visibility in search results."
-            pdf.multi_cell(195, 10, render_text)
-
-            #         #Image Alt Check
-        pdf.set_font('Times', 'BU', 20)
-        pdf.text(10, 155, "IMAGE ALT CHECK:")
-        pdf.ln(30)
-        pdf.set_font('Times', '', 18)
-        if dict['alt_count'] == 0:
-            alt_txt = "Alt attributes enable screen readers to read the information about on-page images for the benefit of a person with complete lack of sight, visually impaired, or who is otherwise unable to view the images on the page.."
-            pdf.multi_cell(85, 8, alt_txt)
-        else:
-            alt_txt = "All image tags should have attribute ALT."
-            pdf.multi_cell(68, 20, alt_txt)
-        fig, ax = plt.subplots(figsize=(3, 3), subplot_kw={'projection': 'polar'})
-        x = (dict['alt_count']* pi * 2) / 100
-        left = (0 * pi * 2) / 360  # this is to control where the bar starts
-        plt.xticks([])
-        plt.yticks([])
-        ax.spines.clear()
-        ax.barh(1, x, left=left, height=1, color='#FF0000')
-        plt.ylim(-3, 3)
-        plt.text(0, -3, str(dict['alt_count']) + "%", ha='center', va='center', fontsize=25)
-        plt.savefig('img.jpg')
-        pdf.image('img.jpg', 97, 130)
-        pdf.set_text_color(255, 0, 0)
-        pdf.set_font('Times', 'B', 16)
-        pdf.text(112, 234, 'No of Images without Alt Attribute')
-
-        # Mobile preview Detail Recommendation
-        pdf.set_text_color(0, 0, 0)
-        pdf.set_font('Times', 'BU', 18)
-        pdf.text(10,250, "MOBILE PREVIEW")
-        pdf.set_font('Times', '', 16)
-        if dict['mobpreview'] == True:
-            pdf.set_text_color(34, 139, 34)
-            pdf.set_font('Times', 'B', 18)
-            pdf.text(45, 265, "Success!")
-            pdf.set_text_color(0, 0, 0)
-            pdf.set_font('Times', '', 18)
-            pdf.text(73, 265, 'Mobile preview is optimized')
-        else:
-            pdf.set_text_color(255, 0, 0)
-            pdf.set_font('Times', 'B', 18)
-            pdf.text(45, 265, "Warning!")
-            pdf.set_text_color(0, 0, 0)
-            pdf.set_font('Times', '', 18)
-            pdf.text(73, 265, 'Mobile preview is not optimized')
-
-
-        pdf.set_text_color(0, 0, 0)
-        pdf.set_font('Times', '', 16)
-        pdf.text(180, 288, 'Page | 16')
-        pdf.add_page()
-
-        # Mobile preview Image
-        pdf.image('mobile_view.png', 42, 5)
-        pdf.set_font('Times', '', 16)
-        pdf.text(180, 288, 'Page | 17')
-        pdf.add_page()
-
-        # Security
-        # SSL
-        pdf.set_font('Times', 'BU', 20)
-        pdf.text(10, 15, "SSL:")
-        pdf.set_font('times', '', 18)
-        pdf.ln(50)
-        if dict['ssl'] == True:
-            pdf.set_text_color(34, 139, 34)
-            pdf.set_font('Times', 'B', 16)
-            pdf.text(15, 30, "SSL Name Found!")
-            pdf.text(15, 40, "SSL Organization Found!")
-            pdf.text(15, 50, "SSL Expiry Found!")
-            pdf.set_text_color(0, 0, 0)
-            pdf.set_font('Times', '', 16)
-            pdf.text(95, 30, str(dict['name']))
-            pdf.text(95, 40, str(dict['organization']))
-            pdf.text(95, 50, str(dict['expiry_date']))
-
-        elif dict['ssl'] == False:
-            pdf.set_font('Times', 'B', 16)
-            pdf.set_text_color(255, 0, 0)
-            pdf.text(15, 30, "Warning!")
-            pdf.set_text_color(0, 0, 0)
-            pdf.text(95, 30, 'SSL Name not found')
-            pdf.set_text_color(255, 0, 0)
-            pdf.text(15, 40, "Warning!")
-            pdf.set_text_color(0, 0, 0)
-            pdf.text(95, 40, 'SSL Oragnaization not found')
-            pdf.set_text_color(255, 0, 0)
-            pdf.text(15, 50, "Warning!")
-            pdf.set_text_color(0, 0, 0)
-            pdf.text(95, 50, 'SSL Expiry not found')
-            pdf.set_text_color(0, 0, 0)
-
-        pdf.set_font('Times', '', 18)
-        pdf.multi_cell(180, 10,'It improves website security and user trust, both of which can lead to higher search engine rankings and increased traffic to the website.')
-
-        # DMCA
-        pdf.set_font('Times', 'BU', 20)
-        pdf.text(10, 100, "DMCA:")
-        pdf.set_font('times', '', 18)
-
-        if dict['dmca'] == True:
-            pdf.set_text_color(34, 139, 34)
-            pdf.set_font('Times', 'B', 18)
-            pdf.text(45, 110, "Success!")
-            pdf.set_text_color(0, 0, 0)
-            pdf.set_font('Times', '', 18)
-            pdf.text(73, 110, 'Website is protected by DMCA')
-        else:
-            pdf.set_text_color(255, 0, 0)
-            pdf.set_font('Times', 'B', 18)
-            pdf.text(45, 110, "Warning!")
-            pdf.set_text_color(0, 0, 0)
-            pdf.set_font('Times', '', 18)
-            pdf.text(73, 110, 'Website is not protected by DMCA')
-
-        if dict['dmca'] == True:
-            pdf.ln(40)
-            dmca_text = "Regularly review and update their DMCA policy to ensure it is effective in protecting their users intellectual property."
-            pdf.multi_cell(195, 10, dmca_text)
-
-        else:
-            pdf.ln(40)
-            dmca_text = "Implementing DMCA on their website to protect the intellectual property of their users and comply with legal requirements for addressing claims of copyright infringement."
-            pdf.multi_cell(195, 10, dmca_text)
-
-        # HTTP Redirection
-        pdf.set_font('Times', 'BU', 20)
-        pdf.text(10, 165, "HTTPS REDIRECTION:")
-        pdf.set_font('times', '', 18)
-
-        if dict['https'] == True:
-            pdf.set_text_color(34, 139, 34)
-            pdf.set_font('Times', 'B', 18)
-            pdf.text(42, 180, "Success!")
-            pdf.set_text_color(0, 0, 0)
-            pdf.set_font('Times', '', 18)
-            pdf.text(70, 180, 'Website is using HTTPS redirection')
-        else:
-            pdf.set_text_color(255, 0, 0)
-            pdf.set_font('Times', 'B', 18)
-            pdf.text(42, 180, "Warning!")
-            pdf.set_text_color(0, 0, 0)
-            pdf.set_font('Times', '', 18)
-            pdf.text(70, 180, 'Website is not using HTTPS redirection')
-
-        if dict['https'] == True:
-            pdf.ln(40)
-            https_text = "HTTPS redirection ensures website security and is a positive ranking signal for search engines."
-            pdf.multi_cell(195, 10, https_text)
-
-        else:
-            pdf.ln(40)
-            https_text = "HTTPS will add privacy and security to a website and SEO goals through verification of the website that it is the right one on the server, preventing tampering by third parties, making the website more secure for visitors, and encrypting all communication like URLs, which in turn protects things like credit card."
-            pdf.multi_cell(195, 10, https_text)
-
-        pdf.set_font('Times', '', 16)
-        pdf.text(180, 288, 'Page | 18')
-        pdf_name = 'Report_' + str(random.randint(10, 99))
-        pdf.output(pdf_name + '.pdf')
-        pdf_file = (pdf_name + '.pdf')
-        webbrowser.open(pdf_file)
-        return
-
-
-
-
+                logger.error(f"Report generation failed: {result['message']}")
+            
+            return result
+            
+        except Exception as e:
+            error_msg = f"Error in Report method: {str(e)}"
+            logger.error(error_msg)
+            return {
+                'success': False,
+                'pdf_path': None,
+                'email_sent': False,
+                'message': error_msg
+            }
+
+
+    # ============================================================================
+    # SECTION 4: ADD THIS NEW METHOD TO Website_Audit CLASS
+    # Add this method anywhere in the Website_Audit class
+    # ============================================================================
+
+    def _get_user_email(self, data_dict):
+        """Get user email from request or data dict"""
+        # Try Django authenticated user
+        try:
+            if self.request and hasattr(self.request, 'user') and self.request.user.is_authenticated:
+                email = self.request.user.email
+                if email:
+                    return email
+        except Exception as e:
+            logger.debug(f"Could not get email from request.user: {e}")
+        
+        # Try from data dict
+        email = data_dict.get('user_email')
+        if email:
+            return email
+        
+        # No email found
+        logger.warning("No user email found - report will be generated without sending email")
+        return None
 
     def get_data(self):
         global Report_variables
@@ -2887,6 +4067,7 @@ class Website_Audit(object):
         self.get_description()
         self.get_Heading()
         self.get_Google_preview()
+        self.get_grammar_analysis()
         self.Keyword_Density()
         self.get_missing_alt()
         self.get_Status()
@@ -2904,16 +4085,27 @@ class Website_Audit(object):
         self.get_content()
         self.get_server()
         self.SSL()
-        self.Https_Redirection()
+        #self.Https_Redirection()
         self.DMCA()
-        self.measure_website_speed()
+        # self.measure_website_speed()
         self.CSS_minification()
         self.JSS_minification()
-        self.Optmized_Plugins()
-        self.Mobile_speed()
-        self.AMP()
-        self.Mobile_rendering()
-        self.Mobile_preview()
+        # self.Optmized_Plugins()
+        # self.Mobile_speed()
+        # self.AMP()
+        # self.Mobile_rendering()
+        # asyncio.run(self.mobile_preview())
+
+        async def analyze_and_get_results():
+            coroutines = [
+                self.measure_website_speed(),
+                self.Optmized_Plugins(),
+                # Add other methods that you want to call together
+            ]
+            await asyncio.gather(*coroutines)
+
+        asyncio.run(analyze_and_get_results())
+
 
 
         Report_variables['url']=self.url
@@ -2936,8 +4128,8 @@ class Website_Audit(object):
         Report_variables['Encoding'] = self.Encoding
         Report_variables['dmca']=self.dmca
         Report_variables['https']=self.https
-        Report_variables['fb_flag']=self.fb_flag
-        Report_variables['insta_flag']=self.insta_flag
+        Report_variables['facebook_flag']=self.facebook_flag
+        Report_variables['instagram_flag']=self.instagram_flag
         Report_variables['twitter_flag']=self.twitter_flag
         Report_variables['linkedin_flag']=self.linkedin_flag
         Report_variables['speed']=self.speed
@@ -2966,9 +4158,9 @@ class Website_Audit(object):
         Report_variables['plugins']=self.plugins
         Report_variables['mobpreview']=self.mobpreview
         Report_variables['ssl']=self.ssl
-        Report_variables['name']=self.name
-        Report_variables['organization']=self.organization
-        Report_variables['expiry_date']=self.expiry_date
+        Report_variables['ssl_name']=self.name
+        Report_variables['ssl_organ']=self.organization
+        Report_variables['ssl_expiry']=self.expiry_date
 
 
 
@@ -2976,105 +4168,269 @@ class Website_Audit(object):
 
 
 
+def sentiment_analysis_page(request):
+    """
+    Display the sentiment analysis form page
+    Route: /sentimentanalysis/
+    """
+    return render(request, 'sentiment_analysis.html')
 
 
-def upload(request,url):
-    upload.get_url=str(url)
+# ⭐ NEW FUNCTION 2: Handle sentiment analysis
+def analyze_sentiment_view(request):
+    """
+    Process sentiment analysis request
+    Route: /sentimentanalysis/analyze/
+    """
+    if request.method == 'POST':
+        url = request.POST.get('url', '').strip()
+        mode = request.POST.get('mode', 'auto')  # fast, deep, or auto
+        
+        if not url:
+            return render(request, 'sentiment_analysis.html', {
+                'error': 'Please enter a valid URL'
+            })
+        
+        try:
+            # Step 1: Scrape the URL
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            }
+            response = requests.get(url, headers=headers, timeout=10)
+            response.raise_for_status()
+            
+            # Step 2: Extract content
+            soup = BeautifulSoup(response.content, 'html.parser')
+            
+            # Remove scripts, styles, nav, footer
+            for tag in soup(['script', 'style', 'nav', 'footer', 'header']):
+                tag.decompose()
+            
+            # Get title
+            title = soup.find('title')
+            page_title = title.get_text().strip() if title else 'No title'
+            
+            # Get main content
+            page_text = soup.get_text(separator=' ', strip=True)
+            
+            # Get meta description
+            meta_desc = soup.find('meta', attrs={'name': 'description'})
+            meta_description = meta_desc['content'] if meta_desc else ''
+            
+            # Word count
+            word_count = len(page_text.split())
+            
+            # Step 3: Analyze sentiment
+            sentiment_result = analyze_sentiment(
+                text=page_text,
+                api_key=os.getenv('OPENROUTER_API_KEY'),
+                mode=mode
+            )
+            
+            # Step 4: Prepare context for template
+            context = {
+                'success': True,
+                'url': url,
+                'title': page_title,
+                'meta_description': meta_description,
+                'word_count': word_count,
+                'sentiment': sentiment_result,
+                'mode_used': mode
+            }
+            
+            return render(request, 'sentiment_results.html', context)
+            
+        except requests.RequestException as e:
+            return render(request, 'sentiment_analysis.html', {
+                'error': f'Failed to fetch URL: {str(e)}'
+            })
+        except Exception as e:
+            return render(request, 'sentiment_analysis.html', {
+                'error': f'Error analyzing content: {str(e)}'
+            })
+    
+    # If GET request, redirect to form page
+    return render(request, 'sentiment_analysis.html')
+
+def upload(request, url):
+    upload.get_url = str(url)
     if url == "":
         return
-    obj=Website_Audit(str(url))
+    obj = Website_Audit(str(url), request=request)  # ADD request=request HERE
     return obj
 
 
 def Report(request):
+    """Generate and send SEO report"""
     try:
-        obj = Website_Audit(Report_variables['url'])
-        obj.Report(Report_variables)
-        messages.success(request, 'Report generated successfully!')
+        # Create Website_Audit object with request
+        obj = Website_Audit(Report_variables['url'], request=request)
+        
+        # Generate the report
+        result = obj.Report(Report_variables)
+        
+        # Check if report generation was successful
+        if result['success']:
+            if result['email_sent']:
+                messages.success(
+                    request, 
+                    'Report generated successfully! Check your registered email.'
+                )
+            else:
+                messages.success(
+                    request, 
+                    'Report generated successfully!'
+                )
+            logger.info(f"Report generated: {result['pdf_path']}")
+        else:
+            messages.error(
+                request, 
+                f'Report generation failed: {result["message"]}'
+            )
+            logger.error(f"Report failed: {result['message']}")
+        
         home_url = reverse('Home')
         return redirect(home_url)
+        
     except Exception as e:
-        messages.error(request, 'An error occurred: {}'.format(str(e)))
+        error_msg = f'An error occurred: {str(e)}'
+        messages.error(request, error_msg)
+        logger.error(error_msg)
         return render(request, 'home.html')
 
+
+@login_required(login_url='login')
 def index(request):
     # data=upload(request)
     # data['message']="URL entered"
     return render(request, 'index.html')
 
+@login_required(login_url='login')
 def show(request):
-    url = request.POST["fname"]
-    if not url or not validators.url(url):
+    url = request.POST.get("fname")
+    
+    if not url:
         return render(request, 'index.html')
-    #clean url
-    if 'com/' in url and 'pk/' in url:
-        pass
-    else:
-        if ".com/" in url:
-            url=url.replace(".com/",".com")
-        elif ".pk/" in url:
-            url=url.replace(".pk/",".pk")
-        elif ".edu/" in url:
-            url=url.replace(".edu/",".edu")
-        elif ".uk/" in url:
-            url=url.replace(".uk/",".uk")
-        else:
-            pass
-
+    
+    # Basic cleanup
+    url = url.strip()
+    
+    # Validate URL
+    if not validators.url(url):
+        # Try adding https:// if missing
+        if not url.startswith(('http://', 'https://')):
+            url = 'https://' + url
+        
+        # Validate again
+        if not validators.url(url):
+            messages.error(request, 'Invalid URL format.')
+            return render(request, 'index.html')
+    
     try:
         data = upload(request, url)
         data = data.get_data()
         return render(request, 'home.html', data)
     except requests.exceptions.Timeout as e:
-        # Handle timeout error
-        messages.error(request, 'Connection timed out!Website is taking Too much time.')
+        messages.error(request, 'Connection timed out! Website is taking too much time.')
         return render(request, 'index.html')
     except requests.exceptions.RequestException as e:
-        # Handle connection error
-        messages.error(request, 'Check your internet connection! OR May be Network Error.')
+        messages.error(request, 'Check your internet connection! Or maybe network error.')
         return render(request, 'index.html')
     except Exception as e:
-        # Handle other types of exceptions
-        messages.error(request, 'An error occurred: {}'.format(str(e)))
+        messages.error(request, f'An error occurred: {str(e)}')
         return render(request, 'index.html')
 
 
-
+@login_required(login_url='login')
 def backlink(request):
-    try:
-        if request.method == "GET":
-            return render(request, 'backlink.html')
-        url = request.POST["fname"]
-        if not url or not validators.url(url):
-            return render(request, 'backlink.html')
+    data = {}
+    if request.method == "POST":
+        target_url = request.POST.get("url")
+        if not target_url:
+            messages.error(request, "Please enter a URL.")
+            return render(request, "backlink.html", data)
 
-        response = requests.get(url)
-        soup = BeautifulSoup(response.text, 'html.parser')
-        links = soup.find_all('a')
-        backlinks = []
-        for link in links:
-            href = link.get('href')
-            if href and 'example.com' not in href and 'http' in href:
-                backlinks.append(href)
+        # Ensure URL has a scheme
+        if not target_url.startswith(('http://', 'https://')):
+            target_url = 'https://' + target_url
 
-        data = {
-            'backlinks': len(backlinks),
-            'urls': enumerate(backlinks, start=1),
-            'url': url,
-        }
-        return render(request, 'backlink.html', data)
+        # ------------------------------
+        # Moz API v1 credentials
+        # ------------------------------
+        access_id = "mozscape-Gp8EfVlQOZ"
+        secret_key = "r5eGovQ09YIFBpxKv2kUPq764yp6tZ3J"
 
-    except requests.exceptions.Timeout as e:
-        # Handle timeout error
-        messages.error(request, 'Connection timed out!Website is taking Too much time.')
-        return render(request, 'backlink.html')
-    except requests.exceptions.RequestException as e:
-        # Handle connection error
-        messages.error(request, 'Check your internet connection! OR May be Network Error.')
-        return render(request, 'backlink.html')
+        try:
+            # ------------------------------
+            # Generate signature
+            # ------------------------------
+            expires = str(int(time.time()) + 300)
+            string_to_sign = f"{access_id}\n{expires}"
+            signature = hmac.new(secret_key.encode(), string_to_sign.encode(), hashlib.sha1).digest()
+            safe_signature = urllib.parse.quote(base64.b64encode(signature))
 
+            # ------------------------------
+            # URL Metrics - single call fetches everything
+            # ------------------------------
+            # Cols bitmask — all values summed so only 1 API row is used:
+            #   1            = Page Authority        (upaNum)
+            #   4            = MozRank               (mozRank)
+            #   16           = MozTrust              (mozTrust)
+            #   32           = External Equity Links (ueid)   ← was the only one before
+            #   64           = Linking Root Domains  (ufeid)
+            #   128          = Total Links           (uid)
+            #   8388608      = Spam Score            (spamScore)
+            #   68719476736  = Domain Authority      (udaNum)
+            #   ──────────────────────────────────────────────
+            #   68727865589  ← combined total
+            cols = "68727865589"
 
+            # URL-encode the target URL
+            encoded_url = urllib.parse.quote(target_url, safe='')
 
+            metrics_url = (
+                f"https://lsapi.seomoz.com/linkscape/url-metrics/{encoded_url}"
+                f"?Cols={cols}&AccessID={access_id}&Expires={expires}&Signature={safe_signature}"
+            )
+
+            metrics_resp = requests.get(metrics_url, timeout=30)
+
+            if metrics_resp.status_code != 200:
+                messages.error(request, f"Moz API error (Status {metrics_resp.status_code}): {metrics_resp.text[:200]}")
+                return render(request, "backlink.html", data)
+
+            metrics_json = metrics_resp.json()
+            print(metrics_json)
+
+            # ------------------------------
+            # Parse all metrics from the single response
+            # ------------------------------
+            if isinstance(metrics_json, dict):
+                data.update({
+                    "url": target_url,
+                    "moz_rank":             metrics_json.get("pjr", 0),
+                    "moz_trust":            metrics_json.get("pjp", 0),
+                    "total_backlinks":      metrics_json.get("ueid", 0),
+                    "linking_root_domains": metrics_json.get("feid", 0),
+                })
+            else:
+                messages.error(request, "Unexpected response format from Moz API.")
+
+        except requests.exceptions.Timeout:
+            messages.error(request, "Request timed out. Please try again.")
+        except requests.exceptions.RequestException as e:
+            messages.error(request, f"Network error: {str(e)}")
+        except ValueError as e:
+            messages.error(request, f"Invalid JSON response: {str(e)}")
+        except Exception as e:
+            messages.error(request, f"Error: {str(e)}")
+            data.update({
+                "total_backlinks": 0
+            })
+
+    return render(request, "backlink.html", data)
+
+@login_required(login_url='login')
 def DomainAuthority(request):
     try:
         if request.method == "GET":
@@ -3110,7 +4466,7 @@ def DomainAuthority(request):
         messages.error(request, 'Check your internet connection! OR May be Network Error.')
         return render(request, 'DomainAuthority.html')
 
-
+@login_required(login_url='login')
 def pageAuthority(request):
     try:
         if request.method=="GET":
@@ -3145,57 +4501,130 @@ def pageAuthority(request):
         return render(request, 'pageAuthority.html')
 
 
-
+@login_required(login_url='login')
 def mobiletest(request):
+    import json
     try:
         if request.method == "GET":
             return render(request, 'mobiletest.html')
-        url1 = request.POST["fname"]
-        if not url1 or not validators.url(url1):
+
+        url = request.POST.get("fname")
+        if not url or not validators.url(url):
+            messages.error(request, "Invalid URL")
             return render(request, 'mobiletest.html')
-        data1={}
-        content=""
-        test=True
-        test1=False
+
+        data = {
+            "url": url,
+            "performance_score": None,
+            "issues": [],
+            "ux_checks": {},
+            "final_verdict": ""
+        }
+
+        # ---------------------------
+        # 1️⃣ Google PageSpeed Insights API
+        # ---------------------------
+        api_data = {}
         try:
-            url = 'https://searchconsole.googleapis.com/v1/urlTestingTools/mobileFriendlyTest:run'
+            api_url = "https://www.googleapis.com/pagespeedonline/v5/runPagespeed"
             params = {
-                'url': url1,
-                'key': "AIzaSyBHQ0tzn7Ox6e4OOWYPfwuV66TcTyM316Q"
+                "url": url,
+                "strategy": "mobile",
+                "key": "AIzaSyATWa7msKvirO8vgWg0xZ0RbkztK9JuC5g",  # replace with your actual API key
+                "category": ["performance", "accessibility", "best-practices", "seo", "pwa"]
             }
-            x = requests.post(url, params=params)
-            data = json.loads(x.text)
-            result=data["mobileFriendliness"]
-            data1["result"]=result
-            if data["mobileFriendliness"] == "NOT_MOBILE_FRIENDLY":
-                test=False
-                test1=True
-                for iteration in range(len(data["mobileFriendlyIssues"])):
-                    content+="The page has problems with " + str(data["mobileFriendlyIssues"][iteration]["rule"])+"\n"
 
-            issues = data.get("resourceIssues", 0)
-            if issues != 0:
-                for iteration in range(len(data["resourceIssues"])):
-                    content+="Problems with the blocked resources " + str(data["resourceIssues"][iteration]["blockedResource"]["url"])+"\n"
+            response = requests.get(api_url, params=params, timeout=30)
+            api_data = response.json()
+            pretty_data = json.dumps(api_data, indent=4)
+            # print(pretty_data)
+            lh = api_data.get("lighthouseResult", {}).get("categories", {})
 
-        except:
-            x = requests.post(url, params=params)
-            content="Problem with " + str(params["url"]) + ". " + str(x)[len(str(x)) - 5:len(str(x)) - 2] + " Response Code."
-        data1["content"]=content
-        data1["url"]=url1
-        data1["test"]=test
-        data1["test1"] = test1
-        return render(request, 'mobiletest.html',data1)
-    except requests.exceptions.Timeout as e:
-        # Handle timeout error
-        messages.error(request, 'Connection timed out!Website is taking Too much time.')
-        return render(request, 'mobiletest.html')
-    except requests.exceptions.RequestException as e:
-        # Handle connection error
-        messages.error(request, 'Check your internet connection! OR May be Network Error.')
-        return render(request, 'mobiletest.html')
+            data.update({
+                "performance_score": lh.get("performance", {}).get("score", 0) * 100,
+                "accessibility_score": lh.get("accessibility", {}).get("score", 0) * 100,
+                "best_practices_score": lh.get("best-practices", {}).get("score", 0) * 100,
+                "seo_score": lh.get("seo", {}).get("score", 0) * 100,
+                "pwa_score": lh.get("pwa", {}).get("score", None)
+            })
+            print(data)
+        except Exception as e:
+            print("Lighthouse fetch error:", e)
+            data.update({
+                "performance_score": None,
+                "accessibility_score": None,
+                "best_practices_score": None,
+                "seo_score": None,
+                "pwa_score": None
+            })
 
+        # Extract Mobile score (0-100)
+        try:
+            data["performance_score"] = api_data["lighthouseResult"]["categories"]["performance"]["score"] * 100
+        except KeyError:
+            data["performance_score"] = None
 
+        # ---------------------------
+        # 2️⃣ HTML + CSS Analysis
+        # ---------------------------
+        try:
+            html = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=20).text
+            soup = BeautifulSoup(html, "html.parser")
+
+            # Viewport
+            viewport = soup.find("meta", attrs={"name": "viewport"})
+            data["ux_checks"]["viewport"] = bool(viewport)
+            viewport_content = viewport.get("content", "") if viewport else ""
+            data["ux_checks"]["content_fit"] = "width=device-width" in viewport_content
+            data["ux_checks"]["scalable"] = "user-scalable=no" not in viewport_content
+
+            # Responsive Images
+            images = soup.find_all("img")
+            responsive_images = sum(1 for img in images if "max-width" in img.get("style", "") or img.get("width") is None)
+            data["ux_checks"]["responsive_images"] = responsive_images > 0
+            data["ux_checks"]["alt_text"] = all(img.get("alt") for img in images) if images else True
+
+            # Font size heuristic
+            small_fonts = 0
+            for tag in soup.find_all(style=True):
+                if "font-size" in tag["style"]:
+                    size = tag["style"].split("font-size:")[-1].split("px")[0]
+                    try:
+                        if int(size.strip()) < 12:
+                            small_fonts += 1
+                    except: 
+                        pass
+            data["ux_checks"]["font_size_ok"] = small_fonts == 0
+
+            # Tap Targets
+            buttons = soup.find_all(["button", "a"])
+            data["ux_checks"]["tap_targets"] = len(buttons) > 0
+
+        except Exception:
+            data["ux_checks"] = {}
+
+        # ---------------------------
+        # 3️⃣ Final Verdict
+        # ---------------------------
+        checks_passed = sum(1 for check in data["ux_checks"].values() if check)
+        if data.get("performance_score", 0) >= 90 and checks_passed >= 5:
+            data["final_verdict"] = "Fully Mobile Optimized"
+        elif checks_passed >= 3:
+            data["final_verdict"] = "Partially Mobile Friendly"
+        else:
+            data["final_verdict"] = "Poor Mobile Experience"
+
+        data["url"] = url
+        return render(request, "mobiletest.html", data)
+    except requests.exceptions.Timeout:
+        messages.error(request, "Request timed out")
+        return render(request, "mobiletest.html")
+
+    except Exception as e:
+        messages.error(request, str(e))
+        return render(request, "mobiletest.html")
+
+@login_required(login_url='login')
 def robot(request):
     try:
         if request.method=="GET":
@@ -3223,7 +4652,7 @@ def robot(request):
         # Handle connection error
         messages.error(request, 'Check your internet connection! OR May be Network Error.')
         return render(request, 'robot.html')
-
+@login_required(login_url='login')
 def keyPosition(request):
     from googlesearch import search
     try:
@@ -3281,7 +4710,7 @@ def keyPosition(request):
         # Handle connection error
         messages.error(request, 'Check your internet connection! OR May be Network Error.')
         return render(request, 'keyPosition.html')
-
+@login_required(login_url='login')
 def keysuggestion(request):
     try:
         if request.method=="GET":
@@ -3314,7 +4743,7 @@ def keysuggestion(request):
         return render(request, 'keysuggestion.html')
 
 def loginuser (request):
-
+    global current_user_email
     if request.method=='POST':
         username = request.POST.get('username')
         pass1 = request.POST.get('pass')
@@ -3324,6 +4753,7 @@ def loginuser (request):
             return redirect('login')
         if user is not None:
             login(request,user)
+            current_user_email=request.user.email
             return redirect('Home')
         else:
             messages.error(request, 'Invalid Credentials!')
@@ -3422,22 +4852,29 @@ def ForgetPassword(request):
     try:
         if request.method == 'POST':
             email = request.POST.get('email')
-            if email == '':
-                messages.error(request, 'Please Enter Email to Forget.')
-                return redirect('forget_password')
-            if not User.objects.filter(email=email):
-                messages.error(request, 'No user found with this email.')
+
+            if not email:
+                messages.error(request, 'Email dalna bhool gaye king 👑')
                 return redirect('forget_password')
 
-            user_obj = User.objects.get(email=email)
+            user = User.objects.filter(email=email).first()
+
+            if not user:
+                messages.error(request, 'Ye email hamare database me nahi hai boss.')
+                return redirect('forget_password')
+
             token = str(uuid.uuid4())
-            profile_obj = Profile.objects.get(user=user_obj)
-            profile_obj.forget_password_token = token
-            profile_obj.save()
-            send_forget_password_mail(user_obj.email, token)
-            messages.success(request, 'An email is sent.')
+
+            profile = Profile.objects.get(user=user)
+            profile.forget_password_token = token
+            profile.save()
+
+            send_forget_password_mail(user.email, token)
+
+            messages.success(request, 'Email sent! Inbox check karo hero 🚀')
             return redirect('forget_password')
 
     except Exception as e:
-        messages.error(request, e)
+        messages.error(request, f'System bola: {str(e)}')
+
     return render(request, 'forget-password.html')

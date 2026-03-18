@@ -1,0 +1,470 @@
+<!doctype html>
+<html lang="en">
+  {% load static %}
+  <head>
+    <title>Comparative URL Analysis - WEB LIFT</title>
+    <!-- Required meta tags -->
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, shrink-to-fit=no"
+    />
+    <link rel="icon" type="image/ico" href="{% static 'favicon-1.ico'%}" />
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Bootstrap CSS -->
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+      integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T"
+      crossorigin="anonymous"
+    />
+
+    <!-- Font Awesome CSS -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"
+    />
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{% static 'css/styles.css'%}" />
+  </head>
+
+  <body>
+    <!-- Loader -->
+    <div id="loader">
+      <div class="loader-animation">
+        <div class="loader-ring"></div>
+        <div class="loader-ring"></div>
+        <div class="loader-ring"></div>
+        <span class="loader-text">Analyzing...</span>
+      </div>
+    </div>
+
+    <!-- Main Navigation Header -->
+    <header>
+      <!-- Sidebar Navigation -->
+      <nav
+        id="sidebarMenu"
+        class="sidebar collapse d-lg-block"
+        aria-label="Main navigation"
+      >
+        <div class="sidebar-header">
+          <div class="sidebar-logo">
+            <img src="{% static 'logo.png'%}" alt="WEB LIFT Logo" />
+            <h5>WEB LIFT</h5>
+          </div>
+        </div>
+
+        <div class="sidebar-content">
+          <div class="nav-section">
+            <span class="nav-section-title">Analysis Tools</span>
+            <a href="{% url 'Home' %}" class="sidebar-link">
+              <i class="fas fa-tachometer-alt"></i>
+              <span>Website Audit</span>
+            </a>
+            <a href="{% url 'backlink' %}" class="sidebar-link">
+              <i class="fas fa-link"></i>
+              <span>Backlinks</span>
+            </a>
+            <a href="{% url 'DomainAuthority' %}" class="sidebar-link">
+              <i class="fas fa-chart-pie"></i>
+              <span>Domain Authority</span>
+            </a>
+            <a href="{% url 'pageAuthority' %}" class="sidebar-link">
+              <i class="fas fa-file-alt"></i>
+              <span>Page Authority</span>
+            </a>
+            <a href="{% url 'mobiletest' %}" class="sidebar-link">
+              <i class="fas fa-mobile-alt"></i>
+              <span>Mobile Friendly Test</span>
+            </a>
+            <a href="{% url 'sentiment_analysis' %}" class="sidebar-link">
+              <i class="fas fa-smile"></i>
+              <span>Sentiment Analysis</span>
+            </a>
+            <a
+              href="{% url 'comparative_analysis:input_form' %}"
+              class="sidebar-link active"
+              aria-current="page"
+            >
+              <i class="fas fa-balance-scale"></i>
+              <span>Comparative Analysis</span>
+            </a>
+          </div>
+        </div>
+      </nav>
+
+      <!-- Top Navbar -->
+      <nav
+        id="main-navbar"
+        class="navbar navbar-expand-lg fixed-top"
+        role="navigation"
+      >
+        <div class="navbar-container navbar-no-search">
+          <!-- Mobile Toggle -->
+          <button
+            class="navbar-toggler"
+            id="navbar-toggle"
+            type="button"
+            aria-controls="sidebarMenu"
+            aria-expanded="false"
+            aria-label="Toggle navigation"
+            onclick="navbar()"
+          >
+            <i class="fas fa-bars"></i>
+          </button>
+
+          <!-- Desktop Logo -->
+          <div class="navbar-logo" id="mylogo">
+            <img src="{% static 'logo.png'%}" alt="WEB LIFT Logo" />
+            <h4>WEB LIFT</h4>
+          </div>
+
+          <!-- Actions -->
+          <div class="navbar-actions">
+            <a href="{% url 'Home' %}" class="btn btn-outline" id="try">
+              <i class="fas fa-home"></i>
+              <span>Home</span>
+            </a>
+
+            <a
+              href="{% url 'logout' %}"
+              class="btn btn-primary logout-btn"
+              id="logout"
+            >
+              <i class="fas fa-sign-out-alt"></i>
+              <span>Logout</span>
+            </a>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Alert Messages -->
+      {% if messages %} {% for message in messages %}
+      <div class="alert-modern alert-{{ message.tags }}" id="msg" role="alert">
+        <div class="alert-content">
+          <i
+            class="fas {% if message.tags == 'success' %}fa-check-circle{% else %}fa-exclamation-circle{% endif %}"
+          ></i>
+          <span>{{ message }}</span>
+        </div>
+        <button class="alert-close" onclick="this.parentElement.remove()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      {% endfor %} {% endif %}
+
+      <div class="container-fluid content-wrapper">
+        <!-- Hero Section -->
+        <section class="comparative-hero">
+          <div class="hero-content">
+            <div class="hero-icon">
+              <i class="fas fa-balance-scale"></i>
+            </div>
+            <h1 class="hero-title">Comparative URL Analysis</h1>
+            <p class="hero-subtitle">
+              Compare two URLs to identify SEO gaps and ranking opportunities
+              with AI-powered insights
+            </p>
+          </div>
+        </section>
+
+        <!-- Input Form Section -->
+        <section class="analysis-section">
+          <div class="section-header">
+            <div class="section-title">
+              <i class="fas fa-link section-icon"></i>
+              <h2>Enter URLs to Compare</h2>
+            </div>
+          </div>
+
+          <div class="section-content">
+            <form
+              method="POST"
+              action="{% url 'comparative_analysis:analyze' %}"
+              id="comparison-form"
+              class="comparative-form"
+            >
+              {% csrf_token %}
+
+              <div class="form-grid">
+                <!-- Primary URL -->
+                <div class="form-group-modern">
+                  <label for="url_primary" class="form-label-modern">
+                    <i class="fas fa-globe"></i>
+                    Primary URL (Your URL)
+                    <span class="required-star">*</span>
+                  </label>
+                  <input
+                    type="url"
+                    id="url_primary"
+                    name="url_primary"
+                    class="form-input-modern"
+                    placeholder="https://example.com/your-page"
+                    required
+                  />
+                  <small class="form-help-text">
+                    The URL you want to analyze and improve
+                  </small>
+                </div>
+
+                <!-- Competitor URL -->
+                <div class="form-group-modern">
+                  <label for="url_competitor" class="form-label-modern">
+                    <i class="fas fa-crosshairs"></i>
+                    Competitor URL
+                    <span class="required-star">*</span>
+                  </label>
+                  <input
+                    type="url"
+                    id="url_competitor"
+                    name="url_competitor"
+                    class="form-input-modern"
+                    placeholder="https://competitor.com/their-page"
+                    required
+                  />
+                  <small class="form-help-text">
+                    The higher-ranking competitor URL
+                  </small>
+                </div>
+
+                <!-- Target Keyword -->
+                <div class="form-group-modern full-width">
+                  <label for="target_keyword" class="form-label-modern">
+                    <i class="fas fa-key"></i>
+                    Target Keyword
+                    <span class="optional-badge">Optional</span>
+                  </label>
+                  <input
+                    type="text"
+                    id="target_keyword"
+                    name="target_keyword"
+                    class="form-input-modern"
+                    placeholder="e.g., best running shoes"
+                  />
+                  <small class="form-help-text">
+                    Leave blank to auto-detect the primary keyword using AI
+                  </small>
+                </div>
+              </div>
+
+              <!-- Submit Button -->
+              <div class="form-actions-center">
+                <button type="submit" class="btn btn-primary btn-large">
+                  <i class="fas fa-search-plus"></i>
+                  <span class="btn-text">Analyze URLs</span>
+                  <span class="btn-loader" style="display: none">
+                    <i class="fas fa-spinner fa-spin"></i> Analyzing...
+                  </span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </section>
+
+        <!-- Features Section -->
+        <section class="analysis-section">
+          <div class="section-header">
+            <div class="section-title">
+              <i class="fas fa-sparkles section-icon"></i>
+              <h2>What We Analyze</h2>
+            </div>
+          </div>
+
+          <div class="section-content">
+            <div class="features-grid">
+              <!-- Feature 1 -->
+              <div class="feature-card">
+                <div class="feature-icon intent-icon">
+                  <i class="fas fa-bullseye"></i>
+                </div>
+                <h3 class="feature-title">Search Intent</h3>
+                <p class="feature-description">
+                  AI-powered detection and comparison of search intent alignment
+                </p>
+              </div>
+
+              <!-- Feature 2 -->
+              <div class="feature-card">
+                <div class="feature-icon onpage-icon">
+                  <i class="fas fa-file-alt"></i>
+                </div>
+                <h3 class="feature-title">On-Page SEO</h3>
+                <p class="feature-description">
+                  Title tags, headings, keywords, and content quality analysis
+                </p>
+              </div>
+
+              <!-- Feature 3 -->
+              <div class="feature-card">
+                <div class="feature-icon technical-icon">
+                  <i class="fas fa-tachometer-alt"></i>
+                </div>
+                <h3 class="feature-title">Technical SEO</h3>
+                <p class="feature-description">
+                  Speed, mobile-friendliness, and structured data evaluation
+                </p>
+              </div>
+
+              <!-- Feature 4 -->
+              <div class="feature-card">
+                <div class="feature-icon authority-icon">
+                  <i class="fas fa-shield-alt"></i>
+                </div>
+                <h3 class="feature-title">Authority Signals</h3>
+                <p class="feature-description">
+                  Real Moz DA/PA scores, backlinks, and trust indicators
+                </p>
+              </div>
+
+              <!-- Feature 5 -->
+              <div class="feature-card">
+                <div class="feature-icon content-icon">
+                  <i class="fas fa-book-open"></i>
+                </div>
+                <h3 class="feature-title">Content Depth</h3>
+                <p class="feature-description">
+                  Word count, topic coverage, and multimedia usage analysis
+                </p>
+              </div>
+
+              <!-- Feature 6 -->
+              <div class="feature-card">
+                <div class="feature-icon ux-icon">
+                  <i class="fas fa-users"></i>
+                </div>
+                <h3 class="feature-title">User Experience</h3>
+                <p class="feature-description">
+                  Readability, structure, and formatting evaluation
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Technology Stack Info -->
+        <section class="analysis-section tech-info-section">
+          <div class="section-content">
+            <div class="tech-info-grid">
+              <div class="tech-info-item">
+                <i class="fas fa-robot"></i>
+                <div class="tech-info-content">
+                  <h4>AI-Powered Analysis</h4>
+                  <p>OpenAI GPT-4 for semantic understanding</p>
+                </div>
+              </div>
+
+              <div class="tech-info-item">
+                <i class="fas fa-chart-line"></i>
+                <div class="tech-info-content">
+                  <h4>Real Authority Data</h4>
+                  <p>Moz API for accurate DA/PA scores</p>
+                </div>
+              </div>
+
+              <div class="tech-info-item">
+                <i class="fas fa-brain"></i>
+                <div class="tech-info-content">
+                  <h4>Smart Insights</h4>
+                  <p>Actionable recommendations powered by AI</p>
+                </div>
+              </div>
+
+              <div class="tech-info-item">
+                <i class="fas fa-bolt"></i>
+                <div class="tech-info-content">
+                  <h4>Fast Analysis</h4>
+                  <p>Results in 5-10 seconds</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <!-- JavaScript -->
+    <script
+      src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
+      integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"
+      integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
+      integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
+      crossorigin="anonymous"
+    ></script>
+
+    <script>
+      // Sidebar Toggle
+      function navbar() {
+        const toggler = document.getElementById("sidebarMenu");
+        toggler.classList.toggle("show");
+      }
+
+      // Form Submit Handler
+      document
+        .getElementById("comparison-form")
+        .addEventListener("submit", function (e) {
+          const btnText = this.querySelector(".btn-text");
+          const btnLoader = this.querySelector(".btn-loader");
+          const submitBtn = this.querySelector('button[type="submit"]');
+
+          btnText.style.display = "none";
+          btnLoader.style.display = "inline-flex";
+          submitBtn.disabled = true;
+
+          // Show loader
+          document.getElementById("loader").style.display = "flex";
+        });
+
+      // Hide Loader on Page Load
+      window.addEventListener("load", () => {
+        document.getElementById("loader").style.display = "none";
+      });
+
+      // Auto-hide Alerts
+      setTimeout(() => {
+        const alerts = document.querySelectorAll(".alert-modern");
+        alerts.forEach((alert) => {
+          alert.style.animation = "slideOut 0.3s ease forwards";
+          setTimeout(() => alert.remove(), 300);
+        });
+      }, 4000);
+
+      // Add animation to cards on scroll
+      const observerOptions = {
+        threshold: 0.1,
+        rootMargin: "0px 0px -50px 0px",
+      };
+
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.style.animation = "fadeInUp 0.6s ease forwards";
+          }
+        });
+      }, observerOptions);
+
+      document.querySelectorAll(".feature-card").forEach((card) => {
+        observer.observe(card);
+      });
+    </script>
+  </body>
+</html>

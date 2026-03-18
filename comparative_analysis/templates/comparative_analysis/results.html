@@ -1,0 +1,860 @@
+<!doctype html>
+<html lang="en">
+  {% load static %}
+  {% load custom_filters %}
+  <head>
+    <title>Comparison Results - WEB LIFT</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <link rel="icon" type="image/ico" href="{% static 'favicon-1.ico'%}" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <link rel="stylesheet" href="{% static 'css/styles.css'%}?v=4" />
+    <style>
+      /* ── Chart containers ── */
+      .chart-container { position: relative; width: 100%; }
+      .chart-container canvas { display: block; }
+
+      /* Doughnut score */
+      .doughnut-wrap { position: relative; width: 160px; height: 160px; margin: 0 auto 1rem; }
+      .doughnut-wrap canvas { position: absolute; top: 0; left: 0; }
+      .doughnut-label {
+        position: absolute; top: 50%; left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center; line-height: 1.1; pointer-events: none;
+      }
+      .doughnut-label .dl-score { font-size: 2rem; font-weight: 700; }
+      .doughnut-label .dl-sub   { font-size: 0.7rem; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: .05em; }
+
+      /* Overall score cards enhanced */
+      .score-display-card .doughnut-wrap { margin-bottom: .5rem; }
+
+      /* Horizontal bar rows */
+      .hbar-row { display: flex; align-items: center; gap: .75rem; margin-bottom: .625rem; }
+      .hbar-label { font-size: .8rem; font-weight: 600; color: #4b5563; min-width: 90px; }
+      .hbar-track { flex: 1; height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden; }
+      .hbar-fill { height: 100%; border-radius: 4px; transition: width .8s ease; }
+      .hbar-val { font-size: .8rem; font-weight: 700; color: #1f2937; min-width: 36px; text-align: right; }
+
+      /* E-E-A-T radar card */
+      .eeat-chart-wrap { max-width: 260px; margin: 0 auto 1rem; }
+
+      /* Technical gauge */
+      .tech-gauge-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; align-items: start; }
+      .speed-doughnut-wrap { position: relative; width: 130px; height: 130px; margin: 0 auto; }
+      .speed-doughnut-wrap canvas { position: absolute; top:0;left:0; }
+      .speed-doughnut-label {
+        position: absolute; top:50%; left:50%;
+        transform: translate(-50%,-50%);
+        text-align: center; pointer-events: none;
+      }
+      .speed-doughnut-label .spd-num { font-size: 1.6rem; font-weight: 700; }
+      .speed-doughnut-label .spd-sub  { font-size: .65rem; color: #94a3b8; font-weight: 600; }
+
+      /* Authority chart */
+      .authority-bar-chart { max-height: 220px; }
+
+      /* Section chart wrapper */
+      .section-chart-band {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 1.25rem 1.5rem;
+        margin-bottom: 1.5rem;
+      }
+      .section-chart-band h4 {
+        font-size: .75rem; font-weight: 700; text-transform: uppercase;
+        letter-spacing: .07em; color: #64748b; margin-bottom: 1rem;
+        display: flex; align-items: center; gap: .4rem;
+      }
+
+      /* Gap cards already defined in styles.css, kept here as override safety */
+      .gap-card { display:flex !important; flex-direction:row !important; align-items:flex-start !important; gap:1rem !important; padding:1rem 1.125rem !important; border-radius:10px !important; margin-bottom:.625rem !important; background:#f8fafc !important; border:1px solid #e2e8f0 !important; }
+      .gap-card--reason .gap-card__number { display:flex !important; align-items:center !important; justify-content:center !important; min-width:28px !important; width:28px !important; height:28px !important; background:#6366f1 !important; color:#fff !important; border-radius:50% !important; font-size:.75rem !important; font-weight:700 !important; flex-shrink:0 !important; margin-top:2px !important; }
+      .gap-card--rec .gap-card__icon { display:flex !important; align-items:center !important; justify-content:center !important; min-width:28px !important; width:28px !important; height:28px !important; background:#d1fae5 !important; color:#059669 !important; border-radius:50% !important; font-weight:700 !important; flex-shrink:0 !important; margin-top:2px !important; }
+      .gap-card__body { flex:1 !important; min-width:0 !important; }
+      .gap-card__body strong { display:block !important; color:#0f172a !important; font-size:.875rem !important; font-weight:600 !important; margin-bottom:.25rem !important; }
+      .gap-card__body p { color:#64748b !important; font-size:.8125rem !important; line-height:1.55 !important; margin:0 !important; padding:0 !important; background:none !important; border:none !important; }
+    </style>
+  </head>
+
+  <body>
+    <!-- Loader -->
+    <div id="loader">
+      <div class="loader-animation">
+        <div class="loader-ring"></div>
+        <div class="loader-ring"></div>
+        <div class="loader-ring"></div>
+        <span class="loader-text">Loading Results...</span>
+      </div>
+    </div>
+
+    <header>
+      <nav id="sidebarMenu" class="sidebar collapse d-lg-block" aria-label="Main navigation">
+        <div class="sidebar-header">
+          <div class="sidebar-logo">
+            <img src="{% static 'logo.png'%}" alt="WEB LIFT Logo" />
+            <h5>WEB LIFT</h5>
+          </div>
+        </div>
+        <div class="sidebar-content">
+          <div class="nav-section">
+            <span class="nav-section-title">Analysis Tools</span>
+            <a href="{% url 'Home' %}" class="sidebar-link"><i class="fas fa-tachometer-alt"></i><span>Website Audit</span></a>
+            <a href="{% url 'backlink' %}" class="sidebar-link"><i class="fas fa-link"></i><span>Backlinks</span></a>
+            <a href="{% url 'DomainAuthority' %}" class="sidebar-link"><i class="fas fa-chart-pie"></i><span>Domain Authority</span></a>
+            <a href="{% url 'pageAuthority' %}" class="sidebar-link"><i class="fas fa-file-alt"></i><span>Page Authority</span></a>
+            <a href="{% url 'mobiletest' %}" class="sidebar-link"><i class="fas fa-mobile-alt"></i><span>Mobile Friendly Test</span></a>
+            <a href="{% url 'sentiment_analysis' %}" class="sidebar-link"><i class="fas fa-smile"></i><span>Sentiment Analysis</span></a>
+            <a href="{% url 'comparative_analysis:input_form' %}" class="sidebar-link active" aria-current="page"><i class="fas fa-balance-scale"></i><span>Comparative Analysis</span></a>
+          </div>
+        </div>
+      </nav>
+
+      <nav id="main-navbar" class="navbar navbar-expand-lg fixed-top" role="navigation">
+        <div class="navbar-container navbar-no-search">
+          <button class="navbar-toggler" id="navbar-toggle" type="button" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle navigation" onclick="navbar()">
+            <i class="fas fa-bars"></i>
+          </button>
+          <div class="navbar-logo" id="mylogo">
+            <img src="{% static 'logo.png'%}" alt="WEB LIFT Logo" />
+            <h4>WEB LIFT</h4>
+          </div>
+          <div class="navbar-actions">
+            <a href="{% url 'comparative_analysis:input_form' %}" class="btn btn-outline"><i class="fas fa-redo"></i><span>New Comparison</span></a>
+            <a href="{% url 'Home' %}" class="btn btn-outline" id="try"><i class="fas fa-home"></i><span>Home</span></a>
+            <a href="{% url 'logout' %}" class="btn btn-primary logout-btn" id="logout"><i class="fas fa-sign-out-alt"></i><span>Logout</span></a>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="main-content">
+      <div class="container-fluid content-wrapper">
+
+        <!-- ════════════════════════════════════════════════════
+             HEADER – URLs being compared
+             ════════════════════════════════════════════════════ -->
+        <section class="comparison-urls-header">
+          <h1 class="comparison-header-title"><i class="fas fa-balance-scale"></i> Comparison Results</h1>
+          <div class="comparison-urls-grid">
+            <div class="url-display-box primary-url-box">
+              <span class="url-label"><i class="fas fa-globe"></i> Your URL (Primary)</span>
+              <a href="{{ url_primary }}" target="_blank" rel="noopener" class="url-text">{{ url_primary }}</a>
+            </div>
+            <div class="url-display-box competitor-url-box">
+              <span class="url-label"><i class="fas fa-crosshairs"></i> Competitor URL</span>
+              <a href="{{ url_competitor }}" target="_blank" rel="noopener" class="url-text">{{ url_competitor }}</a>
+            </div>
+          </div>
+          {% if target_keyword %}
+          <div class="target-keyword-display">
+            <i class="fas fa-key"></i><span>Target Keyword:</span><strong>{{ target_keyword }}</strong>
+          </div>
+          {% endif %}
+        </section>
+
+        <!-- ════════════════════════════════════════════════════
+             OVERALL SEO STRENGTH – doughnut score cards
+             ════════════════════════════════════════════════════ -->
+        <section class="analysis-section">
+          <div class="section-header">
+            <div class="section-title">
+              <i class="fas fa-trophy section-icon"></i>
+              <h2>Overall SEO Strength</h2>
+            </div>
+          </div>
+          <div class="section-content">
+            <div class="overall-scores-grid">
+
+              <!-- Primary -->
+              <div class="score-display-card primary-card">
+                <div class="score-card-label">Your URL</div>
+                <div class="doughnut-wrap">
+                  <canvas id="doughnutPrimary" width="160" height="160"></canvas>
+                  <div class="doughnut-label">
+                    <div class="dl-score" style="color:#3b82f6">{{ primary.scores.overall_seo_strength|default:0 }}</div>
+                    <div class="dl-sub">/ 100</div>
+                  </div>
+                </div>
+                <div class="score-card-details">
+                  <div class="detail-item"><i class="fas fa-search"></i><span>{{ primary.detected_keyword }}</span></div>
+                  <div class="detail-item"><i class="fas fa-bullseye"></i><span>{{ primary.intent_type|title }}</span></div>
+                </div>
+              </div>
+
+              <!-- Competitor -->
+              <div class="score-display-card competitor-card">
+                <div class="score-card-label">Competitor URL</div>
+                <div class="doughnut-wrap">
+                  <canvas id="doughnutCompetitor" width="160" height="160"></canvas>
+                  <div class="doughnut-label">
+                    <div class="dl-score" style="color:#ef4444">{{ competitor.scores.overall_seo_strength|default:0 }}</div>
+                    <div class="dl-sub">/ 100</div>
+                  </div>
+                </div>
+                <div class="score-card-details">
+                  <div class="detail-item"><i class="fas fa-search"></i><span>{{ competitor.detected_keyword }}</span></div>
+                  <div class="detail-item"><i class="fas fa-bullseye"></i><span>{{ competitor.intent_type|title }}</span></div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </section>
+
+        <!-- ════════════════════════════════════════════════════
+             AI GAP EXPLANATION
+             ════════════════════════════════════════════════════ -->
+        <section class="gap-explanation-box">
+          <div class="gap-explanation-header">
+            <div class="gap-explanation-icon"><i class="fas fa-lightbulb"></i></div>
+            <div class="gap-explanation-title">
+              <h3>Why the Ranking Difference?</h3>
+              <p>AI-powered analysis of the key SEO gaps</p>
+            </div>
+          </div>
+          <div class="gap-explanation-content">
+            {% if explanation_is_json %}
+              <p class="gap-opening">{{ ranking_explanation.opening }}</p>
+              <div class="gap-section">
+                <h4 class="gap-section-title"><span>📊</span> Top Ranking Factors</h4>
+                {% for reason in ranking_explanation.reasons %}
+                <div class="gap-card gap-card--reason">
+                  <div class="gap-card__number">{{ forloop.counter }}</div>
+                  <div class="gap-card__body"><strong>{{ reason.title }}</strong><p>{{ reason.detail }}</p></div>
+                </div>
+                {% endfor %}
+              </div>
+              <div class="gap-section">
+                <h4 class="gap-section-title"><span>🎯</span> Actionable Recommendations</h4>
+                {% for rec in ranking_explanation.recommendations %}
+                <div class="gap-card gap-card--rec">
+                  <div class="gap-card__icon">→</div>
+                  <div class="gap-card__body"><strong>{{ rec.title }}</strong><p>{{ rec.detail }}</p></div>
+                </div>
+                {% endfor %}
+              </div>
+            {% else %}
+              <p>{{ ranking_explanation }}</p>
+            {% endif %}
+          </div>
+        </section>
+
+        <!-- ════════════════════════════════════════════════════
+             RADAR CHART – SEO Score Breakdown
+             ════════════════════════════════════════════════════ -->
+        <section class="analysis-section">
+          <div class="section-header">
+            <div class="section-title">
+              <i class="fas fa-chart-bar section-icon"></i>
+              <h2>SEO Score Breakdown</h2>
+            </div>
+          </div>
+          <div class="section-content">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:2rem;align-items:center;">
+              <!-- Radar -->
+              <div class="radar-chart-container">
+                <canvas id="radarChart"></canvas>
+              </div>
+              <!-- Horizontal bar comparison -->
+              <div>
+                <div class="section-chart-band">
+                  <h4><i class="fas fa-align-left"></i> Score Comparison</h4>
+                  {% with cats="On-Page,Technical,Authority,Content,UX,Intent,Backlinks" %}
+                  <div id="hbarList"></div>
+                  {% endwith %}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ════════════════════════════════════════════════════
+             DETAILED SCORE TABLE
+             ════════════════════════════════════════════════════ -->
+        <section class="analysis-section">
+          <div class="section-header">
+            <div class="section-title">
+              <i class="fas fa-table section-icon"></i>
+              <h2>Detailed Score Comparison</h2>
+            </div>
+          </div>
+          <div class="section-content">
+            <div class="comparison-table-wrapper">
+              <table class="comparison-table">
+                <thead><tr><th>Category</th><th>Your URL</th><th>Competitor</th><th>Gap</th><th>Status</th></tr></thead>
+                <tbody>
+                  <tr>
+                    <td><i class="fas fa-file-alt"></i> On-Page SEO</td>
+                    <td class="score-cell">{{ primary.scores.on_page_score|default:0 }}</td>
+                    <td class="score-cell">{{ competitor.scores.on_page_score|default:0 }}</td>
+                    <td class="gap-cell {% if competitor.scores.on_page_score > primary.scores.on_page_score %}negative{% else %}positive{% endif %}">
+                      {% widthratio competitor.scores.on_page_score 1 1 %} - {% widthratio primary.scores.on_page_score 1 1 %}
+                    </td>
+                    <td>{% if competitor.scores.on_page_score > primary.scores.on_page_score %}<span class="status-badge status-behind">Behind</span>{% else %}<span class="status-badge status-ahead">Ahead</span>{% endif %}</td>
+                  </tr>
+                  <tr>
+                    <td><i class="fas fa-tachometer-alt"></i> Technical SEO</td>
+                    <td class="score-cell">{{ primary.scores.technical_score|default:0 }}</td>
+                    <td class="score-cell">{{ competitor.scores.technical_score|default:0 }}</td>
+                    <td class="gap-cell {% if competitor.scores.technical_score > primary.scores.technical_score %}negative{% else %}positive{% endif %}">
+                      {% widthratio competitor.scores.technical_score 1 1 %} - {% widthratio primary.scores.technical_score 1 1 %}
+                    </td>
+                    <td>{% if competitor.scores.technical_score > primary.scores.technical_score %}<span class="status-badge status-behind">Behind</span>{% else %}<span class="status-badge status-ahead">Ahead</span>{% endif %}</td>
+                  </tr>
+                  <tr>
+                    <td><i class="fas fa-shield-alt"></i> Authority</td>
+                    <td class="score-cell">{{ primary.scores.authority_score|default:0 }}</td>
+                    <td class="score-cell">{{ competitor.scores.authority_score|default:0 }}</td>
+                    <td class="gap-cell {% if competitor.scores.authority_score > primary.scores.authority_score %}negative{% else %}positive{% endif %}">
+                      {% widthratio competitor.scores.authority_score 1 1 %} - {% widthratio primary.scores.authority_score 1 1 %}
+                    </td>
+                    <td>{% if competitor.scores.authority_score > primary.scores.authority_score %}<span class="status-badge status-behind">Behind</span>{% else %}<span class="status-badge status-ahead">Ahead</span>{% endif %}</td>
+                  </tr>
+                  <tr>
+                    <td><i class="fas fa-book-open"></i> Content Depth</td>
+                    <td class="score-cell">{{ primary.scores.content_depth_score|default:0 }}</td>
+                    <td class="score-cell">{{ competitor.scores.content_depth_score|default:0 }}</td>
+                    <td class="gap-cell {% if competitor.scores.content_depth_score > primary.scores.content_depth_score %}negative{% else %}positive{% endif %}">
+                      {% widthratio competitor.scores.content_depth_score 1 1 %} - {% widthratio primary.scores.content_depth_score 1 1 %}
+                    </td>
+                    <td>{% if competitor.scores.content_depth_score > primary.scores.content_depth_score %}<span class="status-badge status-behind">Behind</span>{% else %}<span class="status-badge status-ahead">Ahead</span>{% endif %}</td>
+                  </tr>
+                  <tr>
+                    <td><i class="fas fa-users"></i> User Experience</td>
+                    <td class="score-cell">{{ primary.scores.ux_score|default:0 }}</td>
+                    <td class="score-cell">{{ competitor.scores.ux_score|default:0 }}</td>
+                    <td class="gap-cell {% if competitor.scores.ux_score > primary.scores.ux_score %}negative{% else %}positive{% endif %}">
+                      {% widthratio competitor.scores.ux_score 1 1 %} - {% widthratio primary.scores.ux_score 1 1 %}
+                    </td>
+                    <td>{% if competitor.scores.ux_score > primary.scores.ux_score %}<span class="status-badge status-behind">Behind</span>{% else %}<span class="status-badge status-ahead">Ahead</span>{% endif %}</td>
+                  </tr>
+                  <tr>
+                    <td><i class="fas fa-bullseye"></i> Intent Alignment</td>
+                    <td class="score-cell">{{ primary.scores.intent_alignment_score|default:0 }}</td>
+                    <td class="score-cell">{{ competitor.scores.intent_alignment_score|default:0 }}</td>
+                    <td class="gap-cell {% if competitor.scores.intent_alignment_score > primary.scores.intent_alignment_score %}negative{% else %}positive{% endif %}">
+                      {% widthratio competitor.scores.intent_alignment_score 1 1 %} - {% widthratio primary.scores.intent_alignment_score 1 1 %}
+                    </td>
+                    <td>{% if competitor.scores.intent_alignment_score > primary.scores.intent_alignment_score %}<span class="status-badge status-behind">Behind</span>{% else %}<span class="status-badge status-ahead">Ahead</span>{% endif %}</td>
+                  </tr>
+                  <tr>
+                    <td><i class="fas fa-link"></i> Backlink Strength</td>
+                    <td class="score-cell">{{ primary.scores.backlink_strength_score|default:0 }}</td>
+                    <td class="score-cell">{{ competitor.scores.backlink_strength_score|default:0 }}</td>
+                    <td class="gap-cell {% if competitor.scores.backlink_strength_score > primary.scores.backlink_strength_score %}negative{% else %}positive{% endif %}">
+                      {% widthratio competitor.scores.backlink_strength_score 1 1 %} - {% widthratio primary.scores.backlink_strength_score 1 1 %}
+                    </td>
+                    <td>{% if competitor.scores.backlink_strength_score > primary.scores.backlink_strength_score %}<span class="status-badge status-behind">Behind</span>{% else %}<span class="status-badge status-ahead">Ahead</span>{% endif %}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ════════════════════════════════════════════════════
+             ON-PAGE SEO ANALYSIS
+             ════════════════════════════════════════════════════ -->
+        <section class="analysis-section on-page-section">
+          <div class="section-header" data-toggle="collapse" data-target="#onPageDetails">
+            <div class="section-title"><i class="fas fa-file-alt section-icon"></i><h2>On-Page SEO Analysis</h2></div>
+            <i class="fas fa-chevron-down collapse-icon"></i>
+          </div>
+          <div id="onPageDetails" class="collapse show section-content">
+
+            <!-- Score cards -->
+            <div class="overall-scores-grid">
+              <div class="score-display-card primary-card">
+                <div class="score-card-label"><i class="fas fa-globe"></i> YOUR URL</div>
+                <div class="doughnut-wrap">
+                  <canvas id="doughnutOnPagePrimary" width="160" height="160"></canvas>
+                  <div class="doughnut-label">
+                    <div class="dl-score" style="color:#3b82f6">{{ primary.scores.on_page_score|default:0 }}</div>
+                    <div class="dl-sub">/ 100</div>
+                  </div>
+                </div>
+                <div class="score-card-details">
+                  <div class="detail-item"><i class="fas fa-key"></i><span>{{ primary.detected_keyword|default:"Not detected" }}</span></div>
+                  <div class="detail-item"><i class="fas fa-bullseye"></i><span>{{ primary.intent_type|default:"informational"|title }}</span></div>
+                </div>
+              </div>
+              <div class="score-display-card competitor-card">
+                <div class="score-card-label"><i class="fas fa-crosshairs"></i> COMPETITOR URL</div>
+                <div class="doughnut-wrap">
+                  <canvas id="doughnutOnPageComp" width="160" height="160"></canvas>
+                  <div class="doughnut-label">
+                    <div class="dl-score" style="color:#ef4444">{{ competitor.scores.on_page_score|default:0 }}</div>
+                    <div class="dl-sub">/ 100</div>
+                  </div>
+                </div>
+                <div class="score-card-details">
+                  <div class="detail-item"><i class="fas fa-key"></i><span>{{ competitor.detected_keyword|default:"Not detected" }}</span></div>
+                  <div class="detail-item"><i class="fas fa-bullseye"></i><span>{{ competitor.intent_type|default:"informational"|title }}</span></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- On-page metrics bar chart -->
+            <div class="section-chart-band">
+              <h4><i class="fas fa-chart-bar"></i> On-Page Metrics Comparison</h4>
+              <div class="chart-container" style="height:220px;">
+                <canvas id="onPageBarChart"></canvas>
+              </div>
+            </div>
+
+            <!-- Detailed table -->
+            <div class="comparison-table-wrapper">
+              <table class="comparison-table">
+                <thead><tr><th>METRIC</th><th>YOUR URL</th><th>COMPETITOR</th><th>GAP</th><th>STATUS</th></tr></thead>
+                <tbody>
+                  <tr>
+                    <td><i class="fas fa-star"></i> Content Quality</td>
+                    <td class="score-cell">{{ primary.content_quality_score|default:0 }}</td>
+                    <td class="score-cell">{{ competitor.content_quality_score|default:0 }}</td>
+                    <td class="gap-cell {% if primary.content_quality_score > competitor.content_quality_score %}positive{% elif primary.content_quality_score < competitor.content_quality_score %}negative{% endif %}">
+                      {% if primary.content_quality_score > competitor.content_quality_score %}+{% endif %}{{ primary.content_quality_score|default:0 }}
+                    </td>
+                    <td>{% if primary.content_quality_score > competitor.content_quality_score %}<span class="status-badge status-ahead">AHEAD</span>{% elif primary.content_quality_score < competitor.content_quality_score %}<span class="status-badge status-behind">BEHIND</span>{% else %}<span class="status-badge" style="background:var(--gray-400)">TIED</span>{% endif %}</td>
+                  </tr>
+                  <tr>
+                    <td><i class="fas fa-book-open"></i> Readability</td>
+                    <td class="score-cell">{{ primary.readability_score|default:0 }}</td>
+                    <td class="score-cell">{{ competitor.readability_score|default:0 }}</td>
+                    <td class="gap-cell {% if primary.readability_score > competitor.readability_score %}positive{% elif primary.readability_score < competitor.readability_score %}negative{% endif %}">
+                      {% if primary.readability_score > competitor.readability_score %}+{% endif %}{{ primary.readability_score|default:0 }}
+                    </td>
+                    <td>{% if primary.readability_score > competitor.readability_score %}<span class="status-badge status-ahead">AHEAD</span>{% elif primary.readability_score < competitor.readability_score %}<span class="status-badge status-behind">BEHIND</span>{% else %}<span class="status-badge" style="background:var(--gray-400)">TIED</span>{% endif %}</td>
+                  </tr>
+                  <tr>
+                    <td><i class="fas fa-layer-group"></i> Topic Depth</td>
+                    <td class="score-cell">{{ primary.topic_depth.score|default:0 }}</td>
+                    <td class="score-cell">{{ competitor.topic_depth.score|default:0 }}</td>
+                    <td class="gap-cell {% if primary.topic_depth.score > competitor.topic_depth.score %}positive{% elif primary.topic_depth.score < competitor.topic_depth.score %}negative{% endif %}">
+                      {% if primary.topic_depth.score > competitor.topic_depth.score %}+{% endif %}{{ primary.topic_depth.score|default:0 }}
+                    </td>
+                    <td>{% if primary.topic_depth.score > competitor.topic_depth.score %}<span class="status-badge status-ahead">AHEAD</span>{% elif primary.topic_depth.score < competitor.topic_depth.score %}<span class="status-badge status-behind">BEHIND</span>{% else %}<span class="status-badge" style="background:var(--gray-400)">TIED</span>{% endif %}</td>
+                  </tr>
+                  <tr>
+                    <td><i class="fas fa-bullseye"></i> Intent Alignment</td>
+                    <td class="score-cell">{{ primary.intent_alignment_score|default:0 }}</td>
+                    <td class="score-cell">{{ competitor.intent_alignment_score|default:0 }}</td>
+                    <td class="gap-cell {% if primary.intent_alignment_score > competitor.intent_alignment_score %}positive{% elif primary.intent_alignment_score < competitor.intent_alignment_score %}negative{% endif %}">
+                      {% if primary.intent_alignment_score > competitor.intent_alignment_score %}+{% endif %}{{ primary.intent_alignment_score|default:0 }}
+                    </td>
+                    <td>{% if primary.intent_alignment_score > competitor.intent_alignment_score %}<span class="status-badge status-ahead">AHEAD</span>{% elif primary.intent_alignment_score < competitor.intent_alignment_score %}<span class="status-badge status-behind">BEHIND</span>{% else %}<span class="status-badge" style="background:var(--gray-400)">TIED</span>{% endif %}</td>
+                  </tr>
+                  <tr>
+                    <td><i class="fas fa-shield-alt"></i> E-E-A-T Signals</td>
+                    <td class="score-cell">{{ primary.eeat_signals.score|default:0 }}</td>
+                    <td class="score-cell">{{ competitor.eeat_signals.score|default:0 }}</td>
+                    <td class="gap-cell {% if primary.eeat_signals.score > competitor.eeat_signals.score %}positive{% elif primary.eeat_signals.score < competitor.eeat_signals.score %}negative{% endif %}">
+                      {% if primary.eeat_signals.score > competitor.eeat_signals.score %}+{% endif %}{{ primary.eeat_signals.score|default:0 }}
+                    </td>
+                    <td>{% if primary.eeat_signals.score > competitor.eeat_signals.score %}<span class="status-badge status-ahead">AHEAD</span>{% elif primary.eeat_signals.score < competitor.eeat_signals.score %}<span class="status-badge status-behind">BEHIND</span>{% else %}<span class="status-badge" style="background:var(--gray-400)">TIED</span>{% endif %}</td>
+                  </tr>
+                  <tr>
+                    <td><i class="fas fa-file-word"></i> Word Count</td>
+                    <td class="score-cell">{{ primary.word_count|default:0 }}</td>
+                    <td class="score-cell">{{ competitor.word_count|default:0 }}</td>
+                    <td class="gap-cell {% if primary.word_count > competitor.word_count %}positive{% elif primary.word_count < competitor.word_count %}negative{% endif %}">
+                      {% if primary.word_count > competitor.word_count %}+{% endif %}{{ primary.word_count|default:0 }}
+                    </td>
+                    <td>{% if primary.word_count > competitor.word_count %}<span class="status-badge status-ahead">AHEAD</span>{% elif primary.word_count < competitor.word_count %}<span class="status-badge status-behind">BEHIND</span>{% else %}<span class="status-badge" style="background:var(--gray-400)">TIED</span>{% endif %}</td>
+                  </tr>
+                  <tr>
+                    <td><i class="fas fa-percent"></i> Keyword Density</td>
+                    <td class="score-cell">{{ primary.keyword_placement.density|default:0|floatformat:2 }}%</td>
+                    <td class="score-cell">{{ competitor.keyword_placement.density|default:0|floatformat:2 }}%</td>
+                    <td class="gap-cell">—</td>
+                    <td>
+                      {% if primary.keyword_placement.density >= 0.5 and primary.keyword_placement.density <= 2.5 %}<span class="status-badge status-ahead">OPTIMAL</span>
+                      {% elif primary.keyword_placement.density > 2.5 %}<span class="status-badge status-behind">TOO HIGH</span>
+                      {% else %}<span class="status-badge" style="background:var(--warning)">TOO LOW</span>{% endif %}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Detail cards + E-E-A-T radar -->
+            <div class="analysis-grid">
+              <!-- Primary details -->
+              <div class="analysis-card">
+                <div class="card-header"><h3><i class="fas fa-globe"></i> Your URL Details</h3></div>
+                <div class="card-body">
+                  <div class="metric-row"><span class="metric-label"><i class="fas fa-check-circle"></i> Keyword in Title</span><span class="metric-value">{% if primary.keyword_placement.in_title %}<span class="text-success">✓ Yes</span>{% else %}<span class="text-danger">✗ No</span>{% endif %}</span></div>
+                  <div class="metric-row"><span class="metric-label"><i class="fas fa-heading"></i> Keyword in H1</span><span class="metric-value">{% if primary.keyword_placement.in_h1 %}<span class="text-success">✓ Yes</span>{% else %}<span class="text-danger">✗ No</span>{% endif %}</span></div>
+                  <div class="metric-row"><span class="metric-label"><i class="fas fa-user-graduate"></i> Experience</span><span class="metric-value moz-score">{{ primary.eeat_signals.experience_score|default:0 }}/100</span></div>
+                  <div class="metric-row"><span class="metric-label"><i class="fas fa-certificate"></i> Expertise</span><span class="metric-value moz-score">{{ primary.eeat_signals.expertise_score|default:0 }}/100</span></div>
+                  <div class="metric-row"><span class="metric-label"><i class="fas fa-award"></i> Authority</span><span class="metric-value moz-score">{{ primary.eeat_signals.authoritativeness_score|default:0 }}/100</span></div>
+                  <div class="metric-row"><span class="metric-label"><i class="fas fa-shield-alt"></i> Trust</span><span class="metric-value moz-score">{{ primary.eeat_signals.trustworthiness_score|default:0 }}/100</span></div>
+                  <!-- E-E-A-T mini radar -->
+                  <div class="eeat-chart-wrap" style="margin-top:1rem;">
+                    <canvas id="eeatRadarPrimary" height="200"></canvas>
+                  </div>
+                  {% if primary.eeat_signals.has_author or primary.eeat_signals.has_date or primary.eeat_signals.https_enabled %}
+                  <div class="data-source-note"><small><i class="fas fa-check-circle"></i>{% if primary.eeat_signals.has_author %} Author •{% endif %}{% if primary.eeat_signals.has_date %} Date •{% endif %}{% if primary.eeat_signals.https_enabled %} HTTPS{% endif %}</small></div>
+                  {% endif %}
+                  {% if primary.semantic.ai_insights %}
+                  <div class="insights-box"><h4><i class="fas fa-brain"></i> AI-Powered Insights</h4><ul>{% for insight in primary.semantic.ai_insights|slice:":3" %}<li>{{ insight }}</li>{% endfor %}</ul></div>
+                  {% endif %}
+                </div>
+              </div>
+
+              <!-- Competitor details -->
+              <div class="analysis-card">
+                <div class="card-header"><h3><i class="fas fa-crosshairs"></i> Competitor Details</h3></div>
+                <div class="card-body">
+                  <div class="metric-row"><span class="metric-label"><i class="fas fa-check-circle"></i> Keyword in Title</span><span class="metric-value">{% if competitor.keyword_placement.in_title %}<span class="text-success">✓ Yes</span>{% else %}<span class="text-danger">✗ No</span>{% endif %}</span></div>
+                  <div class="metric-row"><span class="metric-label"><i class="fas fa-heading"></i> Keyword in H1</span><span class="metric-value">{% if competitor.keyword_placement.in_h1 %}<span class="text-success">✓ Yes</span>{% else %}<span class="text-danger">✗ No</span>{% endif %}</span></div>
+                  <div class="metric-row"><span class="metric-label"><i class="fas fa-user-graduate"></i> Experience</span><span class="metric-value moz-score">{{ competitor.eeat_signals.experience_score|default:0 }}/100</span></div>
+                  <div class="metric-row"><span class="metric-label"><i class="fas fa-certificate"></i> Expertise</span><span class="metric-value moz-score">{{ competitor.eeat_signals.expertise_score|default:0 }}/100</span></div>
+                  <div class="metric-row"><span class="metric-label"><i class="fas fa-award"></i> Authority</span><span class="metric-value moz-score">{{ competitor.eeat_signals.authoritativeness_score|default:0 }}/100</span></div>
+                  <div class="metric-row"><span class="metric-label"><i class="fas fa-shield-alt"></i> Trust</span><span class="metric-value moz-score">{{ competitor.eeat_signals.trustworthiness_score|default:0 }}/100</span></div>
+                  <div class="eeat-chart-wrap" style="margin-top:1rem;">
+                    <canvas id="eeatRadarComp" height="200"></canvas>
+                  </div>
+                  {% if competitor.eeat_signals.has_author or competitor.eeat_signals.has_date or competitor.eeat_signals.https_enabled %}
+                  <div class="data-source-note"><small><i class="fas fa-check-circle"></i>{% if competitor.eeat_signals.has_author %} Author •{% endif %}{% if competitor.eeat_signals.has_date %} Date •{% endif %}{% if competitor.eeat_signals.https_enabled %} HTTPS{% endif %}</small></div>
+                  {% endif %}
+                  {% if competitor.semantic.ai_insights %}
+                  <div class="insights-box"><h4><i class="fas fa-brain"></i> AI-Powered Insights</h4><ul>{% for insight in competitor.semantic.ai_insights|slice:":3" %}<li>{{ insight }}</li>{% endfor %}</ul></div>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+
+            <!-- Top keywords -->
+            {% if primary.semantic.top_keywords or competitor.semantic.top_keywords %}
+            <div class="analysis-card full-width">
+              <div class="card-header"><h3><i class="fas fa-tags"></i> Top Keywords Found</h3></div>
+              <div class="card-body">
+                <div class="analysis-grid">
+                  <div>
+                    <h4 style="color:var(--primary-mid);margin-bottom:var(--spacing-md);"><i class="fas fa-globe"></i> Your URL</h4>
+                    {% if primary.semantic.top_keywords %}
+                    <div style="display:flex;flex-wrap:wrap;gap:var(--spacing-sm);">
+                      {% for kw in primary.semantic.top_keywords|slice:":8" %}
+                      <span style="padding:.375rem .75rem;background:var(--primary-light);color:white;border-radius:var(--radius-md);font-size:.875rem;font-weight:600;">{{ kw.keyword }} <small style="opacity:.8;">({{ kw.relevance }}%)</small></span>
+                      {% endfor %}
+                    </div>
+                    {% else %}<p style="color:var(--gray-500);font-size:.875rem;">No keywords found</p>{% endif %}
+                  </div>
+                  <div>
+                    <h4 style="color:var(--error);margin-bottom:var(--spacing-md);"><i class="fas fa-crosshairs"></i> Competitor URL</h4>
+                    {% if competitor.semantic.top_keywords %}
+                    <div style="display:flex;flex-wrap:wrap;gap:var(--spacing-sm);">
+                      {% for kw in competitor.semantic.top_keywords|slice:":8" %}
+                      <span style="padding:.375rem .75rem;background:var(--error);color:white;border-radius:var(--radius-md);font-size:.875rem;font-weight:600;">{{ kw.keyword }} <small style="opacity:.8;">({{ kw.relevance }}%)</small></span>
+                      {% endfor %}
+                    </div>
+                    {% else %}<p style="color:var(--gray-500);font-size:.875rem;">No keywords found</p>{% endif %}
+                  </div>
+                </div>
+              </div>
+            </div>
+            {% endif %}
+
+          </div>
+        </section>
+
+        <!-- ════════════════════════════════════════════════════
+             TECHNICAL SEO ANALYSIS
+             ════════════════════════════════════════════════════ -->
+        <section class="analysis-section">
+          <div class="section-header" data-toggle="collapse" data-target="#technicalDetails">
+            <div class="section-title"><i class="fas fa-tachometer-alt section-icon"></i><h2>Technical SEO Analysis</h2></div>
+            <i class="fas fa-chevron-down collapse-icon"></i>
+          </div>
+          <div id="technicalDetails" class="collapse section-content">
+
+            <!-- Speed gauge + checklist side by side -->
+            <div class="analysis-grid">
+
+              <!-- Primary technical card -->
+              <div class="analysis-card">
+                <div class="card-header">
+                  <h3><i class="fas fa-globe"></i> Your URL</h3>
+                  <span class="card-score">{{ primary.scores.technical_score|default:0 }}/100</span>
+                </div>
+                <div class="card-body">
+                  {% if primary.technical %}
+                  <!-- Speed gauge -->
+                  <div style="text-align:center;margin-bottom:1rem;">
+                    <div class="speed-doughnut-wrap">
+                      <canvas id="speedGaugePrimary" width="130" height="130"></canvas>
+                      <div class="speed-doughnut-label">
+                        <div class="spd-num" style="color:#3b82f6">{{ primary.technical.page_speed.speed_score|default:0 }}</div>
+                        <div class="spd-sub">Speed</div>
+                      </div>
+                    </div>
+                    <div style="font-size:.8rem;color:#64748b;margin-top:.4rem;">Load: {{ primary.technical.page_speed.load_time|default:0 }}s</div>
+                  </div>
+                  <!-- Metrics -->
+                  <div class="metric-row"><span class="metric-label">Mobile Responsive:</span><span class="metric-value {% if primary.technical.mobile_responsive %}text-success{% else %}text-danger{% endif %}">{% if primary.technical.mobile_responsive %}<i class="fas fa-check-circle"></i> Yes{% else %}<i class="fas fa-times-circle"></i> No{% endif %}</span></div>
+                  <div class="metric-row"><span class="metric-label">HTTPS Enabled:</span><span class="metric-value {% if primary.technical.https_enabled %}text-success{% else %}text-danger{% endif %}">{% if primary.technical.https_enabled %}<i class="fas fa-check-circle"></i> Yes{% else %}<i class="fas fa-times-circle"></i> No{% endif %}</span></div>
+                  <div class="metric-row"><span class="metric-label">Structured Data:</span><span class="metric-value {% if primary.technical.structured_data.present %}text-success{% else %}text-warning{% endif %}">{% if primary.technical.structured_data.present %}<i class="fas fa-check-circle"></i> Present ({{ primary.technical.structured_data.count }}){% else %}<i class="fas fa-exclamation-triangle"></i> None{% endif %}</span></div>
+                  <div class="metric-row"><span class="metric-label">Canonical Tag:</span><span class="metric-value {% if primary.technical.canonical.present %}text-success{% else %}text-warning{% endif %}">{% if primary.technical.canonical.present %}<i class="fas fa-check-circle"></i> Present{% else %}<i class="fas fa-exclamation-triangle"></i> Missing{% endif %}</span></div>
+                  <div class="metric-row"><span class="metric-label">Internal Links:</span><span class="metric-value">{{ primary.technical.internal_links|default:0 }}</span></div>
+                  {% endif %}
+                </div>
+              </div>
+
+              <!-- Competitor technical card -->
+              <div class="analysis-card">
+                <div class="card-header">
+                  <h3><i class="fas fa-crosshairs"></i> Competitor URL</h3>
+                  <span class="card-score">{{ competitor.scores.technical_score|default:0 }}/100</span>
+                </div>
+                <div class="card-body">
+                  {% if competitor.technical %}
+                  <div style="text-align:center;margin-bottom:1rem;">
+                    <div class="speed-doughnut-wrap">
+                      <canvas id="speedGaugeComp" width="130" height="130"></canvas>
+                      <div class="speed-doughnut-label">
+                        <div class="spd-num" style="color:#ef4444">{{ competitor.technical.page_speed.speed_score|default:0 }}</div>
+                        <div class="spd-sub">Speed</div>
+                      </div>
+                    </div>
+                    <div style="font-size:.8rem;color:#64748b;margin-top:.4rem;">Load: {{ competitor.technical.page_speed.load_time|default:0 }}s</div>
+                  </div>
+                  <div class="metric-row"><span class="metric-label">Mobile Responsive:</span><span class="metric-value {% if competitor.technical.mobile_responsive %}text-success{% else %}text-danger{% endif %}">{% if competitor.technical.mobile_responsive %}<i class="fas fa-check-circle"></i> Yes{% else %}<i class="fas fa-times-circle"></i> No{% endif %}</span></div>
+                  <div class="metric-row"><span class="metric-label">HTTPS Enabled:</span><span class="metric-value {% if competitor.technical.https_enabled %}text-success{% else %}text-danger{% endif %}">{% if competitor.technical.https_enabled %}<i class="fas fa-check-circle"></i> Yes{% else %}<i class="fas fa-times-circle"></i> No{% endif %}</span></div>
+                  <div class="metric-row"><span class="metric-label">Structured Data:</span><span class="metric-value {% if competitor.technical.structured_data.present %}text-success{% else %}text-warning{% endif %}">{% if competitor.technical.structured_data.present %}<i class="fas fa-check-circle"></i> Present ({{ competitor.technical.structured_data.count }}){% else %}<i class="fas fa-exclamation-triangle"></i> None{% endif %}</span></div>
+                  <div class="metric-row"><span class="metric-label">Canonical Tag:</span><span class="metric-value {% if competitor.technical.canonical.present %}text-success{% else %}text-warning{% endif %}">{% if competitor.technical.canonical.present %}<i class="fas fa-check-circle"></i> Present{% else %}<i class="fas fa-exclamation-triangle"></i> Missing{% endif %}</span></div>
+                  <div class="metric-row"><span class="metric-label">Internal Links:</span><span class="metric-value">{{ competitor.technical.internal_links|default:0 }}</span></div>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ════════════════════════════════════════════════════
+             AUTHORITY & BACKLINKS
+             ════════════════════════════════════════════════════ -->
+        <section class="analysis-section">
+          <div class="section-header" data-toggle="collapse" data-target="#authorityDetails">
+            <div class="section-title"><i class="fas fa-shield-alt section-icon"></i><h2>Authority &amp; Backlinks</h2></div>
+            <i class="fas fa-chevron-down collapse-icon"></i>
+          </div>
+          <div id="authorityDetails" class="collapse section-content">
+
+            <div class="analysis-grid">
+
+              <!-- Primary authority -->
+              <div class="analysis-card">
+                <div class="card-header">
+                  <h3><i class="fas fa-globe"></i> Your URL</h3>
+                  <span class="card-score">{{ primary.scores.authority_score|default:0 }}/100</span>
+                </div>
+                <div class="card-body">
+                  {% if primary.authority %}
+                  {% if primary.authority.domain_authority %}
+                  <div class="metric-row"><span class="metric-label"><i class="fas fa-chart-line"></i> Domain Authority (Moz):</span><span class="metric-value moz-score">{{ primary.authority.domain_authority }}/100</span></div>
+                  <div class="metric-row"><span class="metric-label"><i class="fas fa-exclamation-triangle"></i> Spam Score (Moz):</span><span class="metric-value">{{ primary.authority.spam_score }}/17</span></div>
+                  {% endif %}
+                  <div class="metric-row"><span class="metric-label"><i class="fas fa-link"></i> Referring Domains:</span><span class="metric-value">{{ primary.authority.backlink_profile.referring_domains }}</span></div>
+                  <div class="metric-row"><span class="metric-label"><i class="fas fa-link"></i> Total Backlinks:</span><span class="metric-value">{{ primary.authority.backlink_profile.total_backlinks }}</span></div>
+                  <div class="data-source-note"><small><i class="fas fa-info-circle"></i> {{ primary.authority.backlink_profile.data_source }}</small></div>
+                  {% endif %}
+                </div>
+              </div>
+
+              <!-- Competitor authority -->
+              <div class="analysis-card">
+                <div class="card-header">
+                  <h3><i class="fas fa-crosshairs"></i> Competitor URL</h3>
+                  <span class="card-score">{{ competitor.scores.authority_score|default:0 }}/100</span>
+                </div>
+                <div class="card-body">
+                  {% if competitor.authority %}
+                  {% if competitor.authority.domain_authority %}
+                  <div class="metric-row"><span class="metric-label"><i class="fas fa-chart-line"></i> Domain Authority (Moz):</span><span class="metric-value moz-score">{{ competitor.authority.domain_authority }}/100</span></div>
+                  <div class="metric-row"><span class="metric-label"><i class="fas fa-exclamation-triangle"></i> Spam Score (Moz):</span><span class="metric-value">{{ competitor.authority.spam_score }}/17</span></div>
+                  {% endif %}
+                  <div class="metric-row"><span class="metric-label"><i class="fas fa-link"></i> Referring Domains:</span><span class="metric-value">{{ competitor.authority.backlink_profile.referring_domains }}</span></div>
+                  <div class="metric-row"><span class="metric-label"><i class="fas fa-link"></i> Total Backlinks:</span><span class="metric-value">{{ competitor.authority.backlink_profile.total_backlinks }}</span></div>
+                  <div class="data-source-note"><small><i class="fas fa-info-circle"></i> {{ competitor.authority.backlink_profile.data_source }}</small></div>
+                  {% endif %}
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </section>
+
+        <!-- Action button -->
+        <div class="report-action">
+          <a href="{% url 'comparative_analysis:input_form' %}" class="btn btn-download">
+            <i class="fas fa-redo"></i><span>New Comparison</span>
+          </a>
+        </div>
+
+      </div>
+    </main>
+
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+
+    <script>
+    /* ── helpers ──────────────────────────────────────── */
+    function navbar() { document.getElementById("sidebarMenu").classList.toggle("show"); }
+    window.addEventListener("load", () => { document.getElementById("loader").style.display = "none"; });
+
+    const BLUE  = "rgb(59,130,246)";
+    const RED   = "rgb(239,68,68)";
+    const BLUEA = "rgba(59,130,246,0.18)";
+    const REDA  = "rgba(239,68,68,0.18)";
+    const NAVY  = "#023761";
+
+    function makeDoughnut(id, value, color) {
+      const ctx = document.getElementById(id);
+      if (!ctx) return;
+      new Chart(ctx, {
+        type: "doughnut",
+        data: {
+          datasets: [{
+            data: [value, 100 - value],
+            backgroundColor: [color, "#e5e7eb"],
+            borderWidth: 0,
+            hoverOffset: 0,
+          }]
+        },
+        options: {
+          cutout: "72%",
+          responsive: false,
+          animation: { animateRotate: true, duration: 1000 },
+          plugins: { legend: { display: false }, tooltip: { enabled: false } }
+        }
+      });
+    }
+
+    /* ── Overall doughnuts ── */
+    makeDoughnut("doughnutPrimary",    {{ primary.scores.overall_seo_strength|default:0 }},    BLUE);
+    makeDoughnut("doughnutCompetitor", {{ competitor.scores.overall_seo_strength|default:0 }}, RED);
+
+    /* ── On-Page score doughnuts ── */
+    makeDoughnut("doughnutOnPagePrimary", {{ primary.scores.on_page_score|default:0 }},    BLUE);
+    makeDoughnut("doughnutOnPageComp",    {{ competitor.scores.on_page_score|default:0 }}, RED);
+
+    /* ── Speed gauges ── */
+    makeDoughnut("speedGaugePrimary", {{ primary.technical.page_speed.speed_score|default:0 }},    BLUE);
+    makeDoughnut("speedGaugeComp",    {{ competitor.technical.page_speed.speed_score|default:0 }}, RED);
+
+    /* ── Radar chart ── */
+    const radarLabels = ["On-Page SEO","Technical SEO","Authority","Content Depth","User Experience","Intent Alignment","Backlinks"];
+    const primaryScores   = [{{ primary.scores.on_page_score|default:0 }}, {{ primary.scores.technical_score|default:0 }}, {{ primary.scores.authority_score|default:0 }}, {{ primary.scores.content_depth_score|default:0 }}, {{ primary.scores.ux_score|default:0 }}, {{ primary.scores.intent_alignment_score|default:0 }}, {{ primary.scores.backlink_strength_score|default:0 }}];
+    const competitorScores = [{{ competitor.scores.on_page_score|default:0 }}, {{ competitor.scores.technical_score|default:0 }}, {{ competitor.scores.authority_score|default:0 }}, {{ competitor.scores.content_depth_score|default:0 }}, {{ competitor.scores.ux_score|default:0 }}, {{ competitor.scores.intent_alignment_score|default:0 }}, {{ competitor.scores.backlink_strength_score|default:0 }}];
+
+    new Chart(document.getElementById("radarChart").getContext("2d"), {
+      type: "radar",
+      data: {
+        labels: radarLabels,
+        datasets: [
+          { label:"Your URL",       data: primaryScores,    backgroundColor: BLUEA, borderColor: BLUE, borderWidth: 3, pointBackgroundColor: BLUE,  pointBorderColor:"#fff", pointRadius:5, pointHoverRadius:7 },
+          { label:"Competitor URL", data: competitorScores, backgroundColor: REDA,  borderColor: RED,  borderWidth: 3, pointBackgroundColor: RED,   pointBorderColor:"#fff", pointRadius:5, pointHoverRadius:7 }
+        ]
+      },
+      options: {
+        responsive:true, maintainAspectRatio:true,
+        scales: { r: { angleLines:{color:"rgba(0,0,0,.1)"}, grid:{color:"rgba(0,0,0,.1)"}, pointLabels:{font:{size:12,family:"Outfit,sans-serif",weight:"600"},color:"#374151"}, ticks:{stepSize:20,backdropColor:"transparent",font:{size:10}}, suggestedMin:0, suggestedMax:100 }},
+        plugins: {
+          legend: { position:"bottom", labels:{font:{size:14,family:"DM Sans,sans-serif",weight:"600"},padding:20,usePointStyle:true,pointStyle:"circle"} },
+          tooltip: { backgroundColor:"rgba(0,0,0,.8)", padding:12, cornerRadius:8, callbacks:{ label: c => c.dataset.label+": "+c.parsed.r+"/100" } }
+        }
+      }
+    });
+
+    /* ── Horizontal bars next to radar ── */
+    (function buildHBars() {
+      const container = document.getElementById("hbarList");
+      if (!container) return;
+      const rows = [
+        { label:"On-Page",   p: primaryScores[0],   c: competitorScores[0] },
+        { label:"Technical", p: primaryScores[1],   c: competitorScores[1] },
+        { label:"Authority", p: primaryScores[2],   c: competitorScores[2] },
+        { label:"Content",   p: primaryScores[3],   c: competitorScores[3] },
+        { label:"UX",        p: primaryScores[4],   c: competitorScores[4] },
+        { label:"Intent",    p: primaryScores[5],   c: competitorScores[5] },
+        { label:"Backlinks", p: primaryScores[6],   c: competitorScores[6] },
+      ];
+      rows.forEach(r => {
+        container.innerHTML += `
+          <div style="margin-bottom:.75rem;">
+            <div style="font-size:.75rem;font-weight:700;color:#374151;margin-bottom:.3rem;">${r.label}</div>
+            <div class="hbar-row"><span style="font-size:.7rem;color:#3b82f6;min-width:22px;">You</span><div class="hbar-track"><div class="hbar-fill" style="width:${r.p}%;background:#3b82f6;"></div></div><span class="hbar-val">${r.p}</span></div>
+            <div class="hbar-row"><span style="font-size:.7rem;color:#ef4444;min-width:22px;">Comp</span><div class="hbar-track"><div class="hbar-fill" style="width:${r.c}%;background:#ef4444;"></div></div><span class="hbar-val">${r.c}</span></div>
+          </div>`;
+      });
+    })();
+
+    /* ── On-Page grouped bar chart ── */
+    new Chart(document.getElementById("onPageBarChart").getContext("2d"), {
+      type: "bar",
+      data: {
+        labels: ["Content Quality","Readability","Topic Depth","Intent Align","E-E-A-T"],
+        datasets: [
+          { label:"Your URL",       data:[{{ primary.content_quality_score|default:0 }},{{ primary.readability_score|default:0 }},{{ primary.topic_depth.score|default:0 }},{{ primary.intent_alignment_score|default:0 }},{{ primary.eeat_signals.score|default:0 }}], backgroundColor:BLUE, borderRadius:4 },
+          { label:"Competitor URL", data:[{{ competitor.content_quality_score|default:0 }},{{ competitor.readability_score|default:0 }},{{ competitor.topic_depth.score|default:0 }},{{ competitor.intent_alignment_score|default:0 }},{{ competitor.eeat_signals.score|default:0 }}], backgroundColor:RED, borderRadius:4 }
+        ]
+      },
+      options: {
+        responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{position:"bottom",labels:{usePointStyle:true,font:{size:12}}}, tooltip:{cornerRadius:6} },
+        scales:{ x:{grid:{display:false},ticks:{font:{size:11}}}, y:{suggestedMax:100,grid:{color:"rgba(0,0,0,.06)"},ticks:{font:{size:11}}} }
+      }
+    });
+
+    /* ── E-E-A-T mini radars ── */
+    function makeEeatRadar(id, expVal, exprtVal, authVal, trustVal, color, colorA) {
+      const ctx = document.getElementById(id);
+      if (!ctx) return;
+      new Chart(ctx, {
+        type:"radar",
+        data:{
+          labels:["Experience","Expertise","Authority","Trust"],
+          datasets:[{ data:[expVal,exprtVal,authVal,trustVal], backgroundColor:colorA, borderColor:color, borderWidth:2, pointBackgroundColor:color, pointRadius:4 }]
+        },
+        options:{
+          responsive:true, maintainAspectRatio:true,
+          scales:{ r:{ suggestedMin:0,suggestedMax:100, pointLabels:{font:{size:10}}, ticks:{display:false}, grid:{color:"rgba(0,0,0,.08)"} } },
+          plugins:{ legend:{display:false}, tooltip:{cornerRadius:6,callbacks:{label:c=>c.label+": "+c.parsed.r+"/100"}} }
+        }
+      });
+    }
+    makeEeatRadar("eeatRadarPrimary",
+      {{ primary.eeat_signals.experience_score|default:0 }},
+      {{ primary.eeat_signals.expertise_score|default:0 }},
+      {{ primary.eeat_signals.authoritativeness_score|default:0 }},
+      {{ primary.eeat_signals.trustworthiness_score|default:0 }},
+      BLUE, BLUEA);
+    makeEeatRadar("eeatRadarComp",
+      {{ competitor.eeat_signals.experience_score|default:0 }},
+      {{ competitor.eeat_signals.expertise_score|default:0 }},
+      {{ competitor.eeat_signals.authoritativeness_score|default:0 }},
+      {{ competitor.eeat_signals.trustworthiness_score|default:0 }},
+      RED, REDA);
+
+    
+
+    /* ── Collapse icon animation ── */
+    $(".section-header").on("click", function() {
+      $(this).find(".collapse-icon").toggleClass("rotated");
+    });
+
+    /* ── Scroll animation ── */
+    const obs = new IntersectionObserver(entries => entries.forEach(e => {
+      if (e.isIntersecting) e.target.style.animation = "fadeInUp .6s ease forwards";
+    }), { threshold:.1, rootMargin:"0px 0px -50px 0px" });
+    document.querySelectorAll(".analysis-card").forEach(c => obs.observe(c));
+    </script>
+  </body>
+</html>

@@ -1,215 +1,619 @@
 <!doctype html>
 <html lang="en">
-{% load static %}
-<head>
-    <title>Smart Web Analyzer</title>
-    <!-- Required meta tags -->
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <link rel="stylesheet" href="{% static 'fyp.css'%}">
-    <link rel="icon" type="image/ico" href="{% static 'favicon-1.ico'%}">
-            <!-- Font Awesome CSS -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+  {% load static %}
+  <head>
+    <title>WEB LIFT - Page Authority Checker</title>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, shrink-to-fit=no"
+    />
+    <link rel="icon" type="image/ico" href="{% static 'favicon-1.ico'%}" />
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+
     <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
-</head>
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+      integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T"
+      crossorigin="anonymous"
+    />
 
-<body style="background-color:rgb(255, 255, 255)">
+    <!-- Font Awesome CSS -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"
+    />
 
-    <!-- Sidebar -->
-<style>
-     @media (max-width: 996px) {
-            #mylogo {
-                display: none !important;
-            }
-</style>
- <main style="margin-top: 58px; ">
-             {% if messages %}
-                            {% for message in messages %}
-                            {% if message.tags == 'success' %}
-                                <div class="alert-success m-2" id="msg" role="alert" style="background-color: #023761; text-decoration: none;color:white; font-size: 25px;height: 48px;padding-top:4px; padding-bottom: 4px ;padding-left: 30px;">
-                                    {{ message }}
-                                </div>
-                            {% elif message.tags == 'error' %}
-                                 <div class="alert-danger m-2" id="msg1" role="alert" style="background-color: #B30202; text-decoration: none;color:white; font-size: 25px;height: 48px;padding-top:4px; padding-bottom: 4px ;padding-left: 30px;">
-                                    {{ message }}
-                                </div>
-                            {% endif %}
-                            {% endfor %}
-                        {% endif %}
-    <div class="container">
-        <div class="row">
-            <div class="col-md-8 offset-md-2 mt-5">
-                <br>
-                <br>
-                <h3 class="text-center">MOZ Page Authority Checker</h3>
-                <p class="text-center mt-3">Page Authority (PA) is a score developed by Moz that predicts quality score of a single web page that estimates how well a specific page will rank on a SERP.</p>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-md-8 offset-md-2">
-                <form name="myForm" id="myForm" action="/pageAuthority" method="post" required>
-                    {% csrf_token %}
-                    <div class="form-group mt-4">
-                        <input placeholder="Enter URL" name="fname" autocomplete="on" type="search" id="id_url" class="form-control rounded" style="min-width: 350px; min-height:25px"
-                        {% if url %}
-                               value={{url}}
-                        {% endif %}
-                        />
-                    </div>
-                    <div class="form-group text-center">
-                        <button class="btn btn-primary" onclick="myFunction()" style="background-image: linear-gradient(to bottom,#2670ac,#023761)  !important;" type="submit">Submit</button>
-                        </form>
-                        <button onclick="trynewurl()" class="btn btn-secondary" style="background-image: linear-gradient(to bottom,#2670ac,#023761)  !important;" type="submit"><a style=" color:white;text-decoration:none;" href="{% url 'pageAuthority' %}" >Try New URL!</a></button>
-                    </div>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{% static 'fyp.css'%}" />
+    <link rel="stylesheet" href="{% static 'modern-style.css'%}" />
 
-            </div>
-        </div>
-        {% if pa %}
-        <div class="row mt-5">
-            <div class="col-md-8 offset-md-2">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>Page Authority Score:</th>
-                            <td>{{pa}}</td>
-                        </tr>
+    <style>
+      /* ================================================
+         Page Authority — page-specific styles only
+         ================================================ */
 
-                    </thead>
-                </table>
-            </div>
-        </div>
-    {% endif %}
+      /* Hero intro box */
+      .tool-hero {
+        background: var(--white);
+        border-radius: var(--radius-xl);
+        box-shadow: var(--shadow-md);
+        padding: var(--spacing-2xl) var(--spacing-xl);
+        margin-bottom: var(--spacing-xl);
+        text-align: center;
+      }
+      .tool-hero .hero-icon {
+        width: 72px;
+        height: 72px;
+        border-radius: 50%;
+        background: var(--primary-gradient);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: var(--spacing-lg);
+      }
+      .tool-hero .hero-icon i {
+        font-size: 2rem;
+        color: var(--white);
+      }
+      .tool-hero h2 {
+        font-family: var(--font-primary);
+        font-size: 1.875rem;
+        font-weight: 700;
+        color: var(--gray-800);
+        margin: 0 0 var(--spacing-sm) 0;
+      }
+      .tool-hero p {
+        color: var(--gray-500);
+        font-size: 1rem;
+        max-width: 620px;
+        margin: 0 auto;
+        line-height: 1.7;
+      }
+
+      /* Input card */
+      .tool-form-card {
+        background: var(--white);
+        border-radius: var(--radius-xl);
+        box-shadow: var(--shadow-md);
+        padding: var(--spacing-xl);
+        margin-bottom: var(--spacing-xl);
+      }
+      .tool-form-card .form-label {
+        font-family: var(--font-primary);
+        font-weight: 600;
+        color: var(--gray-700);
+        font-size: 0.9375rem;
+        margin-bottom: var(--spacing-sm);
+        display: block;
+      }
+      .tool-form-card .search-input-group {
+        max-width: 100%;
+      }
+      .tool-form-card .form-actions {
+        display: flex;
+        gap: var(--spacing-sm);
+        margin-top: var(--spacing-lg);
+        flex-wrap: wrap;
+      }
+
+      /* ---- Result section ---- */
+      .result-section {
+        animation: fadeInUp 0.5s ease forwards;
+      }
+
+      /* Score card wrapper */
+      .score-card {
+        background: var(--white);
+        border-radius: var(--radius-xl);
+        box-shadow: var(--shadow-md);
+        padding: var(--spacing-2xl) var(--spacing-xl);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--spacing-2xl);
+        flex-wrap: wrap;
+      }
+
+      /* --- Radial gauge (pure CSS) --- */
+      .gauge-container {
+        position: relative;
+        width: 220px;
+        height: 220px;
+        flex-shrink: 0;
+      }
+      .gauge-container svg {
+        width: 100%;
+        height: 100%;
+        transform: rotate(-90deg);
+      }
+      .gauge-bg {
+        fill: none;
+        stroke: var(--gray-200);
+        stroke-width: 18;
+      }
+      .gauge-fill {
+        fill: none;
+        stroke-width: 18;
+        stroke-linecap: round;
+        stroke-dasharray: 565.48; /* 2 * π * 90 */
+        stroke-dashoffset: 565.48;
+        transition:
+          stroke-dashoffset 1.2s cubic-bezier(0.4, 0, 0.2, 1),
+          stroke 0.6s ease;
+      }
+      /* colour tiers driven by JS via inline style on the circle */
+      .gauge-label {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        pointer-events: none;
+      }
+      .gauge-label .gauge-value {
+        font-family: var(--font-primary);
+        font-size: 3rem;
+        font-weight: 700;
+        color: var(--gray-800);
+        line-height: 1;
+      }
+      .gauge-label .gauge-unit {
+        font-family: var(--font-primary);
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: var(--gray-400);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-top: 6px;
+      }
+
+      /* Info beside gauge */
+      .score-info {
+        flex: 1;
+        min-width: 260px;
+      }
+      .score-info h3 {
+        font-family: var(--font-primary);
+        font-size: 1.375rem;
+        font-weight: 700;
+        color: var(--gray-800);
+        margin: 0 0 var(--spacing-md) 0;
+      }
+      .score-info .rating-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--spacing-xs);
+        padding: 0.4rem 1rem;
+        border-radius: 999px;
+        font-family: var(--font-primary);
+        font-size: 0.875rem;
+        font-weight: 600;
+        margin-bottom: var(--spacing-md);
+      }
+      .score-info .rating-tag.low {
+        background: #fef2f2;
+        color: var(--error);
+      }
+      .score-info .rating-tag.medium {
+        background: #fffbeb;
+        color: var(--warning);
+      }
+      .score-info .rating-tag.good {
+        background: #ecfdf5;
+        color: var(--success);
+      }
+      .score-info .rating-tag.excellent {
+        background: #eff6ff;
+        color: var(--info);
+      }
+
+      /* Breakdown list */
+      .breakdown-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+      .breakdown-list li {
+        display: flex;
+        align-items: flex-start;
+        gap: var(--spacing-sm);
+        padding: var(--spacing-sm) 0;
+        border-bottom: 1px solid var(--gray-100);
+        font-size: 0.9rem;
+        color: var(--gray-600);
+      }
+      .breakdown-list li:last-child {
+        border-bottom: none;
+      }
+      .breakdown-list li i {
+        color: var(--primary-mid);
+        margin-top: 2px;
+        flex-shrink: 0;
+      }
+
+      /* Responsive */
+      @media (max-width: 640px) {
+        .score-card {
+          flex-direction: column;
+          text-align: center;
+          gap: var(--spacing-xl);
+        }
+        .score-info {
+          min-width: unset;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- Loader -->
+    <div id="loader">
+      <div class="loader-animation">
+        <div class="loader-ring"></div>
+        <div class="loader-ring"></div>
+        <div class="loader-ring"></div>
+        <span class="loader-text">Analyzing...</span>
+      </div>
     </div>
-    <!--Main Navigation-->
+
+    <!-- Main Navigation Header -->
     <header>
+      <!-- Sidebar Navigation -->
+      <nav id="sidebarMenu" class="sidebar" aria-label="Main navigation">
+        <div class="sidebar-header">
+          <div class="sidebar-logo">
+            <img src="{% static 'logo.png'%}" alt="WEB LIFT Logo" />
+            <h5>WEBLIFT</h5> 
+          </div>
+          <!-- ✅ CLOSE BUTTON - Only visible on mobile -->
+          <button
+            class="sidebar-close"
+            id="sidebar-close"
+            onclick="closeSidebar()"
+            aria-label="Close sidebar"
+          >
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
 
+        <div class="sidebar-content">
+          <div class="nav-section">
+            <span class="nav-section-title">Analysis Tools</span>
+            <a href="{% url 'Home' %}" class="sidebar-link">
+              <i class="fas fa-tachometer-alt"></i>
+              <span>Website Audit</span>
+            </a>
+            <a href="{% url 'backlink' %}" class="sidebar-link">
+              <i class="fas fa-link"></i>
+              <span>Backlinks</span>
+            </a>
+            <a href="{% url 'DomainAuthority' %}" class="sidebar-link">
+              <i class="fas fa-chart-pie"></i>
+              <span>Domain Authority</span>
+            </a>
+            <a
+              href="{% url 'pageAuthority' %}"
+              class="sidebar-link active"
+              aria-current="page"
+            >
+              <i class="fas fa-file-alt"></i>
+              <span>Page Authority</span>
+            </a>
+            <a href="{% url 'mobiletest' %}" class="sidebar-link">
+              <i class="fas fa-mobile-alt"></i>
+              <span>Mobile Friendly Test</span>
+            </a>
+            <a
+              href="{% url 'sentiment_analysis' %}"
+              class="sidebar-link"
+              aria-current="page"
+            >
+              <i class="fas fa-smile"></i>
+              <span>Sentiment Analysis</span>
+            </a>
+          </div>
+        </div>
+      </nav>
 
-        <!-- Sidebar -->
-<nav id="sidebarMenu" class="collapse d-lg-block sidebar collapse bg-primary" style="background-image: linear-gradient(to bottom,#023761,#02569b,#80aacd)  !important;">
-  <div class="position-sticky">
-    <div class="list-group list-group-flush mx-3 mt-4">
-      <a href="{% url 'Home' %}" class="list-group-item list-group-item-action py-2 ripple ">
-        <span class="icon me-3"><i class="fas fa-tachometer-alt"></i></span>
-        <span class="text">Website Audit</span>
-      </a>
-      <a href="{% url 'backlink' %}" class="list-group-item list-group-item-action py-2 ripple ">
-        <span class="icon me-3"><i class="fas fa-chart-line"></i></span>
-        <span class="text">Backlinks Checker</span>
-      </a>
-      <a href="{% url 'DomainAuthority' %}" class="list-group-item list-group-item-action py-2 ripple">
-        <span class="icon me-3"><i class="fas fa-chart-pie"></i></span>
-        <span class="text">Domain Authority</span>
-      </a>
-      <a href="{% url 'pageAuthority' %}" class="list-group-item list-group-item-action py-2 ripple active">
-        <span class="icon me-3"><i class="fas fa-chart-pie"></i></span>
-        <span class="text">Page Authority</span>
-      </a>
-        <a href="{% url 'keyPosition' %}" class="list-group-item list-group-item-action py-2 ripple ">
-        <span class="icon me-3"><i class="fas fa-chart-line"></i></span>
-        <span class="text">Keyword Position</span>
-      </a>
-      <a href="{% url 'mobiletest' %}" class="list-group-item list-group-item-action py-2 ripple ">
-        <span class="icon me-3"><i class="fas fa-chart-bar"></i></span>
-        <span class="text">Mobile Friendly Test</span>
-      </a>
-      <a href="{% url 'robot' %}" class="list-group-item list-group-item-action py-2 ripple">
-        <span class="icon me-3"><i class="fas fa-globe"></i></span>
-        <span class="text">Robot.txt Generator</span>
-      </a>
-      <a href="{% url 'keysuggestion' %}" class="list-group-item list-group-item-action py-2 ripple ">
-        <span class="icon me-3"><i class="fas fa-chart-line"></i></span>
-        <span class="text">Keyword Suggestion</span>
-      </a>
-    </div>
-  </div>
-</nav>
+      <!-- Top Navbar - NO SEARCH BAR VERSION -->
+      <nav
+        id="main-navbar"
+        class="navbar navbar-expand-lg fixed-top"
+        role="navigation"
+      >
+        <div class="navbar-container navbar-no-search">
+          <!-- Mobile Toggle -->
+          <button
+            class="navbar-toggler"
+            id="navbar-toggle"
+            type="button"
+            aria-controls="sidebarMenu"
+            aria-expanded="false"
+            aria-label="Toggle navigation"
+            onclick="toggleSidebar()"
+          >
+            <i class="fas fa-bars"></i>
+          </button>
 
+          <!-- Logo (visible on all screens when no search) -->
+          {% comment %} <div class="navbar-logo">
+            <img src="{% static 'logo.png'%}" alt="WEB LIFT Logo" />
+            <h4>WEBLIFT</h4> 
+          </div> {% endcomment %}
 
-        <!-- Navbar -->
-        <nav id="main-navbar" class="navbar navbar-expand-lg navbar-light bg-white fixed-top" style="background-image: linear-gradient(to right,#023761,#02569b,#80aacd)  !important;">
-          <!-- Container wrapper -->
-          <button class="navbar-toggler" id="navbar-toggle" type="button" data-mdb-toggle="collapse" data-mdb-target="#sidebarMenu" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle navigation" style="color: white; margin: 0px;" onclick="navbar()">
-                        <i class="fas fa-bars"></i>
-                    </button>
-          <!-- Container wrapper -->
-            <div id="mylogo">
-            <img src="{% static 'logo.png'%}" style="display:inline-block !important;width: 40px; height: auto; margin-right: 5px;" />
-<h4 style="color: white; display: inline-block;" class="logo">Smart Web Analyzer</h4>                </div>
-            <div style="width:calc(100% - 280px)">
-                    <div class="row" style="width: 100%;">
-                        <div class="col-sm-9">
-                        </div>
-                        <div class="col-sm-3">
-                            <button class="btn" type="submit" style="background-image: linear-gradient(to bottom,#2670ac,#023761)  !important;padding-left: 20px; padding-right: 20px;float: right;"><a style=" color:white;text-decoration:none;" href="{% url 'logout' %}" >Logout</a></button>
-                        </div>
-                    </div>
-            </div>
-            </nav>
+          <!-- Spacer -->
+          <div style="flex: 1"></div>
 
+          <!-- Navbar actions (right side) -->
+          <div class="navbar-actions">
+            <a href="{% url 'logout' %}" class="btn btn-primary">
+              <i class="fas fa-sign-out-alt"></i>
+              <span>Logout</span>
+            </a>
+          </div>
+        </div>
+      </nav>
     </header>
 
-         <script>
-        function trynewurl() {
-            var url = document.getElementById("urlfield");
-            var c = document.getElementById("content");
-            c.style.display = "none";
-            url.value = ""
-        }
-    </script>
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Alert Messages -->
+      {% if messages %} {% for message in messages %}
+      <div class="alert-modern alert-{{ message.tags }}" id="msg" role="alert">
+        <div class="alert-content">
+          <i
+            class="fas {% if message.tags == 'success' %}fa-check-circle{% else %}fa-exclamation-circle{% endif %}"
+          ></i>
+          <span>{{ message }}</span>
+        </div>
+        <button class="alert-close" onclick="this.parentElement.remove()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      {% endfor %} {% endif %}
 
-        <script>
-         const toggler= document.getElementById("sidebarMenu");
-                                        function navbar(){
+      <div class="container-fluid content-wrapper">
+        <!-- Hero -->
+        <div class="tool-hero">
+          <div class="hero-icon">
+            <i class="fas fa-file-alt"></i>
+          </div>
+          <h2>MOZ Page Authority Checker</h2>
+          <p>
+            Page Authority (PA) is a score developed by Moz that predicts the
+            quality of a single web page. It estimates how well a specific page
+            will rank on search engine result pages (SERPs), scored on a scale
+            of 1 to 100.
+          </p>
+        </div>
 
-            if (toggler.style.display === 'block') {
-              toggler.style.display = 'none';
-            } else {
-              toggler.style.display = 'block';
-            }
-            }
+        <!-- Input Form -->
+        <div class="tool-form-card">
+          <label class="form-label"
+            >Enter a URL to check its Page Authority</label
+          >
+          <form name="myForm" id="myForm" action="/pageAuthority" method="post">
+            {% csrf_token %}
+            <div class="search-input-group">
+              <i class="fas fa-search search-icon"></i>
+              <input
+                placeholder="e.g. https://example.com/about"
+                name="fname"
+                autocomplete="on"
+                type="search"
+                id="id_url"
+                class="search-input"
+                aria-label="Page URL"
+                {% if url %}value="{{ url }}"
+                {% endif %}
+              />
+            </div>
+            <div class="form-actions">
+              <button
+                id="analyzeBtn"
+                onclick="myFunction()"
+                class="btn btn-primary"
+                type="submit"
+              >
+                <i class="fas fa-search-plus"></i>
+                <span>Check Authority</span>
+              </button>
+              <a href="{% url 'pageAuthority' %}" class="btn btn-outline">
+                <i class="fas fa-redo"></i>
+                <span>Try New URL</span>
+              </a>
+            </div>
+          </form>
+        </div>
 
-               function myFunction() {
-                var url = document.getElementById("id_url").value;
-                var isValid = true;
+        <!-- Results (conditional) -->
+        {% if pa %}
+        <div class="result-section">
+          <div class="score-card">
+            <!-- Radial Gauge -->
+            <div class="gauge-container">
+              <svg viewBox="0 0 200 200">
+                <circle class="gauge-bg" cx="100" cy="100" r="90"></circle>
+                <circle
+                  class="gauge-fill"
+                  id="gaugeFill"
+                  cx="100"
+                  cy="100"
+                  r="90"
+                ></circle>
+              </svg>
+              <div class="gauge-label">
+                <span class="gauge-value" id="gaugeValue">0</span>
+                <span class="gauge-unit">PA Score</span>
+              </div>
+            </div>
 
-                // Regular expression to check for a valid URL format
-                var urlRegex = /^(https?|ftp):\/\/[^\s/$.?#].[^\s]*$/i;
-
-                if (url.trim() === "") {
-                    alert("Enter a valid URL first.");
-                    isValid = false;
-                } else if (!urlRegex.test(url)) {
-                    alert("Enter a valid URL format.");
-                    isValid = false;
-                }
-
-                if (isValid) {
-                    // If the form data is valid, submit the form
-                    document.getElementById("myForm").submit();
-                }
-            }
-
-            setTimeout(function(){
-              if ($('#msg').length > 0) {
-                $('#msg').remove();
-              }
-            }, 4000)
-
-            setTimeout(function(){
-              if ($('#msg1').length > 0) {
-                $('#msg1').remove();
-              }
-            }, 4000)
-        </script>
-
+            <!-- Info panel -->
+            <div class="score-info">
+              <h3>Page Authority Result</h3>
+              <span class="rating-tag" id="ratingTag">
+                <i class="fas fa-circle"></i>
+                <span id="ratingText">—</span>
+              </span>
+              <ul class="breakdown-list">
+                <li>
+                  <i class="fas fa-info-circle"></i>
+                  <span>
+                    A Page Authority score of
+                    <strong>{{ pa }}</strong> indicates {% if pa|add:"0" >= 70 %} an <strong>excellent</strong> level of page authority —
+                    this page is highly competitive in search rankings. {% elif pa|add:"0" >= 40 %} a <strong>good</strong> level of page
+                    authority — the page is reasonably well-established and
+                    competitive. {% elif pa|add:"0" >= 20 %} a
+                    <strong>moderate</strong> level of page authority — there is
+                    room to grow through link building and content quality. {% else %} a <strong>low</strong> level of page authority —
+                    focus on improving content, earning backlinks, and building
+                    relevance. {% endif %}
+                  </span>
+                </li>
+                <li>
+                  <i class="fas fa-link"></i>
+                  <span>
+                    Improving PA requires earning high-quality backlinks from
+                    authoritative domains and publishing valuable content.
+                  </span>
+                </li>
+                <li>
+                  <i class="fas fa-chart-line"></i>
+                  <span>
+                    PA scores are relative — compare against competitors in your
+                    niche to understand your standing.
+                  </span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+      </div>
     </main>
-    <!--Main layout-->
-    <!-- Optional JavaScript -->
-    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
-    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js " integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo " crossorigin="anonymous "></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js " integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1 " crossorigin="anonymous "></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js " integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM " crossorigin="anonymous "></script>
-</body>
 
+    <!-- JavaScript -->
+    <script
+      src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
+      integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"
+      integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
+      integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
+      crossorigin="anonymous"
+    ></script>
+
+    <script>
+      // Sidebar Toggle
+      function navbar() {
+        const toggler = document.getElementById("sidebarMenu");
+        toggler.classList.toggle("show");
+      }
+
+      // Loader
+      function myFunction() {
+        var url = document.getElementById("id_url").value;
+        var urlRegex = /^(https?|ftp):\/\/[^\s/$.?#].[^\s]*$/i;
+
+        if (url.trim() === "") {
+          alert("Enter a valid URL first.");
+          return;
+        }
+        if (!urlRegex.test(url)) {
+          alert("Enter a valid URL format.");
+          return;
+        }
+        document.getElementById("loader").style.display = "flex";
+        document.getElementById("myForm").submit();
+      }
+
+      window.addEventListener("load", () => {
+        document.getElementById("loader").style.display = "none";
+
+        // Animate gauge if result exists
+        var score = parseInt("{{ pa|default:'0' }}", 10);
+        if (score > 0) {
+          animateGauge(score);
+        }
+      });
+
+      // Auto-hide Alerts
+      setTimeout(() => {
+        const alerts = document.querySelectorAll(".alert-modern");
+        alerts.forEach((alert) => {
+          alert.style.animation = "slideOut 0.3s ease forwards";
+          setTimeout(() => alert.remove(), 300);
+        });
+      }, 4000);
+
+      // ---- Radial Gauge Animation ----
+      function animateGauge(score) {
+        var fill = document.getElementById("gaugeFill");
+        var valueEl = document.getElementById("gaugeValue");
+        var ratingTag = document.getElementById("ratingTag");
+        var ratingText = document.getElementById("ratingText");
+
+        var circumference = 2 * Math.PI * 90; // 565.48
+        var offset = circumference - (score / 100) * circumference;
+
+        // Color tiers
+        var color, label, tagClass;
+        if (score >= 70) {
+          color = "#3b82f6"; // blue — excellent
+          label = "Excellent";
+          tagClass = "excellent";
+        } else if (score >= 40) {
+          color = "#10b981"; // green — good
+          label = "Good";
+          tagClass = "good";
+        } else if (score >= 20) {
+          color = "#f59e0b"; // amber — medium
+          label = "Moderate";
+          tagClass = "medium";
+        } else {
+          color = "#ef4444"; // red — low
+          label = "Low";
+          tagClass = "low";
+        }
+
+        // Apply
+        fill.style.stroke = color;
+        fill.style.strokeDashoffset = offset;
+
+        ratingTag.className = "rating-tag " + tagClass;
+        ratingText.textContent = label;
+
+        // Count-up animation for the number
+        var current = 0;
+        var duration = 1000;
+        var start = performance.now();
+        function step(now) {
+          var elapsed = now - start;
+          var progress = Math.min(elapsed / duration, 1);
+          // ease-out cubic
+          var eased = 1 - Math.pow(1 - progress, 3);
+          current = Math.round(eased * score);
+          valueEl.textContent = current;
+          if (progress < 1) requestAnimationFrame(step);
+        }
+        requestAnimationFrame(step);
+      }
+    </script>
+  </body>
 </html>
