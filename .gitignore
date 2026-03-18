@@ -7,3 +7,4 @@ venv/
 staticfiles/
 media/
 .env
+reports/
