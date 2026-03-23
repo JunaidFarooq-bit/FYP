@@ -169,15 +169,40 @@ def build_faiss_index(embeddings: np.ndarray) -> faiss.Index:
 
 def save_faiss_index(index: faiss.Index, filepath: Path) -> None:
     """
-    Serializes the FAISS index to disk.
+    Serializes the FAISS index to disk using an atomic write pattern.
+
+    Writes to a .tmp file first, then renames to the final path.
+    This prevents a corrupt/empty .bin if the write is interrupted,
+    which would cause a 'read error: 0 != 1' on next load.
 
     Args:
         index   : Populated FAISS index object.
         filepath: Output .bin file path.
     """
-    faiss.write_index(index, str(filepath))
-    size_mb = filepath.stat().st_size / (1024 * 1024)
-    print(f"✅ FAISS index saved to : {filepath}  ({size_mb:.1f} MB)")
+    tmp_path = filepath.with_suffix(".tmp")
+
+    try:
+        faiss.write_index(index, str(tmp_path))
+
+        # Validate the temp file is non-empty before promoting it
+        tmp_size = tmp_path.stat().st_size
+        if tmp_size == 0:
+            raise RuntimeError(
+                "FAISS write_index produced an empty file. "
+                "Check available disk space and permissions."
+            )
+
+        # Atomic replace — safe on both Windows and Linux
+        tmp_path.replace(filepath)
+
+        size_mb = filepath.stat().st_size / (1024 * 1024)
+        print(f"✅ FAISS index saved to : {filepath}  ({size_mb:.1f} MB)")
+
+    except Exception as e:
+        # Clean up the temp file if anything went wrong
+        if tmp_path.exists():
+            tmp_path.unlink()
+        raise RuntimeError(f"Failed to save FAISS index: {e}") from e
 
 
 def load_faiss_index(filepath: Path) -> faiss.Index:
@@ -192,6 +217,17 @@ def load_faiss_index(filepath: Path) -> faiss.Index:
     Returns:
         Loaded FAISS index ready for search.
     """
+    # Guard against empty/corrupt file before FAISS tries to read it
+    if not filepath.exists():
+        raise FileNotFoundError(f"FAISS index not found at {filepath}.")
+
+    file_size = filepath.stat().st_size
+    if file_size == 0:
+        raise RuntimeError(
+            f"FAISS index file is empty (0 bytes): {filepath}\n"
+            "Delete the file and re-run train_model.py."
+        )
+
     index = faiss.read_index(str(filepath))
     print(f"✅ FAISS index loaded from: {filepath}  ({index.ntotal:,} vectors)")
     return index
@@ -214,7 +250,7 @@ def train_pipeline() -> None:
     # 4. Build FAISS index
     index = build_faiss_index(embeddings)
 
-    # 5. Save FAISS index
+    # 5. Save FAISS index (atomic write — no more empty .bin files)
     save_faiss_index(index, FAISS_INDEX_FILE)
 
     print("\n🎉 Training pipeline complete!")

@@ -51,7 +51,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'SEOAnalyzer',
     'comparative_analysis',
-    # "keyword_suggestion.apps.KeywordSuggestionConfig",
+    "keyword_suggestion.apps.KeywordSuggestionConfig",
 ]
 
 MIDDLEWARE = [
@@ -172,49 +172,49 @@ CACHES = {
 }
 
 
-# LOGGING = {
-#     "version": 1,
-#     "disable_existing_loggers": False,
-#     "formatters": {
-#         "verbose": {
-#             "format": "{levelname} {asctime} {module} {message}",
-#             "style": "{",
-#         }
-#     },
-#     "handlers": {
-#         "console": {"class": "logging.StreamHandler", "formatter": "verbose"}
-#     },
-#     "loggers": {
-#         "keyword_suggestion": {"handlers": ["console"], "level": "DEBUG", "propagate": False},
-#         "ml_models":          {"handlers": ["console"], "level": "INFO",  "propagate": False},
-#         "pipeline":           {"handlers": ["console"], "level": "INFO",  "propagate": False},
-#     },
-# }
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "{levelname} {asctime} {module} {message}",
+            "style": "{",
+        }
+    },
+    "handlers": {
+        "console": {"class": "logging.StreamHandler", "formatter": "verbose"}
+    },
+    "loggers": {
+        "keyword_suggestion": {"handlers": ["console"], "level": "DEBUG", "propagate": False},
+        "ml_models":          {"handlers": ["console"], "level": "INFO",  "propagate": False},
+        "pipeline":           {"handlers": ["console"], "level": "INFO",  "propagate": False},
+    },
+}
 
-# ML_MODELS_DIR      = BASE_DIR / "ml_models"
-# FAISS_INDEX_PATH   = ML_MODELS_DIR / "faiss_index.bin"
-# KEYWORDS_JSON_PATH = ML_MODELS_DIR / "keywords.json"
+ML_MODELS_DIR      = BASE_DIR / "ml_models"
+FAISS_INDEX_PATH   = ML_MODELS_DIR / "faiss_index.bin"
+KEYWORDS_JSON_PATH = ML_MODELS_DIR / "keywords.json"
 
 
 
-# from celery.schedules import crontab
+from celery.schedules import crontab
 
-# CELERY_BEAT_SCHEDULE = {
-#     # Collect fresh keyword trends every 6 hours
-#     "collect-trends-every-6h": {
-#         "task": "pipeline.collect_trends",
-#         "schedule": crontab(minute=0, hour="*/6"),
-#     },
+CELERY_BEAT_SCHEDULE = {
+    # Collect fresh keyword trends every 6 hours
+    "collect-trends-every-6h": {
+        "task": "pipeline.collect_trends",
+        "schedule": crontab(minute=0, hour="*/6"),
+    },
 
-#     # Smart training check every hour
-#     "check-and-train-hourly": {
-#         "task": "pipeline.check_and_train",
-#         "schedule": crontab(minute=30),   # runs at :30 of every hour
-#     },
+    # Smart training check every hour
+    "check-and-train-hourly": {
+        "task": "pipeline.check_and_train",
+        "schedule": crontab(minute=30),   # runs at :30 of every hour
+    },
 
-#     # Guaranteed full retrain every Sunday at 2 AM
-#     "full-retrain-weekly": {
-#         "task": "pipeline.full_retrain",
-#         "schedule": crontab(minute=0, hour=2, day_of_week="sunday"),
-#     },
-# }
+    # Guaranteed full retrain every Sunday at 2 AM
+    "full-retrain-weekly": {
+        "task": "pipeline.full_retrain",
+        "schedule": crontab(minute=0, hour=2, day_of_week="sunday"),
+    },
+}

@@ -31,10 +31,10 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 # ── Paths (relative to this file's location) ─────────────────
-_BASE_DIR       = Path(__file__).parent
-FAISS_INDEX_PATH = _BASE_DIR / "faiss_index.bin"
+_BASE_DIR          = Path(__file__).parent
+FAISS_INDEX_PATH   = _BASE_DIR / "faiss_index.bin"
 KEYWORDS_JSON_PATH = _BASE_DIR / "keywords.json"
-MODEL_NAME      = "all-MiniLM-L6-v2"
+MODEL_NAME         = "all-MiniLM-L6-v2"
 
 # ── Module-level singletons (loaded once per process) ─────────
 # These are intentionally global so Django can reuse them across
@@ -68,7 +68,19 @@ def _load_resources() -> None:
                 f"FAISS index not found at {FAISS_INDEX_PATH}. "
                 "Run ml_models/train_model.py first."
             )
-        logger.info(f"Loading FAISS index from: {FAISS_INDEX_PATH}")
+
+        # Guard against empty/corrupt file — prevents the cryptic
+        # "read error: 0 != 1" crash from FAISS's internal reader.
+        index_size = FAISS_INDEX_PATH.stat().st_size
+        if index_size == 0:
+            raise RuntimeError(
+                f"FAISS index file is empty (0 bytes): {FAISS_INDEX_PATH}\n"
+                "The training pipeline did not complete successfully.\n"
+                "Delete the file and re-run train_model.py."
+            )
+
+        logger.info(f"Loading FAISS index from: {FAISS_INDEX_PATH} "
+                    f"({index_size / (1024 * 1024):.2f} MB)")
         _index = faiss.read_index(str(FAISS_INDEX_PATH))
         logger.info(f"FAISS index loaded. Vectors: {_index.ntotal:,}")
 
@@ -137,6 +149,7 @@ def get_keyword_suggestions(
 
     Raises:
         FileNotFoundError: If model artifacts are missing.
+        RuntimeError     : If FAISS index file is empty or corrupt.
         ValueError       : If seed_keyword is empty.
     """
     if not seed_keyword or not seed_keyword.strip():
