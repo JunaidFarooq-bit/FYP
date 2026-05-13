@@ -4,61 +4,52 @@ Generates human-readable explanations of SEO gaps
 """
 
 import json
+import logging
 from openai import OpenAI
 from django.conf import settings
+
+logger = logging.getLogger(__name__)
 
 
 class GapAnalyzer:
     """Analyze gaps between URLs and generate AI-powered explanations"""
     
     def __init__(self):
-        print("\n" + "="*80)
-        print("[GAP] Initializing GapAnalyzer...")
-        print("="*80)
-        
-        # Get OpenAI/OpenRouter configuration
-        api_key = settings.OPENAI_API_KEY
-        self.model = settings.OPENAI_MODEL
+        use_groq = getattr(settings, 'USE_GROQ', True)
         use_openrouter = getattr(settings, 'USE_OPENROUTER', False)
-        
-        print(f"[GAP] API Key present: {bool(api_key)}")
-        print(f"[GAP] API Key starts with: {api_key[:15]}...")
-        print(f"[GAP] Model: {self.model}")
-        print(f"[GAP] USE_OPENROUTER: {use_openrouter}")
-        
-        # Initialize OpenAI client with correct base_url
-        if use_openrouter:
-            print("[GAP] Using OpenRouter API")
-            print("[GAP] Base URL: https://openrouter.ai/api/v1")
-            self.client = OpenAI(
-                api_key=api_key,
-                base_url="https://openrouter.ai/api/v1"
-            )
+
+        if use_groq:
+            api_key = getattr(settings, 'GROQ_API_KEY', '') or ''
+            self.model = getattr(settings, 'GROQ_MODEL', 'llama-3.3-70b-versatile')
+            base_url = "https://api.groq.com/openai/v1"
+            provider = "groq"
+        elif use_openrouter:
+            api_key = getattr(settings, 'OPENROUTER_API_KEY', '') or getattr(settings, 'OPENAI_API_KEY', '') or ''
+            self.model = getattr(settings, 'OPENAI_MODEL', 'gpt-4o-mini')
+            base_url = "https://openrouter.ai/api/v1"
+            provider = "openrouter"
         else:
-            print("[GAP] Using OpenAI API")
-            print("[GAP] Base URL: https://api.openai.com/v1")
+            api_key = getattr(settings, 'OPENAI_API_KEY', '') or ''
+            self.model = getattr(settings, 'OPENAI_MODEL', 'gpt-4o-mini')
+            base_url = None
+            provider = "openai"
+
+        logger.info(f"[GAP] Initializing (provider={provider}, model={self.model})")
+
+        if base_url:
+            self.client = OpenAI(api_key=api_key, base_url=base_url)
+        else:
             self.client = OpenAI(api_key=api_key)
-        
-        print("[GAP] Initialization complete!")
-        print("="*80 + "\n")
     
     def analyze_gaps(self, primary_scores, competitor_scores, 
                      primary_semantic, competitor_semantic,
                      primary_technical, competitor_technical):
         """Generate comprehensive gap analysis with AI enhancement"""
         
-        print("\n" + "="*80)
-        print("[GAP] Starting gap analysis...")
-        print("="*80)
+        logger.info("[GAP] Starting gap analysis")
         
         try:
-            # Calculate score differences
-            print("[GAP] Step 1: Calculating score gaps...")
             score_gaps = self._calculate_score_gaps(primary_scores, competitor_scores)
-            print(f"[GAP] Found {len(score_gaps)} score categories")
-            
-            # Identify primary ranking factors
-            print("[GAP] Step 2: Identifying ranking factors...")
             ranking_factors = self._identify_ranking_factors(
                 score_gaps,
                 primary_semantic,
@@ -66,10 +57,6 @@ class GapAnalyzer:
                 primary_technical,
                 competitor_technical
             )
-            print(f"[GAP] Identified {len(ranking_factors)} key ranking factors")
-            
-            # Generate AI-enhanced explanation
-            print("[GAP] Step 3: Generating AI explanation...")
             explanation = self._generate_ai_explanation(
                 score_gaps,
                 ranking_factors,
@@ -78,37 +65,19 @@ class GapAnalyzer:
                 primary_semantic,
                 competitor_semantic
             )
-            print(f"[GAP] Explanation generated ({len(explanation)} chars)")
-            
-            # Generate gap summary
-            print("[GAP] Step 4: Generating summary...")
             summary = self._generate_summary(score_gaps, ranking_factors)
-            print(f"[GAP] Summary: {summary[:100]}...")
-            
-            # Calculate overall ranking gap
-            print("[GAP] Step 5: Calculating ranking gap score...")
             ranking_gap_score = self._calculate_ranking_gap(score_gaps)
-            print(f"[GAP] Ranking gap score: {ranking_gap_score}/100")
             
-            result = {
+            logger.info(f"[GAP] Complete — factors={len(ranking_factors)}, gap_score={ranking_gap_score}")
+            return {
                 'score_gaps': score_gaps,
                 'ranking_factors': ranking_factors,
                 'explanation': explanation,
                 'summary': summary,
                 'ranking_gap_score': ranking_gap_score
             }
-            
-            print("\n" + "="*80)
-            print("[GAP] Gap analysis complete!")
-            print("="*80 + "\n")
-            
-            return result
-            
         except Exception as e:
-            print(f"\n[GAP] CRITICAL ERROR: {e}")
-            import traceback
-            traceback.print_exc()
-            print("[GAP] Returning fallback result")
+            logger.exception(f"[GAP] Error in analyze_gaps(): {e}")
             return self._get_fallback_result()
     
     def _generate_ai_explanation(self, score_gaps, ranking_factors, 
@@ -116,17 +85,9 @@ class GapAnalyzer:
                                  primary_semantic, competitor_semantic):
         """Generate detailed explanation using AI"""
         
-        print("[GAP-AI] Generating AI-powered explanation...")
-        
-        # Determine winner
         overall_gap = score_gaps.get('overall_seo_strength', {})
         winner = overall_gap.get('winner', 'tie')
         
-        print(f"[GAP-AI] Winner: {winner}")
-        print(f"[GAP-AI] Primary score: {primary_scores.get('overall_seo_strength', 0)}")
-        print(f"[GAP-AI] Competitor score: {competitor_scores.get('overall_seo_strength', 0)}")
-        
-        # Prepare data for AI
         gap_summary = {
             'winner': winner,
             'overall_score_primary': primary_scores.get('overall_seo_strength', 0),
@@ -166,8 +127,6 @@ Return this exact structure:
 }}"""
 
         try:
-            print(f"[GAP-AI] Sending request to AI (model: {self.model})...")
-            
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
@@ -177,24 +136,11 @@ Return this exact structure:
                 temperature=0.5,
                 max_tokens=1000
             )
-            
             raw = response.choices[0].message.content.strip()
-            # Strip markdown fences if model ignores instructions
             raw = raw.replace("```json", "").replace("```", "").strip()
-            ai_explanation = json.dumps(json.loads(raw))  # validate + re-serialize clean
-            
-            print(f"[GAP-AI] AI explanation received ({len(ai_explanation)} chars)")
-            print(f"[GAP-AI] Preview: {ai_explanation[:100]}...")
-            
-            return ai_explanation
-            
+            return json.dumps(json.loads(raw))
         except Exception as e:
-            print(f"[GAP-AI] ERROR: {e}")
-            import traceback
-            traceback.print_exc()
-            print(f"[GAP-AI] Falling back to traditional explanation...")
-            
-            # Fallback to traditional explanation
+            logger.warning(f"[GAP-AI] AI explanation failed: {e}")
             return self._generate_traditional_explanation(
                 score_gaps, ranking_factors, primary_scores, competitor_scores
             )
@@ -203,13 +149,9 @@ Return this exact structure:
                                          primary_scores, competitor_scores):
         """Traditional explanation generation (fallback)"""
         
-        print("[GAP-FALLBACK] Generating traditional explanation...")
-        
         try:
             overall_gap = score_gaps.get('overall_seo_strength', {})
             winner = overall_gap.get('winner', 'tie')
-            gap_value = abs(overall_gap.get('gap', 0))
-            
             primary_overall = primary_scores.get('overall_seo_strength', 0)
             competitor_overall = competitor_scores.get('overall_seo_strength', 0)
             
@@ -223,27 +165,21 @@ Return this exact structure:
             for i, factor in enumerate(ranking_factors[:3], 1):
                 category_name = factor['category'].replace('_', ' ').title()
                 explanation += f"{i}. **{category_name}** "
-                
                 if factor['winner'] == 'competitor':
                     explanation += f"({abs(factor['gap'])} point advantage)\n"
                 else:
                     explanation += f"(Your advantage: {abs(factor['gap'])} points)\n"
-                
                 for detail in factor['details']:
-                    explanation += f"   • {detail}\n"
-                
+                    explanation += f"   \u2022 {detail}\n"
                 explanation += "\n"
             
             if winner == 'competitor':
                 explanation += "\n**Recommended Improvements:**\n"
                 explanation += self._generate_recommendations(ranking_factors)
             
-            print(f"[GAP-FALLBACK] Traditional explanation generated ({len(explanation)} chars)")
-            
             return explanation
-            
         except Exception as e:
-            print(f"[GAP-FALLBACK] ERROR: {e}")
+            logger.warning(f"[GAP-FALLBACK] Error: {e}")
             return "Gap analysis completed. See score details for comparison."
     
     def _calculate_score_gaps(self, primary_scores, competitor_scores):
@@ -258,12 +194,19 @@ Return this exact structure:
             gap = competitor_val - primary_val
             gap_percentage = (abs(gap) / max(primary_val, 1)) * 100
             
+            if gap > 0:
+                winner = 'competitor'
+            elif gap < 0:
+                winner = 'primary'
+            else:
+                winner = 'tie'
+            
             gaps[key] = {
                 'primary': primary_val,
                 'competitor': competitor_val,
                 'gap': gap,
                 'gap_percentage': gap_percentage,
-                'winner': 'competitor' if gap > 0 else 'primary'
+                'winner': winner
             }
         
         return gaps
@@ -282,7 +225,7 @@ Return this exact structure:
         )
         
         for score_name, gap_data in sorted_gaps[:5]:
-            if abs(gap_data['gap']) > 5:
+            if abs(gap_data['gap']) > 5 and gap_data['winner'] != 'tie':
                 
                 factor = {
                     'category': score_name,
@@ -309,7 +252,7 @@ Return this exact structure:
         
         details = []
         
-        try:
+        try:  # noqa: SIM105
             if score_name == 'content_depth_score':
                 primary_wc = primary_semantic.get('word_count', 0)
                 competitor_wc = competitor_semantic.get('word_count', 0)
@@ -349,7 +292,7 @@ Return this exact structure:
                     details.append("Keyword in H1")
             
         except Exception as e:
-            print(f"[GAP-DETAILS] Error getting details for {score_name}: {e}")
+            logger.debug(f"[GAP-DETAILS] Error for {score_name}: {e}")
         
         return details if details else ["Overall stronger performance in this category"]
     
@@ -403,9 +346,8 @@ Return this exact structure:
                 summary = "Both URLs are competitively matched."
             
             return summary
-            
         except Exception as e:
-            print(f"[GAP-SUMMARY] ERROR: {e}")
+            logger.warning(f"[GAP-SUMMARY] Error: {e}")
             return "Gap analysis completed."
     
     def _calculate_ranking_gap(self, score_gaps):
@@ -413,20 +355,13 @@ Return this exact structure:
         
         try:
             overall_gap = score_gaps.get('overall_seo_strength', {})
-            gap_value = abs(overall_gap.get('gap', 0))
-            
-            ranking_gap_score = min(gap_value, 100)
-            
-            return int(ranking_gap_score)
-            
+            return int(min(abs(overall_gap.get('gap', 0)), 100))
         except Exception as e:
-            print(f"[GAP-SCORE] ERROR: {e}")
+            logger.warning(f"[GAP-SCORE] Error: {e}")
             return 0
     
     def _get_fallback_result(self):
         """Return safe fallback result when analysis fails"""
-        
-        print("[GAP] Generating fallback result...")
         
         return {
             'score_gaps': {},

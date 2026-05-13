@@ -40,7 +40,7 @@
         </div>
         <div class="row">
             <div class="col-md-8 offset-md-2">
-                <form name="myForm" id="myForm" action="/robot" method="post" required>
+                <form name="myForm" id="myForm" action="/robot/" method="post" required>
                     {% csrf_token %}
                     <div class="form-group mt-4">
                         <input placeholder="Enter URL" name="fname" autocomplete="on" type="search" id="id_url" class="form-control rounded" style="min-width: 350px; min-height:25px"
@@ -84,38 +84,7 @@
 <nav id="sidebarMenu" class="collapse d-lg-block sidebar collapse bg-primary" style="background-image: linear-gradient(to bottom,#023761,#02569b,#80aacd)  !important;">
   <div class="position-sticky">
     <div class="list-group list-group-flush mx-3 mt-4">
-      <a href="{% url 'Home' %}" class="list-group-item list-group-item-action py-2 ripple ">
-        <span class="icon me-3"><i class="fas fa-tachometer-alt"></i></span>
-        <span class="text">Website Audit</span>
-      </a>
-      <a href="{% url 'backlink' %}" class="list-group-item list-group-item-action py-2 ripple ">
-        <span class="icon me-3"><i class="fas fa-chart-line"></i></span>
-        <span class="text">Backlinks Checker</span>
-      </a>
-      <a href="{% url 'DomainAuthority' %}" class="list-group-item list-group-item-action py-2 ripple">
-        <span class="icon me-3"><i class="fas fa-chart-pie"></i></span>
-        <span class="text">Domain Authority</span>
-      </a>
-      <a href="{% url 'pageAuthority' %}" class="list-group-item list-group-item-action py-2 ripple ">
-        <span class="icon me-3"><i class="fas fa-chart-pie"></i></span>
-        <span class="text">Page Authority</span>
-      </a>
-        <a href="{% url 'keyPosition' %}" class="list-group-item list-group-item-action py-2 ripple ">
-        <span class="icon me-3"><i class="fas fa-chart-line"></i></span>
-        <span class="text">Keyword Position</span>
-      </a>
-      <a href="{% url 'mobiletest' %}" class="list-group-item list-group-item-action py-2 ripple ">
-        <span class="icon me-3"><i class="fas fa-chart-bar"></i></span>
-        <span class="text">Mobile Friendly Test</span>
-      </a>
-      <a href="{% url 'robot' %}" class="list-group-item list-group-item-action py-2 ripple active">
-        <span class="icon me-3"><i class="fas fa-globe"></i></span>
-        <span class="text">Robot.txt Generator</span>
-      </a>
-      <a href="{% url 'keysuggestion' %}" class="list-group-item list-group-item-action py-2 ripple ">
-        <span class="icon me-3"><i class="fas fa-chart-line"></i></span>
-        <span class="text">Keyword Suggestion</span>
-      </a>
+      {% include 'partials/_sidebar_legacy.html' with active_page='keyword_suggestions' %}
     </div>
   </div>
 </nav>

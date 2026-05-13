@@ -199,7 +199,15 @@ def analyze_comparison(request):
             analysis_duration=duration
         )
 
-        request.session[f'analysis_results_{report.id}'] = results
+        # Strip non-serializable objects (BeautifulSoup) before storing in session
+        def _strip_soup(d):
+            if isinstance(d, dict):
+                return {k: _strip_soup(v) for k, v in d.items() if k != 'soup'}
+            if isinstance(d, list):
+                return [_strip_soup(i) for i in d]
+            return d
+
+        request.session[f'analysis_results_{report.id}'] = _strip_soup(results)
         return redirect('comparative_analysis:results', report_id=report.id)
 
     except Exception as e:

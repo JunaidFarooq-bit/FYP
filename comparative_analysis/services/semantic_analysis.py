@@ -5,60 +5,58 @@ Analyzes content quality, keyword usage, intent, and NLP features using AI
 
 import re
 import json
+import logging
 from collections import Counter
 from openai import OpenAI
 from django.conf import settings
 import tiktoken
+
+logger = logging.getLogger(__name__)
 
 
 class SemanticAnalyzer:
     """Analyze semantic and on-page SEO factors using OpenAI"""
     
     def __init__(self):
-        print("\n" + "="*80)
-        print("[SEMANTIC] Initializing SemanticAnalyzer...")
-        print("="*80)
-        
-        # Get OpenAI/OpenRouter configuration
-        api_key = settings.OPENAI_API_KEY
-        self.model = settings.OPENAI_MODEL
+        use_groq = getattr(settings, 'USE_GROQ', True)
         use_openrouter = getattr(settings, 'USE_OPENROUTER', False)
-        
-        print(f"[SEMANTIC] API Key present: {bool(api_key)}")
-        print(f"[SEMANTIC] API Key starts with: {api_key[:15]}...")
-        print(f"[SEMANTIC] Model: {self.model}")
-        print(f"[SEMANTIC] USE_OPENROUTER: {use_openrouter}")
-        
-        # Initialize OpenAI client with correct base_url
-        if use_openrouter:
-            print("[SEMANTIC] Using OpenRouter API")
-            print("[SEMANTIC] Base URL: https://openrouter.ai/api/v1")
-            self.client = OpenAI(
-                api_key=api_key,
-                base_url="https://openrouter.ai/api/v1"
-            )
+
+        if use_groq:
+            api_key = getattr(settings, 'GROQ_API_KEY', '') or ''
+            self.model = getattr(settings, 'GROQ_MODEL', 'llama-3.3-70b-versatile')
+            base_url = "https://api.groq.com/openai/v1"
+            provider = "groq"
+        elif use_openrouter:
+            api_key = getattr(settings, 'OPENROUTER_API_KEY', '') or getattr(settings, 'OPENAI_API_KEY', '') or ''
+            self.model = getattr(settings, 'OPENAI_MODEL', 'gpt-4o-mini')
+            base_url = "https://openrouter.ai/api/v1"
+            provider = "openrouter"
         else:
-            print("[SEMANTIC] Using OpenAI API")
-            print("[SEMANTIC] Base URL: https://api.openai.com/v1")
+            api_key = getattr(settings, 'OPENAI_API_KEY', '') or ''
+            self.model = getattr(settings, 'OPENAI_MODEL', 'gpt-4o-mini')
+            base_url = None
+            provider = "openai"
+
+        logger.info(f"[SEMANTIC] Initializing (provider={provider}, model={self.model})")
+
+        if not api_key:
+            logger.warning(f"[SEMANTIC] No API key configured for provider={provider}")
+
+        if base_url:
+            self.client = OpenAI(api_key=api_key, base_url=base_url)
+        else:
             self.client = OpenAI(api_key=api_key)
-        
-        # Token counter for cost management
+
+        # tiktoken doesn't know Groq/Llama models, fallback to cl100k_base
         try:
             self.encoding = tiktoken.encoding_for_model(self.model)
-            print(f"[SEMANTIC] Using encoding for model: {self.model}")
-        except:
+        except Exception:
             self.encoding = tiktoken.get_encoding("cl100k_base")
-            print(f"[SEMANTIC] Using default encoding: cl100k_base")
-        
-        print("[SEMANTIC] Initialization complete!")
-        print("="*80 + "\n")
     
     def analyze(self, extracted_data, target_keyword=None):
         """Perform full semantic analysis using OpenAI"""
         
-        print("\n" + "="*80)
-        print("[SEMANTIC] Starting semantic analysis...")
-        print("="*80)
+        logger.info("[SEMANTIC] Starting semantic analysis")
         
         try:
             body_text = extracted_data['body_text']
@@ -67,28 +65,13 @@ class SemanticAnalyzer:
             headings = extracted_data['headings_all']
             word_count = extracted_data['word_count']
             
-            print(f"[SEMANTIC] Title: {title}")
-            print(f"[SEMANTIC] H1: {h1}")
-            print(f"[SEMANTIC] Word count: {word_count}")
-            print(f"[SEMANTIC] Headings count: {len(headings)}")
-            print(f"[SEMANTIC] Body text length: {len(body_text)} chars")
-            
-            # Truncate content if too long (manage costs)
-            print(f"\n[SEMANTIC] Truncating content to max 3000 tokens...")
             body_text_truncated = self._truncate_content(body_text, max_tokens=3000)
-            print(f"[SEMANTIC] Truncated text length: {len(body_text_truncated)} chars")
             
-            # Auto-detect primary keyword if not provided
             if not target_keyword:
-                print(f"\n[SEMANTIC] No target keyword provided, auto-detecting...")
                 detected_keyword = self._auto_detect_keyword_ai(title, h1, body_text_truncated)
-                print(f"[SEMANTIC] Detected keyword: '{detected_keyword}'")
             else:
                 detected_keyword = target_keyword
-                print(f"[SEMANTIC] Using provided keyword: '{detected_keyword}'")
             
-            # AI-powered analyses
-            print(f"\n[SEMANTIC] Running comprehensive AI analysis...")
             ai_analysis = self._comprehensive_ai_analysis(
                 title=title,
                 h1=h1,
@@ -97,62 +80,24 @@ class SemanticAnalyzer:
                 target_keyword=detected_keyword
             )
             
-            # Extract top ranking keywords from AI analysis
             top_keywords = ai_analysis.get('top_keywords', [])
-            print(f"[SEMANTIC] Top keywords found: {len(top_keywords)}")
-            
-            # Search intent from AI
             intent_type = ai_analysis.get('intent_type', 'informational')
-            print(f"[SEMANTIC] Intent type: {intent_type}")
-            
-            # Semantic keywords (LSI) from AI
             semantic_keywords = ai_analysis.get('semantic_keywords', [])
-            print(f"[SEMANTIC] Semantic keywords found: {len(semantic_keywords)}")
-            
-            # Entities from AI
             entities = ai_analysis.get('entities', {})
-            print(f"[SEMANTIC] Entities extracted: {sum(len(v) for v in entities.values())}")
             
-            # Topic depth analysis
-            print(f"\n[SEMANTIC] Analyzing topic depth...")
             topic_depth = self._analyze_topic_depth_ai(headings, body_text_truncated)
-            print(f"[SEMANTIC] Topic depth score: {topic_depth['score']}/100")
-            
-            # E-E-A-T signals with AI enhancement
-            print(f"\n[SEMANTIC] Analyzing E-E-A-T signals...")
             eeat_signals = self._analyze_eeat_signals_ai(extracted_data, body_text_truncated)
-            print(f"[SEMANTIC] E-E-A-T score: {eeat_signals['score']}/100")
-            
-            # Content quality score from AI
             content_quality = ai_analysis.get('content_quality_score', 70)
-            print(f"[SEMANTIC] Content quality: {content_quality}/100")
             
-            # Keyword placement analysis (traditional)
-            print(f"\n[SEMANTIC] Analyzing keyword placement...")
             keyword_in_title = detected_keyword.lower() in title.lower() if detected_keyword else False
             keyword_in_h1 = detected_keyword.lower() in h1.lower() if detected_keyword else False
             keyword_density = self._calculate_keyword_density(body_text, detected_keyword)
-            
-            print(f"[SEMANTIC] Keyword in title: {keyword_in_title}")
-            print(f"[SEMANTIC] Keyword in H1: {keyword_in_h1}")
-            print(f"[SEMANTIC] Keyword density: {keyword_density}%")
-            
-            # Readability from AI
             readability_score = ai_analysis.get('readability_score', 70)
-            print(f"[SEMANTIC] Readability score: {readability_score}/100")
-            
-            # FAQ presence
             has_faq = extracted_data.get('has_faq', False)
-            print(f"[SEMANTIC] Has FAQ: {has_faq}")
-            
-            # Content structure quality
-            print(f"\n[SEMANTIC] Analyzing content structure...")
             structure_quality = self._analyze_content_structure(extracted_data)
-            print(f"[SEMANTIC] Structure quality: {structure_quality['score']}/100")
-            
-            # Intent alignment score from AI
             intent_alignment = ai_analysis.get('intent_alignment_score', 70)
-            print(f"[SEMANTIC] Intent alignment: {intent_alignment}/100")
+            
+            logger.info(f"[SEMANTIC] keyword='{detected_keyword}' intent={intent_type} quality={content_quality}")
             
             result = {
                 'detected_keyword': detected_keyword,
@@ -183,48 +128,24 @@ class SemanticAnalyzer:
                 'ai_insights': ai_analysis.get('insights', [])
             }
             
-            print("\n" + "="*80)
-            print(f"[SEMANTIC] Analysis complete!")
-            print(f"[SEMANTIC] Overall quality score: {content_quality}/100")
-            print("="*80 + "\n")
-            
             return result
             
         except Exception as e:
-            print(f"\n[SEMANTIC] CRITICAL ERROR: {e}")
-            import traceback
-            traceback.print_exc()
-            print("[SEMANTIC] Returning fallback result")
+            logger.exception(f"[SEMANTIC] Error in analyze(): {e}")
             return self._get_fallback_result(extracted_data)
     
     def _truncate_content(self, text, max_tokens=3000):
         """Truncate content to fit within token limits"""
-        
         try:
             tokens = self.encoding.encode(text)
-            
             if len(tokens) <= max_tokens:
-                print(f"[SEMANTIC] Content within limit ({len(tokens)} tokens)")
                 return text
-            
-            print(f"[SEMANTIC] Truncating from {len(tokens)} to {max_tokens} tokens")
-            
-            # Truncate to max_tokens
-            truncated_tokens = tokens[:max_tokens]
-            truncated_text = self.encoding.decode(truncated_tokens)
-            
-            return truncated_text
-            
-        except Exception as e:
-            print(f"[SEMANTIC] Error truncating content: {e}")
-            # Fallback: truncate by characters
+            return self.encoding.decode(tokens[:max_tokens])
+        except Exception:
             return text[:max_tokens * 4]
     
     def _auto_detect_keyword_ai(self, title, h1, body_text):
         """Auto-detect primary keyword using OpenAI"""
-        
-        print(f"[KEYWORD] Auto-detecting keyword...")
-        
         prompt = f"""Analyze this web page content and identify the primary target keyword or key phrase (2-4 words).
 
 Title: {title}
@@ -234,8 +155,6 @@ Content preview: {body_text[:500]}
 Return ONLY the primary keyword/phrase, nothing else."""
 
         try:
-            print(f"[KEYWORD] Sending request to AI...")
-            
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
@@ -245,26 +164,13 @@ Return ONLY the primary keyword/phrase, nothing else."""
                 temperature=0.3,
                 max_tokens=50
             )
-            
-            keyword = response.choices[0].message.content.strip()
-            print(f"[KEYWORD] AI detected: '{keyword}'")
-            return keyword
-            
+            return response.choices[0].message.content.strip()
         except Exception as e:
-            print(f"[KEYWORD] ERROR: {e}")
-            import traceback
-            traceback.print_exc()
-            print(f"[KEYWORD] Using fallback detection...")
-            # Fallback to simple extraction
-            fallback = self._fallback_keyword_detection(title, h1)
-            print(f"[KEYWORD] Fallback detected: '{fallback}'")
-            return fallback
+            logger.warning(f"[KEYWORD] AI detection failed: {e}")
+            return self._fallback_keyword_detection(title, h1)
     
     def _comprehensive_ai_analysis(self, title, h1, body_text, headings, target_keyword):
         """Comprehensive AI-powered content analysis"""
-        
-        print(f"[AI-ANALYSIS] Starting comprehensive analysis...")
-        
         headings_text = "\n".join([f"{h['level'].upper()}: {h['text']}" for h in headings[:20]])
         
         prompt = f"""Analyze this web page for SEO. Provide a JSON response with the following:
@@ -311,8 +217,6 @@ Return 5-7 top_keywords and 8-10 semantic_keywords.
 Insights should be specific SEO observations."""
 
         try:
-            print(f"[AI-ANALYSIS] Sending request (model: {self.model})...")
-            
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
@@ -323,24 +227,9 @@ Insights should be specific SEO observations."""
                 max_tokens=1500,
                 response_format={"type": "json_object"}
             )
-            
-            content = response.choices[0].message.content
-            print(f"[AI-ANALYSIS] Response received ({len(content)} chars)")
-            
-            analysis = json.loads(content)
-            print(f"[AI-ANALYSIS] JSON parsed successfully")
-            print(f"[AI-ANALYSIS] Intent: {analysis.get('intent_type')}")
-            print(f"[AI-ANALYSIS] Quality score: {analysis.get('content_quality_score')}")
-            
-            return analysis
-            
+            return json.loads(response.choices[0].message.content)
         except Exception as e:
-            print(f"[AI-ANALYSIS] ERROR: {e}")
-            import traceback
-            traceback.print_exc()
-            print(f"[AI-ANALYSIS] Returning fallback structure")
-            
-            # Return fallback structure
+            logger.warning(f"[AI-ANALYSIS] Failed: {e}")
             return {
                 'intent_type': 'informational',
                 'intent_alignment_score': 70,
@@ -354,9 +243,6 @@ Insights should be specific SEO observations."""
     
     def _analyze_topic_depth_ai(self, headings, body_text):
         """Analyze topic depth using AI"""
-        
-        print(f"[TOPIC-DEPTH] Analyzing topic depth...")
-        
         headings_text = "\n".join([f"{h['level'].upper()}: {h['text']}" for h in headings[:15]])
         
         prompt = f"""Analyze the topic depth and coverage of this content.
@@ -379,8 +265,6 @@ depth_score: How thoroughly the topic is covered
 hierarchy_quality: How well-organized the heading structure is"""
 
         try:
-            print(f"[TOPIC-DEPTH] Sending request...")
-            
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
@@ -391,10 +275,7 @@ hierarchy_quality: How well-organized the heading structure is"""
                 max_tokens=500,
                 response_format={"type": "json_object"}
             )
-            
             result = json.loads(response.choices[0].message.content)
-            print(f"[TOPIC-DEPTH] Success! Score: {result.get('depth_score')}")
-            
             return {
                 'score': result.get('depth_score', 70),
                 'depth_level': min(len(headings), 4),
@@ -402,13 +283,8 @@ hierarchy_quality: How well-organized the heading structure is"""
                 'missing_topics': result.get('missing_topics', []),
                 'hierarchy_quality': result.get('hierarchy_quality', 70)
             }
-            
         except Exception as e:
-            print(f"[TOPIC-DEPTH] ERROR: {e}")
-            import traceback
-            traceback.print_exc()
-            print(f"[TOPIC-DEPTH] Using fallback")
-            
+            logger.warning(f"[TOPIC-DEPTH] Failed: {e}")
             return {
                 'score': 70,
                 'depth_level': min(len(headings), 4),
@@ -420,21 +296,12 @@ hierarchy_quality: How well-organized the heading structure is"""
     def _analyze_eeat_signals_ai(self, extracted_data, body_text):
         """Enhanced E-E-A-T analysis with AI"""
         
-        print(f"[E-E-A-T] Analyzing E-E-A-T signals...")
-        
-        # Traditional signals
         traditional_signals = {
             'has_author': extracted_data.get('has_author', False),
             'has_date': extracted_data.get('has_date', False),
-            'has_citations': self._detect_citations(extracted_data['soup']),
+            'has_citations': self._detect_citations(extracted_data.get('soup')),
             'https_enabled': extracted_data.get('is_https', False),
         }
-        
-        print(f"[E-E-A-T] Traditional signals:")
-        print(f"  - Author: {traditional_signals['has_author']}")
-        print(f"  - Date: {traditional_signals['has_date']}")
-        print(f"  - Citations: {traditional_signals['has_citations']}")
-        print(f"  - HTTPS: {traditional_signals['https_enabled']}")
         
         # AI-enhanced E-E-A-T analysis
         prompt = f"""Analyze this content for E-E-A-T (Experience, Expertise, Authoritativeness, Trustworthiness) signals.
@@ -465,8 +332,6 @@ Look for:
 - Transparent author information"""
 
         try:
-            print(f"[E-E-A-T] Sending AI request...")
-            
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
@@ -477,12 +342,7 @@ Look for:
                 max_tokens=600,
                 response_format={"type": "json_object"}
             )
-            
             ai_eeat = json.loads(response.choices[0].message.content)
-            print(f"[E-E-A-T] AI analysis complete")
-            print(f"[E-E-A-T] Overall score: {ai_eeat.get('overall_eeat_score')}")
-            
-            # Combine traditional and AI signals
             return {
                 **traditional_signals,
                 'score': ai_eeat.get('overall_eeat_score', 70),
@@ -493,21 +353,14 @@ Look for:
                 'ai_signals': ai_eeat.get('signals_found', []),
                 'ai_recommendations': ai_eeat.get('recommendations', [])
             }
-            
         except Exception as e:
-            print(f"[E-E-A-T] ERROR: {e}")
-            import traceback
-            traceback.print_exc()
-            print(f"[E-E-A-T] Using traditional scoring")
-            
-            # Fallback to traditional scoring
+            logger.warning(f"[E-E-A-T] AI scoring failed: {e}")
             score = sum([
                 20 if traditional_signals['has_author'] else 0,
                 15 if traditional_signals['has_date'] else 0,
                 25 if traditional_signals['has_citations'] else 0,
                 15 if traditional_signals['https_enabled'] else 0,
             ])
-            
             return {
                 **traditional_signals,
                 'score': score,
@@ -521,64 +374,42 @@ Look for:
     
     def _detect_citations(self, soup):
         """Detect presence of citations or references"""
+        if not soup:
+            return False
         try:
-            citation_indicators = [
+            return any([
                 soup.find('ol', class_=re.compile(r'reference|citation', re.I)),
                 soup.find('div', class_=re.compile(r'reference|citation', re.I)),
                 soup.find(string=re.compile(r'References|Citations|Sources', re.I))
-            ]
-            return any(citation_indicators)
-        except:
+            ])
+        except Exception:
             return False
     
     def _analyze_content_structure(self, extracted_data):
         """Analyze content structure quality"""
-        
-        print(f"[STRUCTURE] Analyzing content structure...")
-        
         try:
             headings = extracted_data.get('headings_all', [])
             paragraphs = extracted_data.get('paragraphs', [])
-            
             h1_count = sum(1 for h in headings if h['level'] == 'h1')
             h2_count = sum(1 for h in headings if h['level'] == 'h2')
-            
-            print(f"[STRUCTURE] H1 count: {h1_count}")
-            print(f"[STRUCTURE] H2 count: {h2_count}")
-            print(f"[STRUCTURE] Paragraph count: {len(paragraphs)}")
-            
             structure_score = 0
-            
             if h1_count == 1:
                 structure_score += 25
-                print(f"[STRUCTURE] +25 points: Single H1")
             if h2_count >= 2:
                 structure_score += 25
-                print(f"[STRUCTURE] +25 points: Multiple H2s")
             if 5 <= len(paragraphs) <= 50:
                 structure_score += 25
-                print(f"[STRUCTURE] +25 points: Good paragraph count")
             if self._has_logical_heading_flow(headings):
                 structure_score += 25
-                print(f"[STRUCTURE] +25 points: Logical heading flow")
-            
-            print(f"[STRUCTURE] Total score: {structure_score}/100")
-            
             return {
                 'score': structure_score,
                 'h1_count': h1_count,
                 'h2_count': h2_count,
                 'paragraph_count': len(paragraphs)
             }
-            
         except Exception as e:
-            print(f"[STRUCTURE] ERROR: {e}")
-            return {
-                'score': 0,
-                'h1_count': 0,
-                'h2_count': 0,
-                'paragraph_count': 0
-            }
+            logger.warning(f"[STRUCTURE] Error: {e}")
+            return {'score': 0, 'h1_count': 0, 'h2_count': 0, 'paragraph_count': 0}
     
     def _has_logical_heading_flow(self, headings):
         """Check if headings follow logical hierarchy"""

@@ -3,6 +3,7 @@ Layer 1: Data Extraction
 Extracts raw HTML, metadata, and structural elements
 """
 
+import json
 import requests
 from bs4 import BeautifulSoup
 import re
@@ -133,12 +134,13 @@ class DataExtractor:
         return headings
     
     def _extract_body_text(self, soup):
-        """Extract main body text"""
-        # Remove script and style elements
-        for script in soup(['script', 'style', 'nav', 'footer', 'header']):
-            script.decompose()
+        """Extract main body text (works on a copy to avoid mutating the shared soup)"""
+        import copy
+        soup_copy = copy.copy(soup)
+        for tag in soup_copy(['script', 'style', 'nav', 'footer', 'header']):
+            tag.decompose()
         
-        text = soup.get_text()
+        text = soup_copy.get_text()
         # Clean up whitespace
         lines = (line.strip() for line in text.splitlines())
         chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
@@ -215,7 +217,6 @@ class DataExtractor:
     
     def _extract_schema_types(self, soup):
         """Extract schema.org types"""
-        import json
         types = set()
         
         scripts = soup.find_all('script', type='application/ld+json')
@@ -254,7 +255,6 @@ class DataExtractor:
     
     def _check_faq_schema(self, soup):
         """Check for FAQ schema"""
-        import json
         scripts = soup.find_all('script', type='application/ld+json')
         for script in scripts:
             if script.string and 'FAQPage' in script.string:

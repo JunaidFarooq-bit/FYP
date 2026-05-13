@@ -286,43 +286,7 @@
           </button>
         </div>
 
-        <div class="sidebar-content">
-          <div class="nav-section">
-            <span class="nav-section-title">Analysis Tools</span>
-            <a href="{% url 'Home' %}" class="sidebar-link">
-              <i class="fas fa-tachometer-alt"></i>
-              <span>Website Audit</span>
-            </a>
-            <a href="{% url 'backlink' %}" class="sidebar-link">
-              <i class="fas fa-link"></i>
-              <span>Backlinks</span>
-            </a>
-            <a href="{% url 'DomainAuthority' %}" class="sidebar-link">
-              <i class="fas fa-chart-pie"></i>
-              <span>Domain Authority</span>
-            </a>
-            <a
-              href="{% url 'pageAuthority' %}"
-              class="sidebar-link active"
-              aria-current="page"
-            >
-              <i class="fas fa-file-alt"></i>
-              <span>Page Authority</span>
-            </a>
-            <a href="{% url 'mobiletest' %}" class="sidebar-link">
-              <i class="fas fa-mobile-alt"></i>
-              <span>Mobile Friendly Test</span>
-            </a>
-            <a
-              href="{% url 'sentiment_analysis' %}"
-              class="sidebar-link"
-              aria-current="page"
-            >
-              <i class="fas fa-smile"></i>
-              <span>Sentiment Analysis</span>
-            </a>
-          </div>
-        </div>
+        {% include 'partials/_sidebar.html' with active_page='seo_metrics' %}
       </nav>
 
       <!-- Top Navbar - NO SEARCH BAR VERSION -->
@@ -402,7 +366,7 @@
           <label class="form-label"
             >Enter a URL to check its Page Authority</label
           >
-          <form name="myForm" id="myForm" action="/pageAuthority" method="post">
+          <form name="myForm" id="myForm" action="/pageAuthority/" method="post">
             {% csrf_token %}
             <div class="search-input-group">
               <i class="fas fa-search search-icon"></i>

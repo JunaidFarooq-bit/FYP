@@ -347,43 +347,7 @@
           </div>
         </div>
 
-        <div class="sidebar-content">
-          <div class="nav-section">
-            <span class="nav-section-title">Analysis Tools</span>
-            <a href="{% url 'Home' %}" class="sidebar-link">
-              <i class="fas fa-tachometer-alt"></i>
-              <span>Website Audit</span>
-            </a>
-            <a href="{% url 'backlink' %}" class="sidebar-link">
-              <i class="fas fa-link"></i>
-              <span>Backlinks</span>
-            </a>
-            <a href="{% url 'DomainAuthority' %}" class="sidebar-link">
-              <i class="fas fa-chart-pie"></i>
-              <span>Domain Authority</span>
-            </a>
-            <a href="{% url 'pageAuthority' %}" class="sidebar-link">
-              <i class="fas fa-file-alt"></i>
-              <span>Page Authority</span>
-            </a>
-            <a
-              href="{% url 'mobiletest' %}"
-              class="sidebar-link active"
-              aria-current="page"
-            >
-              <i class="fas fa-mobile-alt"></i>
-              <span>Mobile Friendly Test</span>
-            </a>
-            <a
-              href="{% url 'sentiment_analysis' %}"
-              class="sidebar-link"
-              aria-current="page"
-            >
-              <i class="fas fa-smile"></i>
-              <span>Sentiment Analysis</span>
-            </a>
-          </div>
-        </div>
+        {% include 'partials/_sidebar.html' with active_page='mobiletest' %}
       </nav>
 
       <!-- Top Navbar -->
@@ -513,7 +477,7 @@
         </div>
 
         <!-- Results (conditional) -->
-        {% if performance_score or accessibility_score or best_practices_score or seo_score %}
+        {% if final_verdict %}
         <div class="results-section">
           <!-- Results Header -->
           <div class="results-header">
@@ -528,53 +492,70 @@
               <h3>Lighthouse Scores</h3>
             </div>
 
+            {% if lighthouse_error %}
+            <div class="alert alert-warning" style="margin-bottom:1rem;">
+              <i class="fas fa-exclamation-triangle"></i>
+              <strong>Lighthouse unavailable:</strong> {{ lighthouse_error }}
+            </div>
+            {% endif %}
+
             <div class="lighthouse-grid">
               <div class="lighthouse-item">
                 <div class="lighthouse-label">Performance</div>
-                <div
-                  class="lighthouse-score {% if performance_score|add:'0' >= 90 %}excellent{% elif performance_score|add:'0' >= 50 %}good{% elif performance_score|add:'0' >= 25 %}needs-improvement{% else %}poor{% endif %}"
-                >
+                {% if performance_score is not None %}
+                <div class="lighthouse-score {% if performance_score >= 90 %}excellent{% elif performance_score >= 50 %}good{% elif performance_score >= 25 %}needs-improvement{% else %}poor{% endif %}">
                   {{ performance_score }}
                 </div>
                 <div class="lighthouse-max">/ 100</div>
+                {% else %}
+                <div class="lighthouse-score" style="color:var(--gray-400);font-size:1.5rem;">N/A</div>
+                <div class="lighthouse-max">Unavailable</div>
+                {% endif %}
               </div>
 
               <div class="lighthouse-item">
                 <div class="lighthouse-label">Accessibility</div>
-                <div
-                  class="lighthouse-score {% if accessibility_score|add:'0' >= 90 %}excellent{% elif accessibility_score|add:'0' >= 50 %}good{% elif accessibility_score|add:'0' >= 25 %}needs-improvement{% else %}poor{% endif %}"
-                >
+                {% if accessibility_score is not None %}
+                <div class="lighthouse-score {% if accessibility_score >= 90 %}excellent{% elif accessibility_score >= 50 %}good{% elif accessibility_score >= 25 %}needs-improvement{% else %}poor{% endif %}">
                   {{ accessibility_score }}
                 </div>
                 <div class="lighthouse-max">/ 100</div>
+                {% else %}
+                <div class="lighthouse-score" style="color:var(--gray-400);font-size:1.5rem;">N/A</div>
+                <div class="lighthouse-max">Unavailable</div>
+                {% endif %}
               </div>
 
               <div class="lighthouse-item">
                 <div class="lighthouse-label">Best Practices</div>
-                <div
-                  class="lighthouse-score {% if best_practices_score|add:'0' >= 90 %}excellent{% elif best_practices_score|add:'0' >= 50 %}good{% elif best_practices_score|add:'0' >= 25 %}needs-improvement{% else %}poor{% endif %}"
-                >
+                {% if best_practices_score is not None %}
+                <div class="lighthouse-score {% if best_practices_score >= 90 %}excellent{% elif best_practices_score >= 50 %}good{% elif best_practices_score >= 25 %}needs-improvement{% else %}poor{% endif %}">
                   {{ best_practices_score }}
                 </div>
                 <div class="lighthouse-max">/ 100</div>
+                {% else %}
+                <div class="lighthouse-score" style="color:var(--gray-400);font-size:1.5rem;">N/A</div>
+                <div class="lighthouse-max">Unavailable</div>
+                {% endif %}
               </div>
 
               <div class="lighthouse-item">
                 <div class="lighthouse-label">SEO</div>
-                <div
-                  class="lighthouse-score {% if seo_score|add:'0' >= 90 %}excellent{% elif seo_score|add:'0' >= 50 %}good{% elif seo_score|add:'0' >= 25 %}needs-improvement{% else %}poor{% endif %}"
-                >
+                {% if seo_score is not None %}
+                <div class="lighthouse-score {% if seo_score >= 90 %}excellent{% elif seo_score >= 50 %}good{% elif seo_score >= 25 %}needs-improvement{% else %}poor{% endif %}">
                   {{ seo_score }}
                 </div>
                 <div class="lighthouse-max">/ 100</div>
+                {% else %}
+                <div class="lighthouse-score" style="color:var(--gray-400);font-size:1.5rem;">N/A</div>
+                <div class="lighthouse-max">Unavailable</div>
+                {% endif %}
               </div>
 
               {% if pwa_score %}
               <div class="lighthouse-item">
                 <div class="lighthouse-label">PWA</div>
-                <div
-                  class="lighthouse-score {% if pwa_score|add:'0' >= 90 %}excellent{% elif pwa_score|add:'0' >= 50 %}good{% elif pwa_score|add:'0' >= 25 %}needs-improvement{% else %}poor{% endif %}"
-                >
+                <div class="lighthouse-score {% if pwa_score >= 0.9 %}excellent{% elif pwa_score >= 0.5 %}good{% elif pwa_score >= 0.25 %}needs-improvement{% else %}poor{% endif %}">
                   {{ pwa_score }}
                 </div>
                 <div class="lighthouse-max">/ 100</div>

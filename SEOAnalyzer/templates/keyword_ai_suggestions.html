@@ -1,0 +1,603 @@
+<!doctype html>
+<html lang="en">
+{% load static %}
+<head>
+    <title>WEB LIFT - AI Keyword Suggestions</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="icon" type="image/ico" href="{% static 'favicon-1.ico'%}">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+
+    <!-- Font Awesome CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{% static 'fyp.css'%}">
+    <link rel="stylesheet" href="{% static 'modern-style.css'%}">
+
+    <style>
+        /* Override heading font */
+        :root {
+            --font-primary: "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+
+        /* ================================================
+           AI Keyword Suggestions — page-specific styles
+           ================================================ */
+
+        /* Keyword badge styling */
+        .keyword-badge {
+            display: inline-block;
+            background: var(--primary-gradient);
+            color: white;
+            padding: 6px 12px;
+            margin: 4px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .score-badge {
+            background: var(--success);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            margin-left: 8px;
+        }
+        .intent-info { background: #17a2b8; }
+        .intent-transactional { background: #dc3545; }
+        .intent-commercial { background: #fd7e14; }
+        .intent-navigational { background: #6f42c1; }
+        .focus-keyword {
+            background: #ffc107;
+            color: #000;
+            font-weight: bold;
+        }
+
+        /* Results card */
+        .results-card {
+            background: var(--white);
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-md);
+            padding: var(--spacing-xl);
+            margin-top: var(--spacing-xl);
+        }
+
+        /* Keywords grid */
+        .keywords-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--spacing-sm);
+            margin: var(--spacing-md) 0;
+        }
+
+        /* Table styling */
+        .keywords-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: var(--spacing-md);
+        }
+        .keywords-table th,
+        .keywords-table td {
+            padding: var(--spacing-sm) var(--spacing-md);
+            text-align: left;
+            border-bottom: 1px solid var(--gray-200);
+        }
+        .keywords-table th {
+            background: var(--gray-100);
+            font-weight: 600;
+            color: var(--gray-700);
+        }
+        .keywords-table tr:hover {
+            background: var(--gray-50);
+        }
+
+        /* Copy section */
+        .copy-section {
+            margin-top: var(--spacing-lg);
+        }
+        .copy-section textarea {
+            width: 100%;
+            min-height: 150px;
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-md);
+            font-family: monospace;
+            font-size: 0.875rem;
+            resize: vertical;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Loader -->
+    <div id="loader">
+        <div class="loader-animation">
+            <div class="loader-ring"></div>
+            <div class="loader-ring"></div>
+            <div class="loader-ring"></div>
+            <span class="loader-text">Analyzing...</span>
+        </div>
+    </div>
+
+    <!-- Main Navigation Header -->
+    <header>
+        <!-- Sidebar Navigation -->
+        <nav id="sidebarMenu" class="sidebar" aria-label="Main navigation">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">
+                    <img src="{% static 'logo.png'%}" alt="WEB LIFT Logo" />
+                    <h5>WEBLIFT</h5>
+                </div>
+                <button class="sidebar-close" id="sidebar-close" onclick="closeSidebar()" aria-label="Close sidebar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            {% include 'partials/_sidebar.html' with active_page='keyword_suggestions' %}
+        </nav>
+
+        <!-- Top Navbar -->
+        <nav id="main-navbar" class="navbar navbar-expand-lg fixed-top" role="navigation">
+            <div class="navbar-container navbar-no-search">
+                <button class="navbar-toggler" id="navbar-toggle" type="button" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle navigation" onclick="toggleSidebar()">
+                    <i class="fas fa-bars"></i>
+                </button>
+
+                <div style="flex: 1"></div>
+
+                <div class="navbar-actions">
+                    <a href="{% url 'logout' %}" class="btn btn-primary">
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span>Logout</span>
+                    </a>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+        <!-- Alert Messages -->
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert-modern alert-{{ message.tags }}" id="msg" role="alert">
+                    <div class="alert-content">
+                        <i class="fas {% if message.tags == 'success' %}fa-check-circle{% else %}fa-exclamation-circle{% endif %}"></i>
+                        <span>{{ message }}</span>
+                    </div>
+                    <button class="alert-close" onclick="this.parentElement.remove()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <div class="container-fluid content-wrapper">
+            <!-- Hero -->
+            <div class="tool-hero">
+                <div class="hero-icon">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <h2>AI Keyword Suggestions</h2>
+                <p>
+                    Advanced keyword extraction using machine learning. 
+                    Analyze any URL or paste your content to discover high-value keywords 
+                    grouped by search intent.
+                </p>
+            </div>
+
+            <!-- Input Form -->
+            <div class="tool-form-card">
+                <form method="post" id="keywordForm">
+                    {% csrf_token %}
+                    
+                    <div class="form-group">
+                        <label class="form-label">Website URL (optional)</label>
+                        <div class="search-input-group">
+                            <i class="fas fa-globe search-icon"></i>
+                            <input type="url" name="url" id="url" class="search-input" placeholder="https://example.com" value="{{ url|default:'' }}">
+                        </div>
+                        <small class="form-hint">Enter a URL to analyze its content</small>
+                    </div>
+                    
+                    <div class="text-center my-3 text-muted">— OR —</div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Text Content (optional)</label>
+                        <textarea name="text" id="text" class="form-control" rows="4" placeholder="Paste your content here...">{{ text|default:'' }}</textarea>
+                        <small class="form-hint">Paste text directly instead of URL</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Page Topic Hint (optional)</label>
+                        <input type="text" name="page_topic" id="page_topic" class="form-control" placeholder="e.g., SEO Guide, Product Review" value="{{ page_topic|default:'' }}">
+                        <small class="form-hint">Helps AI better understand and group keywords</small>
+                    </div>
+                    
+                    <div class="form-group form-check">
+                        <input type="checkbox" class="form-check-input" id="use_llm" name="use_llm" value="true">
+                        <label class="form-check-label" for="use_llm">
+                            Use GPT for intent grouping (requires OpenAI API key)
+                        </label>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary" id="analyzeBtn">
+                            <i class="fas fa-magic"></i>
+                            <span>Analyze Keywords</span>
+                        </button>
+                        <a href="{% url 'keyword_ai_suggestions' %}" class="btn btn-outline">
+                            <i class="fas fa-redo"></i>
+                            <span>New Analysis</span>
+                        </a>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Results Section -->
+            {% if relevant_keywords %}
+            <div class="results-section">
+                <div class="results-card">
+                    <div class="table-header">
+                        <i class="fas fa-chart-bar"></i>
+                        <h3>Analysis Results</h3>
+                    </div>
+                    
+                    {% if page_title %}
+                    <p><strong>Page Title:</strong> {{ page_title }}</p>
+                    {% endif %}
+                    
+                    <div class="metrics-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin: var(--spacing-lg) 0;">
+                        <div class="metric-item">
+                            <div class="metric-label">Total Keywords Found</div>
+                            <div class="metric-value">{{ keyword_count }}</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Focus Keywords -->
+                    {% if focus_keywords %}
+                    <div class="mb-4">
+                        <h5 class="metrics-group-title">
+                            <i class="fas fa-bullseye" style="margin-right: 6px;"></i>
+                            Focus Keywords (Top 5)
+                        </h5>
+                        <div class="keywords-grid">
+                            {% for kw in focus_keywords %}
+                                <span class="keyword-badge focus-keyword">{{ kw }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Intent Groups -->
+                    {% if intent_groups %}
+                    <div class="mb-4">
+                        <h5 class="metrics-group-title">
+                            <i class="fas fa-sitemap" style="margin-right: 6px;"></i>
+                            Keywords by Search Intent
+                        </h5>
+                        {% for group, keywords in intent_groups.items %}
+                            {% if keywords %}
+                            <div class="mb-3">
+                                <strong style="color: var(--gray-700);">{{ group }}:</strong>
+                                <div class="keywords-grid">
+                                    {% for kw in keywords %}
+                                        <span class="keyword-badge">{{ kw }}</span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Scored Keywords Table -->
+                    <div class="mb-4">
+                        <h5 class="metrics-group-title">
+                            <i class="fas fa-list-ol" style="margin-right: 6px;"></i>
+                            Top Keywords by Relevance Score
+                        </h5>
+                        <div class="table-responsive">
+                            <table class="keywords-table">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Keyword</th>
+                                        <th>Relevance Score</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in scored_keywords %}
+                                    <tr>
+                                        <td>{{ forloop.counter }}</td>
+                                        <td>{{ item.keyword }}</td>
+                                        <td>
+                                            <span class="score-badge">{{ item.relevance_score }}</span>
+                                        </td>
+                                        <td>
+                                            {% if item.is_relevant %}
+                                                <span class="badge badge-success">Relevant</span>
+                                            {% else %}
+                                                <span class="badge badge-secondary">Low Relevance</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Raw Keywords List -->
+                    <div class="copy-section">
+                        <h5 class="metrics-group-title">
+                            <i class="fas fa-copy" style="margin-right: 6px;"></i>
+                            All Keywords (Copy-Paste Ready)
+                        </h5>
+                        <textarea readonly>{% for kw in relevant_keywords %}{{ kw }}
+{% endfor %}</textarea>
+                        <button class="btn btn-outline mt-2" onclick="copyKeywords()">
+                            <i class="fas fa-copy"></i>
+                            <span>Copy All</span>
+                        </button>
+                    </div>
+                    
+                    <!-- Technical Details -->
+                    {% if keybert_keywords %}
+                    <div class="mt-4">
+                        <h6 style="color: var(--gray-600); font-size: 0.875rem;">
+                            <i class="fas fa-cogs" style="margin-right: 6px;"></i>
+                            Pipeline Details
+                        </h6>
+                        <small class="text-muted">
+                            <strong>KeyBERT Extracted:</strong> {% for k in keybert_keywords %}{{ k.keyword }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                            <br>
+                            <strong>Similarity Expanded:</strong> {% for k in expanded_keywords %}{{ k.keyword }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                        </small>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </main>
+
+    <script>
+        // Sidebar toggle
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebarMenu');
+            sidebar.classList.toggle('show');
+        }
+
+        function closeSidebar() {
+            const sidebar = document.getElementById('sidebarMenu');
+            sidebar.classList.remove('show');
+        }
+
+        // Copy keywords function
+        function copyKeywords() {
+            var textarea = document.querySelector('.copy-section textarea');
+            textarea.select();
+            document.execCommand('copy');
+            alert('Keywords copied to clipboard!');
+        }
+
+        // Form submission with loader
+        document.getElementById('keywordForm').addEventListener('submit', function() {
+            document.getElementById('loader').classList.add('show');
+        });
+
+        // Auto-hide alerts
+        setTimeout(function(){
+            var alerts = document.querySelectorAll('.alert-modern');
+            alerts.forEach(function(alert) {
+                alert.style.opacity = '0';
+                setTimeout(function() {
+                    alert.remove();
+                }, 300);
+            });
+        }, 4000);
+
+        // Phase 4: Async Processing & Progress Tracking
+        let currentTaskId = null;
+        let progressInterval = null;
+
+        // Start async analysis
+        async function startAsyncAnalysis(url, parameters) {
+            try {
+                const response = await fetch('/api/keywords/analyze-async/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        url: url,
+                        ...parameters
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.task_id) {
+                    currentTaskId = data.task_id;
+                    showProgressPanel();
+                    startProgressTracking(data.task_id);
+                } else {
+                    alert('Error: ' + (data.error || 'Failed to start analysis'));
+                }
+            } catch (error) {
+                console.error('Error starting analysis:', error);
+                alert('Failed to start analysis. Please try again.');
+            }
+        }
+
+        // Track task progress
+        function startProgressTracking(taskId) {
+            if (progressInterval) {
+                clearInterval(progressInterval);
+            }
+
+            progressInterval = setInterval(async () => {
+                try {
+                    const response = await fetch(`/api/keywords/task-status/?task_id=${taskId}`);
+                    const data = await response.json();
+
+                    updateProgressUI(data);
+
+                    if (data.status === 'completed' || data.status === 'failed') {
+                        clearInterval(progressInterval);
+                        progressInterval = null;
+                        
+                        if (data.status === 'completed') {
+                            showResults(data.result);
+                        } else {
+                            alert('Analysis failed: ' + data.error);
+                        }
+                        
+                        hideProgressPanel();
+                    }
+                } catch (error) {
+                    console.error('Error checking progress:', error);
+                }
+            }, 2000); // Check every 2 seconds
+        }
+
+        // Update progress UI
+        function updateProgressUI(data) {
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            const progressStep = document.getElementById('progressStep');
+
+            if (progressBar) {
+                progressBar.style.width = data.progress_percent + '%';
+            }
+            if (progressText) {
+                progressText.textContent = data.progress_percent + '%';
+            }
+            if (progressStep && data.current_step) {
+                progressStep.textContent = data.current_step;
+            }
+        }
+
+        // Show progress panel
+        function showProgressPanel() {
+            const panel = document.getElementById('progressPanel');
+            if (panel) {
+                panel.style.display = 'block';
+            }
+            document.getElementById('loader').classList.add('show');
+        }
+
+        // Hide progress panel
+        function hideProgressPanel() {
+            const panel = document.getElementById('progressPanel');
+            if (panel) {
+                panel.style.display = 'none';
+            }
+            document.getElementById('loader').classList.remove('show');
+        }
+
+        // Show results
+        function showResults(result) {
+            // Reload page to show results or update DOM dynamically
+            window.location.reload();
+        }
+
+        // Export results
+        async function exportResults(url, format = 'csv') {
+            try {
+                const response = await fetch('/api/keywords/export/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        url: url,
+                        format: format
+                    })
+                });
+
+                if (format === 'csv') {
+                    // Download CSV file
+                    const blob = await response.blob();
+                    const downloadUrl = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = downloadUrl;
+                    a.download = `keywords_${new Date().toISOString().split('T')[0]}.csv`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(downloadUrl);
+                    document.body.removeChild(a);
+                } else {
+                    // Show JSON results
+                    const data = await response.json();
+                    console.log('Exported data:', data);
+                    alert(`Exported ${data.keywords_count} keywords`);
+                }
+            } catch (error) {
+                console.error('Export error:', error);
+                alert('Export failed. Please try again.');
+            }
+        }
+
+        // Cancel ongoing analysis
+        function cancelAnalysis() {
+            if (progressInterval) {
+                clearInterval(progressInterval);
+                progressInterval = null;
+            }
+            currentTaskId = null;
+            hideProgressPanel();
+        }
+
+        // Toggle keyword details
+        function toggleKeywordDetails(keywordId) {
+            const details = document.getElementById('keyword-details-' + keywordId);
+            if (details) {
+                details.classList.toggle('show');
+            }
+        }
+
+        // Feedback submission
+        async function submitFeedback(opportunityId, action, comment = '') {
+            try {
+                const response = await fetch('/api/keywords/feedback/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        opportunity_id: opportunityId,
+                        action: action,
+                        comment: comment
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    // Update UI to show feedback recorded
+                    const btn = document.querySelector(`[data-opportunity-id="${opportunityId}"]`);
+                    if (btn) {
+                        btn.classList.add('feedback-recorded');
+                    }
+                }
+            } catch (error) {
+                console.error('Feedback error:', error);
+            }
+        }
+    </script>
+
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+</body>
+</html>

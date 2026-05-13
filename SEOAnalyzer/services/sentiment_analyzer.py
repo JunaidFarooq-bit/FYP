@@ -9,8 +9,10 @@ from openai import OpenAI
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 import re
 from collections import Counter
+from django.conf import settings
 
-OPENROUTER_API_KEY = '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'
+# API key should be set via environment variable OPENROUTER_API_KEY
+# This hardcoded value is removed for security - do not commit API keys to version control
 
 def analyze_sentiment(text, api_key=None, mode='auto', debug=False):
     """
@@ -38,9 +40,13 @@ def analyze_sentiment(text, api_key=None, mode='auto', debug=False):
             'method': 'none'
         }
     
-    # Get API key
+    # Get API key from environment or parameter
+    # Prefer Groq when configured, otherwise fall back to OpenRouter
     if not api_key:
-        api_key = os.getenv('OPENROUTER_API_KEY', OPENROUTER_API_KEY)
+        if getattr(settings, 'USE_GROQ', True):
+            api_key = getattr(settings, 'GROQ_API_KEY', '') or os.getenv('GROQ_API_KEY', '')
+        else:
+            api_key = os.getenv('OPENROUTER_API_KEY')
     
     if debug:
         print(f"[DEBUG] Text length: {len(text)}")
@@ -98,6 +104,11 @@ def analyze_sentiment(text, api_key=None, mode='auto', debug=False):
             'sentiment_score': 50,
             'confidence': 0,
             'tone': [],
+            'intent': 'unknown',
+            'call_to_action': 'unknown',
+            'strengths': [],
+            'weaknesses': [],
+            'text_stats': text_stats,
             'method': 'error'
         }
 
@@ -178,17 +189,25 @@ def _calculate_emotional_intensity(exclamations, caps_words, total_words):
 
 
 def _analyze_with_ai(text, api_key, debug=False):
-    """Use OpenRouter AI for detailed analysis"""
-    
-    if not api_key or not api_key.startswith('sk-'):
-        raise ValueError("Invalid API key format")
-    
+    """Use AI (Groq preferred) for detailed sentiment analysis"""
+
+    if not api_key:
+        raise ValueError("Missing API key")
+
+    use_groq = getattr(settings, 'USE_GROQ', True)
+    if use_groq:
+        base_url = "https://api.groq.com/openai/v1"
+        model_name = getattr(settings, 'GROQ_MODEL', 'llama-3.3-70b-versatile')
+    else:
+        base_url = "https://openrouter.ai/api/v1"
+        model_name = "openai/gpt-4o-mini"
+
     if debug:
-        print(f"[DEBUG] Initializing OpenAI client...")
-    
+        print(f"[DEBUG] Initializing AI client (base_url={base_url})...")
+
     client = OpenAI(
         api_key=api_key,
-        base_url="https://openrouter.ai/api/v1",
+        base_url=base_url,
         timeout=30.0,
         max_retries=2
     )
@@ -200,7 +219,7 @@ def _analyze_with_ai(text, api_key, debug=False):
     
     try:
         completion = client.chat.completions.create(
-            model="openai/gpt-4o-mini",
+            model=model_name,
             messages=[
                 {
                     "role": "system",
@@ -233,18 +252,32 @@ Analyze sentiment, tone, and provide actionable insights. Return ONLY valid JSON
         )
         
         response_text = completion.choices[0].message.content.strip()
-        
+
         if debug:
             print(f"[DEBUG] Received AI response")
-        
-        # Clean markdown if present
+
+        # Validate response is not empty
+        if not response_text:
+            raise ValueError("AI returned empty response")
+
+        # Clean markdown if present (handles ```json and ``` blocks)
         if '```' in response_text:
-            lines = response_text.split('```')
-            for line in lines:
-                if line.strip().startswith('{'):
-                    response_text = line.strip()
-                    break
-        
+            # Try to extract JSON from markdown code blocks
+            import re
+            json_match = re.search(r'```(?:json)?\s*({.*?})\s*```', response_text, re.DOTALL)
+            if json_match:
+                response_text = json_match.group(1)
+            else:
+                # Fallback: find the first { and last }
+                start_idx = response_text.find('{')
+                end_idx = response_text.rfind('}') + 1
+                if start_idx != -1 and end_idx > start_idx:
+                    response_text = response_text[start_idx:end_idx]
+
+        # Validate JSON before parsing
+        if not response_text.startswith('{') or not response_text.endswith('}'):
+            raise ValueError("AI response does not contain valid JSON object")
+
         result = json.loads(response_text)
         result['method'] = 'OpenRouter AI (GPT-4o-mini)'
         
@@ -260,9 +293,21 @@ Analyze sentiment, tone, and provide actionable insights. Return ONLY valid JSON
         if debug:
             print(f"[DEBUG] JSON parsing failed: {e}")
         raise Exception(f"AI returned invalid JSON: {e}")
+    except TimeoutError as e:
+        if debug:
+            print(f"[DEBUG] API timeout: {e}")
+        raise Exception("AI request timed out. Please try again.") from e
     except Exception as e:
         if debug:
             print(f"[DEBUG] API error: {e}")
+        # Check for rate limit or API key errors
+        error_msg = str(e)
+        if '429' in error_msg or 'rate limit' in error_msg.lower():
+            raise Exception("API rate limit exceeded. Please try again later.") from e
+        if '401' in error_msg or 'unauthorized' in error_msg.lower():
+            raise Exception("Invalid API key. Please check your OPENROUTER_API_KEY setting.") from e
+        if '403' in error_msg:
+            raise Exception("API access denied. Check your API key permissions.") from e
         raise e
 
 

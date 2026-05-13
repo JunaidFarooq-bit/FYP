@@ -7,6 +7,39 @@
 @import url("https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;700&display=swap");
 
 /* ========================================
+   Base Reset - CRITICAL for preventing layout breakage
+   ======================================== */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--font-secondary);
+  background: var(--gray-50);
+  color: var(--gray-800);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+/* Force all images to be responsive by default */
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* ========================================
    Root Variables - Brand Colors & Design System
    ======================================== */
 
@@ -80,26 +113,6 @@
   --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-base: 300ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-slow: 500ms cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* ========================================
-   Global Reset & Base Styles
-   ======================================== */
-
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-body {
-  font-family: var(--font-secondary);
-  background: var(--gray-50);
-  color: var(--gray-800);
-  line-height: 1.6;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  overflow-x: hidden;
 }
 
 /* ========================================
@@ -219,13 +232,19 @@ body {
   display: flex;
   align-items: center;
   gap: var(--spacing-md);
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .sidebar-logo img {
-  width: 42px;
-  height: 42px;
+  width: 42px !important;
+  height: 42px !important;
+  max-width: 42px !important;
+  max-height: 42px !important;
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-md);
+  object-fit: contain;
+  flex-shrink: 0;
 }
 
 .sidebar-logo h5 {
@@ -359,9 +378,12 @@ body {
 }
 
 .navbar-logo img {
-  width: 36px;
-  height: 36px;
+  width: 36px !important;
+  height: 36px !important;
+  max-width: 36px !important;
+  max-height: 36px !important;
   border-radius: var(--radius-md);
+  object-fit: contain;
 }
 
 .navbar-logo h4 {
@@ -2522,4 +2544,42 @@ body {
   background: none !important;
   border: none !important;
   font-weight: 400 !important;
+}
+
+/* ========================================
+   Defensive Styles - Prevent Layout Breakage
+   ======================================== */
+
+/* Ensure all containers constrain their children */
+.analysis-section,
+.section-content,
+.card-body,
+.form-group-modern,
+.hero-content,
+.sidebar-content,
+.navbar-container {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Ensure floated elements are contained */
+.analysis-section::after,
+.section-content::after,
+.card-body::after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+/* Ensure all images are properly constrained */
+img:not([src*="logo"]):not([src*="favicon"]) {
+  max-width: 100% !important;
+  height: auto !important;
+}
+
+/* Specifically constrain any large decorative images that might appear */
+img[width="100%"],
+img[style*="width: 100%"] {
+  max-width: 100% !important;
+  height: auto !important;
 }

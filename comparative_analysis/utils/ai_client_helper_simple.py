@@ -1,12 +1,14 @@
 """
 OpenAI/OpenRouter Client Helper
 Supports both OpenAI and OpenRouter APIs with proper error handling
-Uses print statements for debugging
 """
 
+import logging
 from typing import Optional, Dict, Any
 from django.conf import settings
 from openai import OpenAI
+
+logger = logging.getLogger(__name__)
 
 
 class AIClientError(Exception):
@@ -16,43 +18,38 @@ class AIClientError(Exception):
 
 def get_ai_client() -> OpenAI:
     """
-    Get configured OpenAI client (supports both OpenAI and OpenRouter)
-    
-    Returns:
-        OpenAI client instance
-        
-    Raises:
-        AIClientError: If configuration is invalid
+    Get configured AI client (supports Groq, OpenRouter, and OpenAI).
+    Groq is preferred when USE_GROQ=True (default).
     """
-    print("\n[AI] Initializing AI client...")
-    
-    api_key = getattr(settings, 'OPENAI_API_KEY', None)
-    
-    if not api_key:
-        print("[AI] ERROR: OPENAI_API_KEY not configured in settings")
-        raise AIClientError("OPENAI_API_KEY not configured in settings")
-    
-    print(f"[AI] API key present: {bool(api_key)}")
-    print(f"[AI] API key starts with: {api_key[:10]}...")
-    
-    # Check if we should use OpenRouter
+    use_groq = getattr(settings, 'USE_GROQ', True)
     use_openrouter = getattr(settings, 'USE_OPENROUTER', False)
-    print(f"[AI] USE_OPENROUTER setting: {use_openrouter}")
-    
+
+    if use_groq:
+        api_key = getattr(settings, 'GROQ_API_KEY', None)
+        if not api_key:
+            raise AIClientError("GROQ_API_KEY not configured in settings")
+        client = OpenAI(api_key=api_key, base_url="https://api.groq.com/openai/v1")
+        logger.debug("[AI] Client initialized (provider=groq)")
+        return client
+
+    api_key = getattr(settings, 'OPENAI_API_KEY', None)
+    if not api_key:
+        raise AIClientError("OPENAI_API_KEY not configured in settings")
+
     if use_openrouter:
-        print("[AI] Using OpenRouter API")
-        print("[AI] Base URL: https://openrouter.ai/api/v1")
-        client = OpenAI(
-            api_key=api_key,
-            base_url="https://openrouter.ai/api/v1"
-        )
+        client = OpenAI(api_key=api_key, base_url="https://openrouter.ai/api/v1")
+        logger.debug("[AI] Client initialized (provider=openrouter)")
     else:
-        print("[AI] Using OpenAI API")
-        print("[AI] Base URL: https://api.openai.com/v1")
         client = OpenAI(api_key=api_key)
-    
-    print("[AI] Client initialized successfully")
+        logger.debug("[AI] Client initialized (provider=openai)")
     return client
+
+
+def get_ai_model() -> str:
+    """Return the configured model name based on active provider."""
+    if getattr(settings, 'USE_GROQ', True):
+        return getattr(settings, 'GROQ_MODEL', 'llama-3.3-70b-versatile')
+    return getattr(settings, 'OPENAI_MODEL', 'gpt-4o-mini')
 
 
 def get_ai_completion(
@@ -75,28 +72,14 @@ def get_ai_completion(
     Returns:
         Completion text or None if failed
     """
-    print("\n" + "="*80)
-    print("[AI] Getting completion...")
-    print("="*80)
-    
     try:
         client = get_ai_client()
-        model = model or getattr(settings, 'OPENAI_MODEL', 'gpt-4o-mini')
-        
-        print(f"[AI] Model: {model}")
-        print(f"[AI] Max tokens: {max_tokens}")
-        print(f"[AI] Temperature: {temperature}")
-        print(f"[AI] Prompt length: {len(prompt)} chars")
+        model = model or get_ai_model()
         
         messages = []
         if system_message:
             messages.append({"role": "system", "content": system_message})
-            print(f"[AI] System message included ({len(system_message)} chars)")
-        
         messages.append({"role": "user", "content": prompt})
-        
-        print(f"[AI] Total messages: {len(messages)}")
-        print(f"[AI] Sending request to API...")
         
         response = client.chat.completions.create(
             model=model,
@@ -104,22 +87,10 @@ def get_ai_completion(
             max_tokens=max_tokens,
             temperature=temperature
         )
-        
-        completion = response.choices[0].message.content
-        
-        print(f"[AI] SUCCESS: Received completion")
-        print(f"[AI] Completion length: {len(completion)} chars")
-        print(f"[AI] Preview: {completion[:100]}...")
-        print("="*80 + "\n")
-        
-        return completion
+        return response.choices[0].message.content
         
     except Exception as e:
-        print(f"\n[AI] ERROR: {e}")
-        print(f"[AI] Error type: {type(e).__name__}")
-        import traceback
-        traceback.print_exc()
-        print("="*80 + "\n")
+        logger.exception("[AI] Completion failed: %s", e)
         return None
 
 
@@ -139,59 +110,4 @@ def get_ai_completion_safe(
     Returns:
         Completion text or fallback message
     """
-    result = get_ai_completion(prompt, **kwargs)
-    
-    if result:
-        print(f"[AI] Returning AI-generated response")
-        return result
-    else:
-        print(f"[AI] Returning fallback message")
-        return fallback
-
-
-# Example usage in your code:
-def get_content_explanation(content: str, max_length: int = 500) -> str:
-    """
-    Get AI explanation of content
-    
-    Args:
-        content: Content to explain
-        max_length: Maximum length of content to analyze
-        
-    Returns:
-        Explanation text
-    """
-    print(f"\n[EXPLAIN] Getting content explanation...")
-    print(f"[EXPLAIN] Content length: {len(content)} chars")
-    
-    # Truncate content if too long
-    truncated = content[:max_length] if len(content) > max_length else content
-    
-    if len(content) > max_length:
-        print(f"[EXPLAIN] Truncated to {max_length} chars")
-    
-    prompt = f"""Analyze this content and provide a brief explanation of what makes it effective or ineffective for SEO:
-
-Content:
-{truncated}
-
-Provide a 2-3 sentence analysis focusing on:
-1. Content quality and relevance
-2. SEO optimization signals
-3. User engagement factors
-"""
-    
-    system_message = "You are an SEO expert analyzing web content for optimization opportunities."
-    
-    print(f"[EXPLAIN] Requesting analysis from AI...")
-    
-    result = get_ai_completion_safe(
-        prompt=prompt,
-        system_message=system_message,
-        max_tokens=300,
-        temperature=0.5,
-        fallback="Content analysis unavailable."
-    )
-    
-    print(f"[EXPLAIN] Analysis complete")
-    return result
+    return get_ai_completion(prompt, **kwargs) or fallback

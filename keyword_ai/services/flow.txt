@@ -1,0 +1,13 @@
+# You type a URL → views.py receives it → 
+hands it to pipeline.py → 
+which calls extract_content.py to download and read the webpage 
+text → passes that text to keybert_extractor.py 
+which finds the top 20 important phrases using AI → those phrases go 
+to embeddings.py to be converted into numbers → those numbers go to 
+similarity_search.py which creates more keyword variations by 
+combining them with SEO modifiers like "best", "how to", "review" → all keywords
+ combined go to relevance_scorer.py which runs them through your trained Logistic Regression ML model and drops anything scoring below 0.5 → the surviving keywords go to 
+ llm_refiner.py which sends them to GPT and gets back intent groups and top 5 focus keywords → pipeline.py bundles all of this into one big
+  result → views.py 
+sends it back to your browser 
+as JSON → your frontend displays it.

@@ -1,0 +1,34 @@
+{% load static %}
+{% comment %}
+Shared sidebar navigation. Pass `active_page` in context to highlight the current item.
+Possible values: home, seo_metrics, mobiletest, sentiment_analysis, comparative_analysis, keyword_suggestions
+{% endcomment %}
+<div class="sidebar-content">
+  <div class="nav-section">
+    <span class="nav-section-title">Analysis Tools</span>
+    <a href="{% url 'Home' %}" class="sidebar-link {% if active_page == 'home' %}active{% endif %}" {% if active_page == 'home' %}aria-current="page"{% endif %}>
+      <i class="fas fa-tachometer-alt"></i>
+      <span>Website Audit</span>
+    </a>
+    <a href="{% url 'seo_metrics' %}" class="sidebar-link {% if active_page == 'seo_metrics' %}active{% endif %}" {% if active_page == 'seo_metrics' %}aria-current="page"{% endif %}>
+      <i class="fas fa-chart-line"></i>
+      <span>SEO Metrics</span>
+    </a>
+    <a href="{% url 'mobiletest' %}" class="sidebar-link {% if active_page == 'mobiletest' %}active{% endif %}" {% if active_page == 'mobiletest' %}aria-current="page"{% endif %}>
+      <i class="fas fa-mobile-alt"></i>
+      <span>Mobile Friendly Test</span>
+    </a>
+    <a href="{% url 'sentiment_analysis' %}" class="sidebar-link {% if active_page == 'sentiment_analysis' %}active{% endif %}" {% if active_page == 'sentiment_analysis' %}aria-current="page"{% endif %}>
+      <i class="fas fa-smile"></i>
+      <span>Sentiment Analysis</span>
+    </a>
+    <a href="{% url 'comparative_analysis:input_form' %}" class="sidebar-link {% if active_page == 'comparative_analysis' %}active{% endif %}" {% if active_page == 'comparative_analysis' %}aria-current="page"{% endif %}>
+      <i class="fas fa-balance-scale"></i>
+      <span>Comparative Analysis</span>
+    </a>
+    <a href="{% url 'keyword_ai_suggestions' %}" class="sidebar-link {% if active_page == 'keyword_suggestions' %}active{% endif %}" {% if active_page == 'keyword_suggestions' %}aria-current="page"{% endif %}>
+      <i class="fas fa-key"></i>
+      <span>Keyword Suggestions</span>
+    </a>
+  </div>
+</div>

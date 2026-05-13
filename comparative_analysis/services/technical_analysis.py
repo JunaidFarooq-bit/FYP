@@ -187,8 +187,8 @@ class TechnicalAnalyzer:
         
         score = 0
         
-        # Speed (25 points)
-        score += (factors['speed_score'] / 100) * 25
+        # Speed (20 points)
+        score += (factors['speed_score'] / 100) * 20
         
         # HTTPS (15 points)
         score += 15 if factors['is_https'] else 0
@@ -207,5 +207,8 @@ class TechnicalAnalyzer:
         
         # URL quality (10 points)
         score += (factors['url_quality_score'] / 100) * 10
+        
+        # Image optimization (5 points)
+        score += (factors['image_optimization_score'] / 100) * 5
         
         return int(min(score, 100))

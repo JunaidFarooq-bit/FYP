@@ -1,0 +1,25 @@
+{% comment %}Legacy Bootstrap list-group style sidebar. Pass `active_page` to highlight current item.{% endcomment %}
+<a href="{% url 'Home' %}" class="list-group-item list-group-item-action py-2 ripple {% if active_page == 'home' %}active{% endif %}">
+  <span class="icon me-3"><i class="fas fa-tachometer-alt"></i></span>
+  <span class="text">Website Audit</span>
+</a>
+<a href="{% url 'seo_metrics' %}" class="list-group-item list-group-item-action py-2 ripple {% if active_page == 'seo_metrics' %}active{% endif %}">
+  <span class="icon me-3"><i class="fas fa-chart-line"></i></span>
+  <span class="text">SEO Metrics</span>
+</a>
+<a href="{% url 'mobiletest' %}" class="list-group-item list-group-item-action py-2 ripple {% if active_page == 'mobiletest' %}active{% endif %}">
+  <span class="icon me-3"><i class="fas fa-mobile-alt"></i></span>
+  <span class="text">Mobile Friendly Test</span>
+</a>
+<a href="{% url 'sentiment_analysis' %}" class="list-group-item list-group-item-action py-2 ripple {% if active_page == 'sentiment_analysis' %}active{% endif %}">
+  <span class="icon me-3"><i class="fas fa-smile"></i></span>
+  <span class="text">Sentiment Analysis</span>
+</a>
+<a href="{% url 'comparative_analysis:input_form' %}" class="list-group-item list-group-item-action py-2 ripple {% if active_page == 'comparative_analysis' %}active{% endif %}">
+  <span class="icon me-3"><i class="fas fa-balance-scale"></i></span>
+  <span class="text">Comparative Analysis</span>
+</a>
+<a href="{% url 'keyword_ai_suggestions' %}" class="list-group-item list-group-item-action py-2 ripple {% if active_page == 'keyword_suggestions' %}active{% endif %}">
+  <span class="icon me-3"><i class="fas fa-key"></i></span>
+  <span class="text">Keyword Suggestions</span>
+</a>

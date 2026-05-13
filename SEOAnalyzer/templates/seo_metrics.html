@@ -1,0 +1,444 @@
+<!doctype html>
+<html lang="en">
+  {% load static %}
+  <head>
+    <title>WEB LIFT - SEO Metrics</title>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, shrink-to-fit=no"
+    />
+    <link rel="icon" type="image/ico" href="{% static 'favicon-1.ico'%}" />
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Bootstrap CSS -->
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+      integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T"
+      crossorigin="anonymous"
+    />
+
+    <!-- Font Awesome CSS -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"
+    />
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{% static 'fyp.css'%}" />
+    <link rel="stylesheet" href="{% static 'modern-style.css'%}" />
+
+    <style>
+      /* ================================================
+         SEO Metrics — page-specific styles
+         ================================================ */
+
+      .tool-hero {
+        background: var(--white);
+        border-radius: var(--radius-xl);
+        box-shadow: var(--shadow-md);
+        padding: var(--spacing-2xl) var(--spacing-xl);
+        margin-bottom: var(--spacing-xl);
+        text-align: center;
+      }
+      .tool-hero .hero-icon {
+        width: 72px;
+        height: 72px;
+        border-radius: 50%;
+        background: var(--primary-gradient);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: var(--spacing-lg);
+      }
+      .tool-hero .hero-icon i {
+        font-size: 2rem;
+        color: var(--white);
+      }
+      .tool-hero h2 {
+        font-family: var(--font-primary);
+        font-size: 1.875rem;
+        font-weight: 700;
+        color: var(--gray-800);
+        margin: 0 0 var(--spacing-sm) 0;
+      }
+      .tool-hero p {
+        color: var(--gray-500);
+        font-size: 1rem;
+        max-width: 680px;
+        margin: 0 auto;
+        line-height: 1.7;
+      }
+
+      .tool-form-card {
+        background: var(--white);
+        border-radius: var(--radius-xl);
+        box-shadow: var(--shadow-md);
+        padding: var(--spacing-xl);
+        margin-bottom: var(--spacing-xl);
+      }
+      .tool-form-card .form-label {
+        font-family: var(--font-primary);
+        font-weight: 600;
+        color: var(--gray-700);
+        font-size: 0.9375rem;
+        margin-bottom: var(--spacing-sm);
+        display: block;
+      }
+      .tool-form-card .form-actions {
+        margin-top: var(--spacing-lg);
+        display: flex;
+        gap: var(--spacing-md);
+        flex-wrap: wrap;
+      }
+
+      /* Results section */
+      .results-section {
+        margin-top: var(--spacing-xl);
+      }
+      .results-header {
+        background: var(--white);
+        border-radius: var(--radius-xl);
+        box-shadow: var(--shadow-md);
+        padding: var(--spacing-lg) var(--spacing-xl);
+        margin-bottom: var(--spacing-lg);
+        text-align: center;
+      }
+      .results-header h3 {
+        font-family: var(--font-primary);
+        font-weight: 700;
+        color: var(--gray-800);
+        margin-bottom: var(--spacing-xs);
+      }
+      .results-url {
+        color: var(--primary-mid);
+        font-weight: 500;
+        word-break: break-all;
+        margin: 0;
+      }
+      .results-url a {
+        color: inherit;
+        text-decoration: none;
+      }
+      .results-url a:hover {
+        text-decoration: underline;
+      }
+
+      /* Metric grid */
+      .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: var(--spacing-lg);
+        margin-bottom: var(--spacing-lg);
+      }
+      .metric-card {
+        background: var(--white);
+        border-radius: var(--radius-xl);
+        box-shadow: var(--shadow-md);
+        padding: var(--spacing-xl) var(--spacing-lg);
+        text-align: center;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+      .metric-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-lg);
+      }
+      .metric-card .metric-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        background: var(--primary-gradient);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: var(--spacing-md);
+      }
+      .metric-card .metric-icon i {
+        color: var(--white);
+        font-size: 1.25rem;
+      }
+      .metric-card .metric-value {
+        font-family: var(--font-primary);
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: var(--gray-800);
+        line-height: 1;
+        margin-bottom: var(--spacing-sm);
+      }
+      .metric-card .metric-label {
+        color: var(--gray-500);
+        font-size: 0.9375rem;
+        font-weight: 500;
+      }
+
+      .section-title-header {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+        margin-bottom: var(--spacing-md);
+      }
+      .section-title-header i {
+        color: var(--primary-mid);
+        font-size: 1.25rem;
+      }
+      .section-title-header h3 {
+        font-family: var(--font-primary);
+        font-weight: 700;
+        color: var(--gray-800);
+        margin: 0;
+        font-size: 1.25rem;
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- Loader -->
+    <div id="loader">
+      <div class="loader-animation">
+        <div class="loader-ring"></div>
+        <div class="loader-ring"></div>
+        <div class="loader-ring"></div>
+        <span class="loader-text">Analyzing...</span>
+      </div>
+    </div>
+
+    <!-- Main Navigation Header -->
+    <header>
+      <!-- Sidebar Navigation -->
+      <nav id="sidebarMenu" class="sidebar" aria-label="Main navigation">
+        <div class="sidebar-header">
+          <div class="sidebar-logo">
+            <img src="{% static 'logo.png'%}" alt="WEB LIFT Logo" />
+            <h5>WEB LIFT</h5>
+          </div>
+        </div>
+
+        {% include 'partials/_sidebar.html' with active_page='seo_metrics' %}
+      </nav>
+
+      <!-- Top Navbar -->
+      <nav
+        id="main-navbar"
+        class="navbar navbar-expand-lg fixed-top"
+        role="navigation"
+      >
+        <div class="navbar-container">
+          <button
+            class="navbar-toggler"
+            id="navbar-toggle"
+            type="button"
+            aria-controls="sidebarMenu"
+            aria-expanded="false"
+            aria-label="Toggle navigation"
+            onclick="toggleSidebar()"
+          >
+            <i class="fas fa-bars"></i>
+          </button>
+
+          <div style="flex: 1"></div>
+          <div class="navbar-actions" style="margin-left: auto">
+            <a
+              class="btn btn-primary"
+              href="{% url 'logout' %}"
+              id="logout"
+            >
+              <i class="fas fa-sign-out-alt"></i>
+              <span>Logout</span>
+            </a>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Alert Messages -->
+      {% if messages %}
+        {% for message in messages %}
+        <div class="alert-modern alert-{{ message.tags }}" id="msg" role="alert">
+          <div class="alert-content">
+            <i class="fas {% if message.tags == 'success' %}fa-check-circle{% else %}fa-exclamation-circle{% endif %}"></i>
+            <span>{{ message }}</span>
+          </div>
+          <button class="alert-close" onclick="this.parentElement.remove()">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        {% endfor %}
+      {% endif %}
+
+      <div class="container-fluid content-wrapper">
+        <!-- Hero -->
+        <div class="tool-hero">
+          <div class="hero-icon">
+            <i class="fas fa-chart-line"></i>
+          </div>
+          <h2>SEO Metrics</h2>
+          <p>
+            Get comprehensive SEO insights including Domain Authority,
+            Page Authority, MozRank, total backlinks, and linking root domains.
+            Powered by the Moz API for accurate, real-time data.
+          </p>
+        </div>
+
+        <!-- Input Form -->
+        <div class="tool-form-card">
+          <label class="form-label">Enter a URL to analyze SEO metrics</label>
+          <form
+            name="myForm"
+            id="myForm"
+            action="{% url 'seo_metrics' %}"
+            method="post"
+          >
+            {% csrf_token %}
+            <div class="search-input-group">
+              <i class="fas fa-search search-icon"></i>
+              <input
+                placeholder="e.g. https://example.com"
+                name="fname"
+                autocomplete="on"
+                type="search"
+                id="id_url"
+                class="search-input"
+                aria-label="Website URL"
+                required
+                {% if url %}value="{{ url }}"{% endif %}
+              />
+            </div>
+            <div class="form-actions">
+              <button
+                id="analyzeBtn"
+                onclick="submitForm()"
+                class="btn btn-primary"
+                type="submit"
+              >
+                <i class="fas fa-search-plus"></i>
+                <span>Analyze</span>
+              </button>
+              <a href="{% url 'seo_metrics' %}" class="btn btn-outline">
+                <i class="fas fa-redo"></i>
+                <span>Try New URL</span>
+              </a>
+            </div>
+          </form>
+        </div>
+
+        <!-- Results (conditional) -->
+        {% if url %}
+        <div class="results-section">
+          <!-- Results Header -->
+          <div class="results-header">
+            <h3>SEO Metrics Report</h3>
+            <p class="results-url">
+              <a href="{{ url }}" target="_blank" rel="noopener">{{ url }}</a>
+            </p>
+          </div>
+
+          <!-- Authority Metrics -->
+          <div class="section-title-header">
+            <i class="fas fa-shield-alt"></i>
+            <h3>Authority Scores</h3>
+          </div>
+          <div class="metrics-grid">
+            <div class="metric-card">
+              <div class="metric-icon">
+                <i class="fas fa-globe"></i>
+              </div>
+              <div class="metric-value">{{ da }}</div>
+              <div class="metric-label">Domain Authority</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-icon">
+                <i class="fas fa-file-alt"></i>
+              </div>
+              <div class="metric-value">{{ pa }}</div>
+              <div class="metric-label">Page Authority</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-icon">
+                <i class="fas fa-star"></i>
+              </div>
+              <div class="metric-value">{{ moz_rank }}</div>
+              <div class="metric-label">MozRank</div>
+            </div>
+          </div>
+
+          <!-- Backlink Metrics -->
+          <div class="section-title-header">
+            <i class="fas fa-link"></i>
+            <h3>Backlink Profile</h3>
+          </div>
+          <div class="metrics-grid">
+            <div class="metric-card">
+              <div class="metric-icon">
+                <i class="fas fa-link"></i>
+              </div>
+              <div class="metric-value">{{ total_backlinks }}</div>
+              <div class="metric-label">Total Backlinks</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-icon">
+                <i class="fas fa-sitemap"></i>
+              </div>
+              <div class="metric-value">{{ linking_root_domains }}</div>
+              <div class="metric-label">Linking Root Domains</div>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </main>
+
+    <!-- Bootstrap JS -->
+    <script
+      src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
+      integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"
+      integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
+      integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
+      crossorigin="anonymous"
+    ></script>
+
+    <script>
+      function toggleSidebar() {
+        const sidebar = document.getElementById("sidebarMenu");
+        sidebar.classList.toggle("show");
+      }
+
+      function submitForm() {
+        const form = document.getElementById("myForm");
+        const loader = document.getElementById("loader");
+        if (form.checkValidity()) {
+          loader.style.display = "flex";
+          form.submit();
+        } else {
+          form.reportValidity();
+        }
+      }
+
+      // Auto-dismiss alerts after 5s
+      setTimeout(() => {
+        document.querySelectorAll(".alert-modern").forEach((el) => {
+          el.style.transition = "opacity 0.4s ease";
+          el.style.opacity = "0";
+          setTimeout(() => el.remove(), 400);
+        });
+      }, 5000);
+    </script>
+  </body>
+</html>

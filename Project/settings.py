@@ -9,40 +9,39 @@ https://docs.djangoproject.com/en/4.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.1/ref/settings/
 """
-import os.path
-from pathlib import Path
-import django_heroku
-import dj_database_url
 import os
+from pathlib import Path
+import dj_database_url
 from dotenv import load_dotenv
+from celery.schedules import crontab
 
 load_dotenv()
-
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
-from django.core.checks import messages
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/4.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-j6zzp2rm^v6(m90de2662_$$53&ro8vdmz&g&gg*o#jl9_5@pw'
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
+if not SECRET_KEY:
+    raise ValueError("DJANGO_SECRET_KEY environment variable is required")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+
 CSRF_TRUSTED_ORIGINS = [
-    "https://e551-119-155-204-25.ngrok-free.app",
-    "https://d2c9-202-47-51-230.ngrok-free.app",
-    # Add any other trusted origins if applicable.
+    origin.strip()
+    for origin in os.getenv('CSRF_TRUSTED_ORIGINS', '').split(',')
+    if origin.strip()
 ]
 
 # Application definition
 
 INSTALLED_APPS = [
+    'keyword_ai',
+    'pgvector',  # Vector database support for RAG
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -51,7 +50,9 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'SEOAnalyzer',
     'comparative_analysis',
-    "keyword_suggestion.apps.KeywordSuggestionConfig",
+    # "keyword_suggestion.apps.KeywordSuggestionConfig",
+    # "pipeline.apps.PipelineConfig",
+    # "ml_models.apps.MlModelsConfig",
 ]
 
 MIDDLEWARE = [
@@ -88,13 +89,17 @@ WSGI_APPLICATION = 'Project.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.1/ref/settings/#databases
 
+# PostgreSQL with pgvector support for RAG
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'keywordai_db',
+        'USER': 'postgres',
+        'PASSWORD': 'admin123',
+        'HOST': 'localhost',
+        'PORT': '5432',
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/4.1/ref/settings/#auth-password-validators
@@ -133,35 +138,49 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-STATICFILES_DIRS = (os.path.join(BASE_DIR, 'static'),)
-django_heroku.settings(locals())
+_STATIC_DIR = os.path.join(BASE_DIR, 'static')
+STATICFILES_DIRS = (_STATIC_DIR,) if os.path.isdir(_STATIC_DIR) else ()
 # LOCAL
-SITE_URL = "http://127.0.0.1:8000"
+SITE_URL = os.getenv('SITE_URL', 'http://127.0.0.1:8000')
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_USE_TLS = True
-EMAIL_PORT = 587
-EMAIL_HOST_USER = 'moazzamrazaghori@gmail.com'
-EMAIL_HOST_PASSWORD = 'ahdbwmrxdpiaxiew'
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True').lower() == 'true'
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
 # Default primary key field type
-# https://docs.djangoproject.com/en/4.1/ref/settings/#default-auto-field
-
-
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
-SESSION_COOKIE_AGE=300000
+SESSION_COOKIE_AGE = 300000
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
 
+# Security headers
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = 'DENY'
+SECURE_SSL_REDIRECT = not DEBUG
 
-
+# API Keys (must be set via environment)
 MOZ_ACCESS_ID = os.getenv('MOZ_ACCESS_ID')
 MOZ_SECRET_KEY = os.getenv('MOZ_SECRET_KEY')
 USE_MOZ_API = os.getenv('USE_MOZ_API', 'false').lower() == 'true'
 MOZ_API_MONTHLY_LIMIT = int(os.getenv('MOZ_API_MONTHLY_LIMIT', 50))
 
-# OpenAI Configuration (supports both OpenAI and OpenRouter)
+# Google PageSpeed Insights API Key
+PAGESPEED_API_KEY = os.getenv('PAGESPEED_API_KEY', '')
+
+# AI API Configuration (supports OpenAI, OpenRouter, and Groq)
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 OPENAI_MODEL = os.getenv('OPENAI_MODEL', 'gpt-4o-mini')
 USE_OPENROUTER = os.getenv('USE_OPENROUTER', 'false').lower() == 'true'
+OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY')
+
+# Groq Configuration (free, OpenAI-compatible API)
+USE_GROQ = os.getenv('USE_GROQ', 'true').lower() == 'true'
+GROQ_API_KEY = os.getenv('GROQ_API_KEY', '')
+GROQ_MODEL = os.getenv('GROQ_MODEL', 'llama-3.3-70b-versatile')
 
 
 CACHES = {
@@ -182,39 +201,65 @@ LOGGING = {
         }
     },
     "handlers": {
-        "console": {"class": "logging.StreamHandler", "formatter": "verbose"}
+        "console": {"class": "logging.StreamHandler", "formatter": "verbose"},
+        "file": {
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": BASE_DIR / "logs" / "django.log",
+            "maxBytes": 10485760,
+            "backupCount": 5,
+            "formatter": "verbose",
+        },
     },
     "loggers": {
-        "keyword_suggestion": {"handlers": ["console"], "level": "DEBUG", "propagate": False},
-        "ml_models":          {"handlers": ["console"], "level": "INFO",  "propagate": False},
-        "pipeline":           {"handlers": ["console"], "level": "INFO",  "propagate": False},
+        "SEOAnalyzer": {"handlers": ["console", "file"], "level": "INFO", "propagate": False},
+        "comparative_analysis": {"handlers": ["console", "file"], "level": "INFO", "propagate": False},
+        "keyword_ai": {"handlers": ["console", "file"], "level": "INFO", "propagate": False},
     },
 }
 
-ML_MODELS_DIR      = BASE_DIR / "ml_models"
-FAISS_INDEX_PATH   = ML_MODELS_DIR / "faiss_index.bin"
+
+ML_MODELS_DIR = BASE_DIR / "keyword_ai" / "ml_models"
+FAISS_INDEX_PATH = ML_MODELS_DIR / "faiss_index.bin"
 KEYWORDS_JSON_PATH = ML_MODELS_DIR / "keywords.json"
 
 
+# Celery Configuration
+CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://127.0.0.1:6379/0')
+CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', 'redis://127.0.0.1:6379/0')
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE
 
-from celery.schedules import crontab
-
+# pipeline app is currently disabled — beat schedule entries are commented out
+# to avoid celery errors at startup. Re-enable when pipeline is added back to INSTALLED_APPS.
 CELERY_BEAT_SCHEDULE = {
-    # Collect fresh keyword trends every 6 hours
-    "collect-trends-every-6h": {
-        "task": "pipeline.collect_trends",
-        "schedule": crontab(minute=0, hour="*/6"),
+    "cleanup-old-tasks-daily": {
+        "task": "keyword_ai.tasks.cleanup_old_tasks",
+        "schedule": crontab(minute=0, hour=3),  # 3 AM daily
     },
-
-    # Smart training check every hour
-    "check-and-train-hourly": {
-        "task": "pipeline.check_and_train",
-        "schedule": crontab(minute=30),   # runs at :30 of every hour
-    },
-
-    # Guaranteed full retrain every Sunday at 2 AM
-    "full-retrain-weekly": {
-        "task": "pipeline.full_retrain",
-        "schedule": crontab(minute=0, hour=2, day_of_week="sunday"),
-    },
+    # "collect-trends-every-6h": {
+    #     "task": "pipeline.collect_trends",
+    #     "schedule": crontab(minute=0, hour="*/6"),
+    # },
+    # "collect-search-console-daily": {
+    #     "task": "pipeline.collect_search_console",
+    #     "schedule": crontab(minute=0, hour=6),
+    # },
+    # "check-and-train-hourly": {
+    #     "task": "pipeline.check_and_train",
+    #     "schedule": crontab(minute=30),
+    # },
+    # "full-retrain-weekly": {
+    #     "task": "pipeline.full_retrain",
+    #     "schedule": crontab(minute=0, hour=2, day_of_week="sunday"),
+    # },
 }
+
+
+# ═══════════════════════════════════════════════════════════════
+# GOOGLE SEARCH CONSOLE CONFIGURATION
+# (used by pipeline app — re-enable when pipeline is added back)
+# ═══════════════════════════════════════════════════════════════
+# GSC_CLIENT_SECRETS_PATH = BASE_DIR / os.getenv("GSC_CLIENT_SECRETS_PATH", "client_secret.json")
+# GSC_CREDENTIALS_PATH = BASE_DIR / os.getenv("GSC_CREDENTIALS_PATH", ".gsc_credentials.json")

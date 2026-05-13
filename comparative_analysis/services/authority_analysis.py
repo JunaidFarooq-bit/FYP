@@ -4,6 +4,7 @@ Analyzes domain authority, backlink profiles, and trust signals using real Moz d
 """
 
 import re
+import logging
 import requests
 import hashlib
 import hmac
@@ -18,36 +19,34 @@ from django.core.cache import cache
 from django.utils import timezone
 import whois
 
+logger = logging.getLogger(__name__)
+
 
 class MozAPIClient:
-    """Moz Links API Client - Using Working v1 Credentials"""
+    """Moz Links API Client"""
     
     def __init__(self):
-        # Hardcoded working credentials from your backlink view
-        self.access_id = "mozscape-AGoBybxI14"
-        self.secret_key = "cVbO40lcvGzJgsAQ4lQ8BxKxQzdiOjR3"
+        self.access_id = getattr(settings, 'MOZ_ACCESS_ID', '') or ''
+        self.secret_key = getattr(settings, 'MOZ_SECRET_KEY', '') or ''
         
-        print(f"[MOZ] Client initialized with hardcoded credentials")
-        print(f"[MOZ] Access ID: {self.access_id}")
+        logger.info("[MOZ] Client initialized")
     
     def get_url_metrics(self, url: str) -> Optional[Dict[str, Any]]:
-        """
-        Get URL metrics from Moz API v1 (same method as your working backlink view)
-        """
-        print(f"\n[MOZ] Fetching metrics for: {url}")
+        """Get URL metrics from Moz API v1"""
+        logger.info(f"[MOZ] Fetching metrics for: {url}")
+
+        if not self.access_id or not self.secret_key:
+            logger.warning("[MOZ] Credentials not configured — skipping API call")
+            return None
         
-        # Check cache first (cache for 24 hours)
         cache_key = f"moz_metrics_{hashlib.md5(url.encode()).hexdigest()}"
         cached_data = cache.get(cache_key)
         
         if cached_data:
-            print(f"[MOZ] Cache HIT - using cached data")
+            logger.debug("[MOZ] Cache HIT")
             return cached_data
         
-        print(f"[MOZ] Cache MISS - making API request")
-        
         try:
-            # Generate signature (same as your backlink view)
             expires = str(int(time.time()) + 300)
             string_to_sign = f"{self.access_id}\n{expires}"
             signature = hmac.new(
@@ -57,82 +56,50 @@ class MozAPIClient:
             ).digest()
             safe_signature = urllib.parse.quote(base64.b64encode(signature))
             
-            print(f"[MOZ] Generated signature for expires: {expires}")
-            
-            # Cols bitmask for all metrics we need:
-            # 1 = Page Authority
-            # 4 = MozRank
-            # 16 = MozTrust
-            # 32 = External Equity Links
-            # 64 = Linking Root Domains
-            # 128 = Total Links
-            # 8388608 = Spam Score
-            # 68719476736 = Domain Authority
-            # Total: 68727865589
-            cols = "68727865589"
-            
-            # URL-encode the target
+            # pda(68719476736) + upa(34359738368) + umrp(16384) + ueid(32) + uid(2048) = 103079233568
+            cols = "103079233568"
             encoded_url = urllib.parse.quote(url, safe='')
             
-            # Build API URL (v1 format - same as your backlink view)
             metrics_url = (
                 f"https://lsapi.seomoz.com/linkscape/url-metrics/{encoded_url}"
                 f"?Cols={cols}&AccessID={self.access_id}&Expires={expires}&Signature={safe_signature}"
             )
             
-            print(f"[MOZ] Request URL: {metrics_url[:100]}...")
-            print(f"[MOZ] Sending request...")
-            
             response = requests.get(metrics_url, timeout=30)
             
-            print(f"[MOZ] Response status: {response.status_code}")
-            
             if response.status_code != 200:
-                print(f"[MOZ] ERROR: Status {response.status_code}")
-                print(f"[MOZ] Response: {response.text[:200]}")
+                logger.warning(f"[MOZ] API error: status {response.status_code}")
                 return None
             
             metrics_json = response.json()
-            print(f"[MOZ] Raw response: {metrics_json}")
             
             if isinstance(metrics_json, dict):
-                # Map Moz API v1 response to our format
                 metrics = {
-                    'domain_authority': int(metrics_json.get('pda', 0)),  # pda = Domain Authority
-                    'page_authority': int(metrics_json.get('upa', 0)),    # upa = Page Authority
-                    'spam_score': int(metrics_json.get('pda', 0) / 10),   # Approximate spam score
-                    'root_domains_to_page': int(metrics_json.get('uid', 0)),  # uid = Total Links
-                    'external_links_to_page': int(metrics_json.get('ueid', 0)),  # ueid = External Equity Links
-                    'root_domains_to_subdomain': int(metrics_json.get('feid', 0)),  # feid = Linking Root Domains
+                    'domain_authority': int(metrics_json.get('pda', 0)),
+                    'page_authority': int(metrics_json.get('upa', 0)),
+                    'spam_score': int(metrics_json.get('pda', 0) / 10),
+                    'root_domains_to_page': int(metrics_json.get('uid', 0)),
+                    'external_links_to_page': int(metrics_json.get('ueid', 0)),
+                    'root_domains_to_subdomain': int(metrics_json.get('feid', 0)),
                     'external_links_to_subdomain': int(metrics_json.get('fuid', 0) if 'fuid' in metrics_json else 0),
                     'http_status_code': 200
                 }
                 
-                print(f"[MOZ] SUCCESS!")
-                print(f"[MOZ] DA: {metrics['domain_authority']}")
-                print(f"[MOZ] PA: {metrics['page_authority']}")
-                print(f"[MOZ] Referring Domains: {metrics['root_domains_to_subdomain']}")
-                print(f"[MOZ] Total Backlinks: {metrics['external_links_to_page']}")
-                
-                # Cache for 24 hours
+                logger.info(f"[MOZ] DA={metrics['domain_authority']} PA={metrics['page_authority']}")
                 cache.set(cache_key, metrics, 60 * 60 * 24)
-                print(f"[MOZ] Cached data for 24 hours")
-                
                 return metrics
             else:
-                print(f"[MOZ] ERROR: Unexpected response format")
+                logger.warning("[MOZ] Unexpected response format")
                 return None
             
         except requests.exceptions.Timeout:
-            print(f"[MOZ] ERROR: Request timed out")
+            logger.warning("[MOZ] Request timed out")
             return None
         except requests.exceptions.RequestException as e:
-            print(f"[MOZ] ERROR: Network error - {e}")
+            logger.warning(f"[MOZ] Network error: {e}")
             return None
         except Exception as e:
-            print(f"[MOZ] ERROR: {e}")
-            import traceback
-            traceback.print_exc()
+            logger.exception(f"[MOZ] Unexpected error: {e}")
             return None
 
 
@@ -140,15 +107,9 @@ class AuthorityAnalyzer:
     """Analyze domain authority and backlink signals with Moz API"""
     
     def __init__(self):
-        print("\n" + "="*80)
-        print("[AUTH] AuthorityAnalyzer initializing...")
-        print("="*80)
-        
-        # Always use Moz API with hardcoded credentials
-        self.use_moz = True
         self.moz_client = MozAPIClient()
-        
-        print("[AUTH] Moz API is ENABLED (hardcoded credentials)")
+        self.use_moz = bool(getattr(settings, 'MOZ_ACCESS_ID', None))
+        logger.info(f"[AUTH] AuthorityAnalyzer initialized (Moz enabled: {self.use_moz})")
     
     def analyze(self, url: str, extracted_data: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -161,54 +122,22 @@ class AuthorityAnalyzer:
         Returns:
             Dictionary with authority metrics
         """
-        print("\n" + "="*80)
-        print(f"[AUTH] Starting authority analysis for: {url}")
-        print("="*80)
+        logger.info(f"[AUTH] Starting authority analysis for: {url}")
         
         try:
             domain = urlparse(url).netloc
-            print(f"[AUTH] Domain: {domain}")
-            
-            # Try to get real Moz data
-            print("\n[AUTH] Step 1: Fetching Moz API data...")
             moz_metrics = self._get_moz_metrics_safe(url)
-            
-            if moz_metrics:
-                print("[AUTH] SUCCESS: Retrieved Moz API data")
-            else:
-                print("[AUTH] WARNING: Failed to retrieve Moz API data")
-                print("[AUTH] Falling back to estimation mode")
-            
-            # Domain age estimation
-            print("\n[AUTH] Step 2: Estimating domain age...")
             domain_age = self._estimate_domain_age_safe(domain)
-            print(f"[AUTH] Domain age: {domain_age} days ({domain_age / 365:.1f} years)")
-            
-            # Trust signals
-            print("\n[AUTH] Step 3: Analyzing trust signals...")
             trust_signals = self._analyze_trust_signals_safe(extracted_data)
-            print(f"[AUTH] Trust score: {trust_signals['trust_score']}/100")
-            
-            # Internal link equity
-            print("\n[AUTH] Step 4: Analyzing internal links...")
             internal_link_strength = self._analyze_internal_links_safe(extracted_data, url)
-            print(f"[AUTH] Internal link strength: {internal_link_strength['score']}/100")
-            
-            # Topical relevance
-            print("\n[AUTH] Step 5: Estimating topical relevance...")
             topical_relevance = self._estimate_topical_relevance_safe(extracted_data)
-            print(f"[AUTH] Topical relevance: {topical_relevance['score']}/100")
             
-            # Calculate authority score
-            print("\n[AUTH] Step 6: Calculating authority score...")
             if moz_metrics:
-                print("[AUTH] Using Moz data for scoring")
                 authority_score = self._calculate_authority_score_with_moz(
                     moz_metrics, domain_age, trust_signals, internal_link_strength
                 )
                 backlink_profile = self._create_real_backlink_profile(moz_metrics)
             else:
-                print("[AUTH] Using estimation for scoring")
                 authority_score = self._calculate_authority_score_estimated(
                     domain_age, trust_signals, internal_link_strength
                 )
@@ -228,19 +157,11 @@ class AuthorityAnalyzer:
                 'data_source': 'moz' if moz_metrics else 'estimated',
             }
             
-            print("\n" + "="*80)
-            print(f"[AUTH] ANALYSIS COMPLETE")
-            print(f"[AUTH] Authority Score: {result['authority_score']}/100")
-            print(f"[AUTH] Data Source: {result['data_source']}")
-            print("="*80 + "\n")
-            
+            logger.info(f"[AUTH] Complete — score={result['authority_score']}, source={result['data_source']}")
             return result
             
         except Exception as e:
-            print(f"\n[AUTH] CRITICAL ERROR in analyze(): {e}")
-            import traceback
-            traceback.print_exc()
-            print("[AUTH] Returning fallback result")
+            logger.exception(f"[AUTH] Error in analyze(): {e}")
             return self._get_fallback_result()
     
     def _get_moz_metrics_safe(self, url: str) -> Optional[Dict[str, Any]]:
@@ -248,42 +169,35 @@ class AuthorityAnalyzer:
         try:
             return self.moz_client.get_url_metrics(url)
         except Exception as e:
-            print(f"[AUTH] ERROR getting Moz metrics: {e}")
+            logger.warning(f"[AUTH] Error getting Moz metrics: {e}")
             return None
     
     def _estimate_domain_age_safe(self, domain: str) -> int:
         """Safely estimate domain age using WHOIS"""
         try:
-            print(f"[WHOIS] Querying domain: {domain}")
             w = whois.whois(domain)
             
             if w.creation_date:
-                if isinstance(w.creation_date, list):
-                    creation_date = w.creation_date[0]
-                else:
-                    creation_date = w.creation_date
+                creation_date = w.creation_date[0] if isinstance(w.creation_date, list) else w.creation_date
                 
                 if creation_date.tzinfo is None:
                     creation_date = timezone.make_aware(creation_date, timezone.utc)
                 
-                now = timezone.now()
-                age_days = (now - creation_date).days
-                
-                print(f"[WHOIS] SUCCESS: Age = {age_days} days")
+                age_days = (timezone.now() - creation_date).days
                 return max(0, age_days)
                 
         except Exception as e:
-            print(f"[WHOIS] ERROR: {e}")
+            logger.debug(f"[WHOIS] Could not determine domain age: {e}")
         
-        print("[WHOIS] Using default: 730 days")
         return 730
     
     def _analyze_trust_signals_safe(self, extracted_data: Dict[str, Any]) -> Dict[str, Any]:
         """Safely analyze trust signals"""
+        fallback = {'trust_score': 0, 'https': False, 'privacy_policy': False, 'contact_info': False, 'ssl_certificate': False}
         try:
             soup = extracted_data.get('soup')
             if not soup:
-                return {'trust_score': 0, 'https': False, 'privacy_policy': False, 'contact_info': False, 'ssl_certificate': False}
+                return fallback
             
             signals = {
                 'https': extracted_data.get('is_https', False),
@@ -304,30 +218,23 @@ class AuthorityAnalyzer:
             return signals
             
         except Exception as e:
-            print(f"[TRUST] ERROR: {e}")
-            return {'trust_score': 0, 'https': False, 'privacy_policy': False, 'contact_info': False, 'ssl_certificate': False}
+            logger.warning(f"[TRUST] Error: {e}")
+            return fallback
     
     def _check_privacy_policy(self, soup) -> bool:
         try:
-            links = soup.find_all('a', href=True)
-            for link in links:
-                if re.search(r'privacy|policy', link.get_text(), re.I):
-                    return True
-        except:
-            pass
-        return False
+            return any(re.search(r'privacy|policy', link.get_text(), re.I) for link in soup.find_all('a', href=True))
+        except Exception:
+            return False
     
     def _check_contact_info(self, soup) -> bool:
         try:
-            links = soup.find_all('a', href=True)
-            for link in links:
+            for link in soup.find_all('a', href=True):
                 if re.search(r'contact|about', link.get_text(), re.I):
                     return True
-            if re.search(r'[\w\.-]+@[\w\.-]+\.\w+', soup.get_text()):
-                return True
-        except:
-            pass
-        return False
+            return bool(re.search(r'[\w\.-]+@[\w\.-]+\.\w+', soup.get_text()))
+        except Exception:
+            return False
     
     def _analyze_internal_links_safe(self, extracted_data: Dict[str, Any], url: str) -> Dict[str, Any]:
         """Safely analyze internal linking strength"""
@@ -356,7 +263,7 @@ class AuthorityAnalyzer:
             }
             
         except Exception as e:
-            print(f"[LINKS] ERROR: {e}")
+            logger.warning(f"[LINKS] Error: {e}")
             return {'score': 0, 'total_internal_links': 0, 'anchor_diversity': 0, 'estimated_depth': 0}
     
     def _estimate_topical_relevance_safe(self, extracted_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -378,82 +285,41 @@ class AuthorityAnalyzer:
                 'schema_types': schema_types
             }
         except Exception as e:
-            print(f"[RELEVANCE] ERROR: {e}")
+            logger.warning(f"[RELEVANCE] Error: {e}")
             return {'score': 50, 'schema_types': []}
     
     def _calculate_authority_score_with_moz(self, moz_metrics, domain_age, trust_signals, internal_link_strength) -> float:
         """Calculate authority score using real Moz data"""
-        print("\n[SCORING] Calculating with Moz data:")
-        
         score = 0.0
-        
-        da = moz_metrics.get('domain_authority', 0)
-        da_points = (da / 100) * 40
-        score += da_points
-        print(f"  - DA contribution: {da_points:.1f} points (DA={da})")
-        
-        pa = moz_metrics.get('page_authority', 0)
-        pa_points = (pa / 100) * 30
-        score += pa_points
-        print(f"  - PA contribution: {pa_points:.1f} points (PA={pa})")
-        
+        score += (moz_metrics.get('domain_authority', 0) / 100) * 40
+        score += (moz_metrics.get('page_authority', 0) / 100) * 30
         spam = moz_metrics.get('spam_score', 0)
-        spam_penalty = (spam / 17) * 10
-        spam_points = 10 - spam_penalty
-        score += spam_points
-        print(f"  - Spam contribution: {spam_points:.1f} points")
-        
-        age_points = 0
+        score += 10 - (spam / 17) * 10
         if domain_age > 1825:
-            age_points = 10
+            score += 10
         elif domain_age > 730:
-            age_points = 7
+            score += 7
         elif domain_age > 365:
-            age_points = 4
-        score += age_points
-        print(f"  - Age contribution: {age_points} points")
-        
-        trust_points = (trust_signals['trust_score'] / 100) * 10
-        score += trust_points
-        print(f"  - Trust contribution: {trust_points:.1f} points")
-        
-        final_score = max(0, min(100, score))
-        print(f"\n[SCORING] Total: {final_score:.1f}/100")
-        
-        return final_score
+            score += 4
+        score += (trust_signals['trust_score'] / 100) * 10
+        return max(0, min(100, score))
     
     def _calculate_authority_score_estimated(self, domain_age, trust_signals, internal_link_strength) -> float:
         """Calculate authority score without Moz"""
-        print("\n[SCORING] Calculating with estimation:")
-        
         score = 0.0
-        
-        age_points = 0
         if domain_age > 1825:
-            age_points = 30
+            score += 30
         elif domain_age > 730:
-            age_points = 20
+            score += 20
         elif domain_age > 365:
-            age_points = 10
-        score += age_points
-        print(f"  - Age contribution: {age_points} points")
-        
-        trust_points = (trust_signals['trust_score'] / 100) * 40
-        score += trust_points
-        print(f"  - Trust contribution: {trust_points:.1f} points")
-        
-        link_points = (internal_link_strength['score'] / 100) * 30
-        score += link_points
-        print(f"  - Links contribution: {link_points:.1f} points")
-        
-        final_score = max(0, min(100, score))
-        print(f"\n[SCORING] Total estimated: {final_score:.1f}/100")
-        
-        return final_score
+            score += 10
+        score += (trust_signals['trust_score'] / 100) * 40
+        score += (internal_link_strength['score'] / 100) * 30
+        return max(0, min(100, score))
     
     def _create_real_backlink_profile(self, moz_metrics: Dict[str, Any]) -> Dict[str, Any]:
         """Create backlink profile from real Moz data"""
-        profile = {
+        return {
             'referring_domains': int(moz_metrics.get('root_domains_to_subdomain', 0)),
             'total_backlinks': int(moz_metrics.get('external_links_to_page', 0)),
             'domain_authority': int(moz_metrics.get('domain_authority', 0)),
@@ -462,12 +328,6 @@ class AuthorityAnalyzer:
             'quality_score': self._calculate_link_quality(moz_metrics),
             'data_source': 'Moz API v1 (Real Data)'
         }
-        
-        print(f"\n[BACKLINKS] Profile from Moz:")
-        print(f"  - Referring domains: {profile['referring_domains']}")
-        print(f"  - Total backlinks: {profile['total_backlinks']}")
-        
-        return profile
     
     def _calculate_link_quality(self, moz_metrics: Dict[str, Any]) -> int:
         da = moz_metrics.get('domain_authority', 0)

@@ -150,50 +150,51 @@ class Command(BaseCommand):
         self.stdout.write('⏳ Making API request...')
 
         try:
-            # Generate auth header
+            # Generate auth for Moz API v1 (Linkscape)
+            import urllib.parse
             access_id = settings.MOZ_ACCESS_ID
             secret_key = settings.MOZ_SECRET_KEY
-            expires = int(time.time()) + 300
+            expires = str(int(time.time()) + 300)
 
             string_to_sign = f"{access_id}\n{expires}"
-            binary_signature = hmac.new(
+            signature = hmac.new(
                 secret_key.encode('utf-8'),
                 string_to_sign.encode('utf-8'),
                 hashlib.sha1
             ).digest()
-            signature = base64.b64encode(binary_signature).decode('utf-8')
-            auth_header = f"Basic {base64.b64encode(f'{access_id}:{signature}:{expires}'.encode()).decode()}"
+            safe_signature = urllib.parse.quote(base64.b64encode(signature))
 
-            # Make request
-            headers = {
-                'Authorization': auth_header,
-                'Content-Type': 'application/json'
-            }
-            payload = {'targets': [test_url]}
-
-            response = requests.post(
-                "https://lsapi.seomoz.com/v2/url_metrics",
-                json=payload,
-                headers=headers,
-                timeout=10
+            # Build v1 API URL
+            # pda(68719476736) + upa(34359738368) + umrp(16384) + ueid(32) + uid(2048) = 103079233568
+            cols = "103079233568"
+            encoded_url = urllib.parse.quote(test_url, safe='')
+            api_url = (
+                f"https://lsapi.seomoz.com/linkscape/url-metrics/{encoded_url}"
+                f"?Cols={cols}&AccessID={access_id}&Expires={expires}&Signature={safe_signature}"
             )
+
+            response = requests.get(api_url, timeout=10)
 
             # Check response
             if response.status_code == 200:
                 data = response.json()
-                if 'results' in data and len(data['results']) > 0:
-                    result = data['results'][0]
-                    da = result.get('domain_authority', 'N/A')
-                    pa = result.get('page_authority', 'N/A')
-                    spam = result.get('spam_score', 'N/A')
+                # v1 API returns data directly, not in 'results' array
+                if isinstance(data, dict):
+                    da = data.get('pda', 'N/A')  # Domain Authority
+                    pa = data.get('upa', 'N/A')  # Page Authority
+                    mozrank = data.get('umrp', 'N/A')  # MozRank
+                    backlinks = data.get('ueid', 'N/A')  # External Equity Links
+                    linking_domains = data.get('uid', 'N/A')  # Root Domains Linking
 
                     self.stdout.write(self.style.SUCCESS('\n✅ API TEST SUCCESSFUL!'))
                     self.stdout.write(self.style.SUCCESS(f'   Domain Authority: {da}'))
                     self.stdout.write(self.style.SUCCESS(f'   Page Authority: {pa}'))
-                    self.stdout.write(self.style.SUCCESS(f'   Spam Score: {spam}'))
+                    self.stdout.write(self.style.SUCCESS(f'   MozRank: {mozrank}'))
+                    self.stdout.write(self.style.SUCCESS(f'   Total Backlinks: {backlinks}'))
+                    self.stdout.write(self.style.SUCCESS(f'   Linking Domains: {linking_domains}'))
                     self.stdout.write(self.style.SUCCESS('\n🎉 Your Moz API credentials are WORKING!'))
                 else:
-                    self.stdout.write(self.style.WARNING('⚠️  API returned no results'))
+                    self.stdout.write(self.style.WARNING('⚠️  API returned unexpected format'))
             elif response.status_code == 401:
                 self.stdout.write(self.style.ERROR('\n❌ AUTHENTICATION FAILED'))
                 self.stdout.write(self.style.ERROR('   Your Access ID or Secret Key is incorrect'))

@@ -1,16 +1,15 @@
+from keyword_ai.pipeline_v2 import run_keyword_pipeline_v2
 # ================================
 # DJANGO CORE IMPORTS
 # ================================
 from .services.sentiment_analyzer import analyze_sentiment
-import os
 
 from django.contrib.auth.models import User                 # Django built-in User model
 from django.contrib.auth import authenticate, login, logout # Authentication utilities
 from django.contrib.auth.decorators import login_required   # Protect views with login
 from django.shortcuts import render, redirect, reverse      # Rendering and redirects
-from django.http import HttpResponse, JsonResponse, FileResponse # HTTP responses
+from django.http import JsonResponse                        # HTTP responses
 from django.views.decorators.cache import never_cache       # Disable caching for views
-from django.views.decorators.csrf import csrf_exempt        # CSRF exemption (APIs)
 from django.views.decorators.http import require_POST       # Restrict HTTP methods
 from django.contrib import messages                         # Flash messages
 
@@ -36,8 +35,7 @@ import socket                                               # Network socket inf
 # ================================
 
 import requests                                             # HTTP requests
-import urllib.request                                       # URL fetching
-from urllib.parse import urlparse, urljoin, urlunparse       # URL parsing utilities
+from urllib.parse import urlparse, urljoin, urlunparse, quote  # URL parsing utilities
 from bs4 import BeautifulSoup                                # HTML parsing
 import validators                                           # URL validation
 
@@ -47,7 +45,6 @@ import validators                                           # URL validation
 # ================================
 
 import favicon                                              # Website favicon detection
-import builtwith                                            # Detect site technologies
 from py_w3c.validators.html.validator import HTMLValidator   # W3C HTML validation
 
 # ================================
@@ -55,12 +52,7 @@ from py_w3c.validators.html.validator import HTMLValidator   # W3C HTML validati
 # ================================
 
 import pandas as pd                                         # Data analysis
-import numpy as np                                          # Numerical operations
 import plotly.express as px                                 # Interactive charts
-import matplotlib
-matplotlib.use('Agg')                                       # Non-GUI backend
-import matplotlib.pyplot as plt                              # Static charts
-from math import pi                                         # Chart calculations
 
 
 # ================================
@@ -68,7 +60,6 @@ from math import pi                                         # Chart calculations
 # ================================
 
 import geocoder                                             # IP-based geolocation
-import pycountry                                            # Country metadata
 
 # ================================
 # CODE OPTIMIZATION
@@ -99,30 +90,36 @@ import logging                                              # Logging
 import concurrent.futures                                   # Parallel execution
 from datetime import datetime                                # Date & time
 from collections import Counter                              # Frequency counting
-from typing import Optional, Dict 
-
-import os
-import re
-import json
+from typing import Optional, Dict
 from openai import OpenAI
-
+import openai          # needed for openai.RateLimitError
+from django.conf import settings
 logger = logging.getLogger(__name__)
 
 # Create your views here.
 
-Report_variables={}
-global current_user_email
-OPENROUTER_API_KEY = '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'
+# API key now loaded from environment variables in settings
+OPENROUTER_API_KEY = getattr(settings, 'OPENROUTER_API_KEY', '')
 
 class Website_Audit(object):
-    def __init__(self, url,request=None):
-        
-        
+    def __init__(self, url, request=None):
+
+        # ✅ FIX (Global State): store request and derive user_email as an
+        #    instance attribute so no module-level global is needed anywhere.
+        self.request = request
+        self.user_email = (
+            request.user.email
+            if request is not None
+            and hasattr(request, 'user')
+            and request.user.is_authenticated
+            else None
+        )
+
         # ✅ FIX: Normalize and validate URL to accept all page types
         self.url = self._normalize_url(url)
         self.base_url = self._get_base_url(self.url)
         self.domain = self._get_domain(self.url)
-        
+
         # ✅ Modern session configuration with security headers
         self.session = requests.Session()
         self.session.headers.update({
@@ -134,44 +131,88 @@ class Website_Audit(object):
             "Connection": "keep-alive",
             "Upgrade-Insecure-Requests": "1"
         })
-        
-        # ✅ Enhanced error handling with redirect tracking
+
+        # ✅ FIX (Async Networking): use aiohttp with a 15-second timeout so the
+        #    Django worker thread is never blocked for the old 120-second window.
+        #    We spin up a dedicated event loop so __init__ remains synchronous
+        #    from the caller's perspective.
+        async def _async_fetch(target_url: str):
+            timeout = aiohttp.ClientTimeout(total=15)          # ✅ 15 s hard limit
+            ssl_ctx = ssl.create_default_context()
+            try:
+                async with aiohttp.ClientSession(
+                    headers=dict(self.session.headers),
+                    connector=aiohttp.TCPConnector(ssl=ssl_ctx)
+                ) as client:
+                    async with client.get(
+                        target_url,
+                        timeout=timeout,
+                        allow_redirects=True,
+                        max_redirects=10
+                    ) as resp:
+                        raw_bytes = await resp.read()
+                        # ✅ FIX (Encoding): honour server-declared charset so
+                        #    BeautifulSoup never sees mis-decoded bytes.
+                        detected_encoding = resp.charset or 'utf-8'
+                        text = raw_bytes.decode(detected_encoding, errors='replace')
+                        return {
+                            'text': text,
+                            'encoding': detected_encoding,
+                            'headers': dict(resp.headers),
+                            'status': resp.status,
+                            'final_url': str(resp.url),
+                            'error': None,
+                        }
+            except asyncio.TimeoutError:
+                return {'text': '', 'encoding': 'utf-8', 'headers': {}, 'status': None,
+                        'final_url': target_url, 'error': 'timeout'}
+            except aiohttp.ClientError as exc:
+                return {'text': '', 'encoding': 'utf-8', 'headers': {}, 'status': None,
+                        'final_url': target_url, 'error': str(exc)}
+
         try:
-            response = self.session.get(self.url, timeout=120, allow_redirects=True, verify=True)
-            response.raise_for_status()
-            self.response = response.text
-            self.openai_client = None
-            self.soup = BeautifulSoup(self.response, 'html.parser')
-            self.response_headers = response.headers
-            self.status_code = response.status_code
-            self.final_url = response.url  # Track final URL after redirects
-            
-            # ✅ Check if URL was redirected
-            if self.final_url != self.url:
-                self.was_redirected = True
-                self.redirect_url = self.final_url
-            else:
-                self.was_redirected = False
-                self.redirect_url = None
-                
-        except requests.exceptions.Timeout:
+            _loop = asyncio.new_event_loop()
+            _fetch = _loop.run_until_complete(_async_fetch(self.url))
+            _loop.close()
+        except Exception as exc:
+            _fetch = {'text': '', 'encoding': 'utf-8', 'headers': {}, 'status': None,
+                      'final_url': self.url, 'error': str(exc)}
+
+        if _fetch['error']:
             self.response = ""
             self.soup = BeautifulSoup("", 'html.parser')
             self.response_headers = {}
             self.status_code = None
-            self.final_url = url
+            self.final_url = self.url
             self.was_redirected = False
             self.redirect_url = None
-            print(f"Timeout error while fetching {url}")
-        except requests.exceptions.RequestException as e:
-            self.response = ""
-            self.soup = BeautifulSoup("", 'html.parser')
-            self.response_headers = {}
-            self.status_code = None
-            self.final_url = url
-            self.was_redirected = False
-            self.redirect_url = None
-            print(f"Error fetching {url}: {str(e)}")
+            self.ttfb = None
+            logger.warning(f"Fetch error for {self.url}: {_fetch['error']}")
+        else:
+            self.response = _fetch['text']
+            # ✅ FIX (Encoding): pass detected encoding explicitly to BeautifulSoup
+            #    so multi-byte characters (CJK, Arabic, accented Latin …) are not
+            #    corrupted during HTML parsing.
+            _enc = _fetch['encoding'] or 'utf-8'
+            self.soup = BeautifulSoup(
+                self.response.encode(_enc, errors='replace'),
+                'html.parser',
+                from_encoding=_enc,
+            )
+            self.response_headers = _fetch['headers']
+            self.status_code = _fetch['status']
+            self.final_url = _fetch['final_url']
+            self.was_redirected = (self.final_url != self.url)
+            self.redirect_url = self.final_url if self.was_redirected else None
+
+            # ✅ FIX (Core Web Vitals — TTFB): use a fast HEAD request so we can
+            #    read response.elapsed.total_seconds() without re-downloading the
+            #    full page body.
+            try:
+                _head = self.session.head(self.url, timeout=5, allow_redirects=True)
+                self.ttfb = round(_head.elapsed.total_seconds(), 3)
+            except Exception:
+                self.ttfb = None
         
         self.title_score = 0
         self.desc_score = 0
@@ -231,74 +272,88 @@ class Website_Audit(object):
         self.data = {}
         self.expiry_date = None
         self.lst = []
+
     def _get_ai_client(self):
-        """Get OpenAI client for OpenRouter with improved timeout"""
-        # Try environment variable first, then fall back to constant
+        """Get AI client (Groq preferred, OpenRouter/OpenAI fallback)"""
+        use_groq = getattr(settings, 'USE_GROQ', True)
+
+        if use_groq:
+            api_key = getattr(settings, 'GROQ_API_KEY', '') or os.getenv('GROQ_API_KEY', '')
+            if not api_key:
+                print("Warning: No GROQ_API_KEY found. Using fallback E-E-A-T analysis.")
+                return None
+            return OpenAI(
+                api_key=api_key,
+                base_url="https://api.groq.com/openai/v1",
+                timeout=45.0,
+                max_retries=3
+            )
+
         api_key = os.getenv('OPENROUTER_API_KEY') or OPENROUTER_API_KEY
-        
         if not api_key:
-            # Fallback to basic analysis (no AI)
             print("Warning: No API key found. Using fallback E-E-A-T analysis.")
             return None
-        
+
         return OpenAI(
             api_key=api_key,
             base_url="https://openrouter.ai/api/v1",
             timeout=45.0,
             max_retries=3
         )
+
+    def _get_ai_model(self):
+        """Get model name based on active provider"""
+        if getattr(settings, 'USE_GROQ', True):
+            return getattr(settings, 'GROQ_MODEL', 'llama-3.3-70b-versatile')
+        return getattr(settings, 'OPENAI_MODEL', 'openai/gpt-4o-mini')
+
     def _normalize_url(self, url):
+        """
+        ✅ FIX (URL Validation): replaced the hand-maintained TLD regex list with
+        the `validators` library.  It handles every real-world TLD including
+        ccTLDs, new gTLDs (.app, .dev, .cloud …) and IDNs.
+        """
         if not url:
             return url
 
         url = url.strip()
 
-        # Fix common malformations FIRST
-        # Case 1: "www.domain.compath" → "www.domain.com/path"
+        # Add scheme if missing so urlparse works correctly
         if not url.startswith(('http://', 'https://', '//')):
-            import re
-            # Better pattern: Match TLD followed by any non-slash, non-dot character
-            # This catches: .com/path, .compath, .com123, .comPath, etc.
-            pattern = r'(\.com|\.net|\.org|\.edu|\.gov|\.co|\.io|\.ai|\.pk|\.uk|\.ca|\.au)([^/\.])'
-            if re.search(pattern, url):
-                url = re.sub(pattern, r'\1/\2', url)
-        
-        # Add scheme if missing
-        if not url.startswith(('http://', 'https://')):
             url = 'https://' + url
 
-        # Parse the URL
         parsed = urlparse(url)
-        
-        # Additional fix: if netloc is empty but path has domain-like structure
+
+        # If netloc is empty but path has domain-like structure, reconstruct
         if not parsed.netloc and parsed.path:
-            # Try to extract domain from path
             parts = parsed.path.split('/', 1)
             if len(parts) == 2:
-                domain, path = parts
-                url = f"{parsed.scheme or 'https'}://{domain}/{path}"
-                parsed = urlparse(url)
+                domain_part, path_part = parts
+                url = f"{parsed.scheme or 'https'}://{domain_part}/{path_part}"
             else:
-                # Just a domain, no path
                 url = f"{parsed.scheme or 'https'}://{parsed.path}"
-                parsed = urlparse(url)
-        
-        # Fix: If path exists but doesn't start with '/', add it
+            parsed = urlparse(url)
+
+        # Ensure path starts with '/'
         path = parsed.path
         if path and not path.startswith('/'):
             path = '/' + path
 
-        # Clean reconstruction
         clean_url = urlunparse((
             parsed.scheme or 'https',
             parsed.netloc,
             path or '/',
             parsed.params,
             parsed.query,
-            ''  # Remove fragment
+            ''  # Strip fragment
         ))
 
+        # ✅ Validate with the validators library — covers all real TLDs
+        if not validators.url(clean_url):
+            logger.warning(f"_normalize_url: '{clean_url}' did not pass validators.url() — proceeding anyway")
+
         return clean_url
+
     def _get_base_url(self, url):
         """Extract base URL (scheme + netloc only)"""
         try:
@@ -324,6 +379,7 @@ class Website_Audit(object):
             return parsed.netloc if parsed.netloc else url
         except Exception:
             return url
+
     def Score(self, max_val, length):
         """
         ✅ MODERNIZED: Dynamic scoring with optimal range penalties
@@ -364,21 +420,9 @@ class Website_Audit(object):
             cleaned = re.sub(r'\s+', ' ', cleaned)
             return cleaned.strip()
         except Exception as e:
-            print(f"Error cleaning text: {str(e)}")
+            logger.error(f"Error cleaning text: {str(e)}")
             return input_string.strip() if input_string else ""
 
-    
-    
-    def remove_unicode_characters(self, text):
-        """Clean text while preserving semantic meaning"""
-        if not text:
-            return ""
-        # Preserve structured unicode (emojis, special chars) but clean problematic ones
-        text = text.encode('utf-8', 'ignore').decode('utf-8')
-        # Normalize whitespace
-        text = ' '.join(text.split())
-        return text
-    
     def _fallback_eeat_analysis(self, content_type, content):
         """
         Enhanced fallback E-E-A-T analysis with 2026 signals
@@ -469,6 +513,10 @@ class Website_Audit(object):
         
         try:
             client = self._get_ai_client()
+            
+            # ✅ FIX: If no API key, fall back immediately without crashing
+            if client is None:
+                return self._fallback_eeat_analysis(content_type, content)
             
             # ✅ 2026 UPDATED PROMPTS - Focus on Helpful Content & Mobile SERP
             if content_type == 'title':
@@ -583,28 +631,50 @@ Return ONLY valid JSON (no markdown):
     "trust_level": "high/medium/low"
 }}"""
 
-            # Call OpenRouter API with improved error handling
-            completion = client.chat.completions.create(
-                model="openai/gpt-4o-mini",
-                messages=[
-                    {
-                        "role": "system",
-                        "content": """You are an expert SEO analyst specializing in Google's 2026 ranking systems: 
+            # ✅ FIX (Error Handling): retry on RateLimitError with exponential
+            #    back-off before falling back to the basic analysis.
+            _MAX_RATE_RETRIES = 3
+            completion = None
+            for _attempt in range(_MAX_RATE_RETRIES):
+                try:
+                    completion = client.chat.completions.create(
+                        model=self._get_ai_model(),
+                        messages=[
+                            {
+                                "role": "system",
+                                "content": """You are an expert SEO analyst specializing in Google's 2026 ranking systems: 
 - E-E-A-T (Experience, Expertise, Authoritativeness, Trustworthiness)
 - Helpful Content System (rewards genuine human expertise)
 - Mobile-First Indexing (mobile SERP optimization)
 
 Focus on detecting: AI-generated content patterns, thin content, clickbait, missing expertise signals.
 Return ONLY valid JSON, no markdown, no preamble."""
-                    },
-                    {
-                        "role": "user",
-                        "content": analysis_prompt
-                    }
-                ],
-                temperature=0.2,  # Lower for more consistent analysis
-                max_tokens=700
-            )
+                            },
+                            {
+                                "role": "user",
+                                "content": analysis_prompt
+                            }
+                        ],
+                        temperature=0.2,  # Lower for more consistent analysis
+                        max_tokens=700
+                    )
+                    break  # success — exit retry loop
+                except openai.RateLimitError:
+                    if _attempt < _MAX_RATE_RETRIES - 1:
+                        _wait = 2 ** _attempt  # 1 s, 2 s, then give up
+                        logger.warning(
+                            f"OpenAI RateLimitError — retrying in {_wait}s "
+                            f"(attempt {_attempt + 1}/{_MAX_RATE_RETRIES})"
+                        )
+                        time.sleep(_wait)
+                    else:
+                        logger.error(
+                            "OpenAI RateLimitError — all retries exhausted, "
+                            "falling back to basic analysis"
+                        )
+                        return self._fallback_eeat_analysis(content_type, content)
+            if completion is None:
+                return self._fallback_eeat_analysis(content_type, content)
             
             response_text = completion.choices[0].message.content.strip()
             
@@ -641,20 +711,9 @@ Return ONLY valid JSON, no markdown, no preamble."""
             print(f"Response was: {response_text[:200]}")
             return self._fallback_eeat_analysis(content_type, content)
         except Exception as e:
-            print(f"AI E-E-A-T analysis failed for {content_type}: {e}")
+            logger.error(f"AI E-E-A-T analysis failed for {content_type}: {e}")
             return self._fallback_eeat_analysis(content_type, content)
-    
-    def Score(self, max_length, actual_length):
-        """Calculate penalty score for length deviations"""
-        if actual_length == 0:
-            return 0
-        if actual_length <= max_length:
-            return 100
-        # Progressive penalty for exceeding max
-        excess = actual_length - max_length
-        penalty = min(excess * 2, 70)  # Cap penalty at 70%
-        return max(30, 100 - penalty)
-    
+
     def get_title(self, min_length=30, max_length=60, use_ai=True):
         """
         ✅ 2026 TITLE OPTIMIZATION
@@ -725,11 +784,6 @@ Return ONLY valid JSON, no markdown, no preamble."""
                 issues.append(f"❌ Keyword stuffing detected: '{', '.join(repeated_words)}' repeated {word_freq[repeated_words[0]]}+ times")
                 eeat_analysis['eeat_score'] = max(0, eeat_analysis['eeat_score'] - 20)
         
-        # ✅ DUPLICATE TITLE CHECK (if soup has multiple pages - you'd implement)
-        # This is a placeholder for duplicate detection across your site
-        # if self._check_duplicate_title(title):
-        #     issues.append("❌ Duplicate title across site - Each page needs unique title")
-        
         # Combine issues from AI and basic checks
         all_issues = issues + eeat_analysis['issues']
         
@@ -757,7 +811,6 @@ Return ONLY valid JSON, no markdown, no preamble."""
             title_score = self.Score(max_length, title_length)
         
         # ✅ COMBINE: Technical (55%) + E-E-A-T (45%) - 2026 weights
-        # E-E-A-T is now MORE important in 2026 (increased from 40% to 45%)
         self.title_score = int((title_score * 0.55) + (eeat_analysis['eeat_score'] * 0.45))
         
         return title
@@ -817,7 +870,6 @@ Return ONLY valid JSON, no markdown, no preamble."""
         
         # ✅ CHECK FOR TITLE DUPLICATION (major 2026 issue)
         if self.comp_desc and self.title:
-            # Check if description is just the title repeated
             desc_lower = self.comp_desc.lower()
             title_lower = self.title.lower()
             
@@ -845,7 +897,6 @@ Return ONLY valid JSON, no markdown, no preamble."""
         if desc_length == 0:
             desc_score = 0
         elif min_length <= desc_length <= max_length:
-            # Optimal: 155 chars gets 100
             ideal = 155
             deviation = abs(desc_length - ideal)
             desc_score = 100 - (deviation * 1.0)
@@ -854,7 +905,6 @@ Return ONLY valid JSON, no markdown, no preamble."""
             desc_score = self.Score(max_length, desc_length)
         
         # ✅ COMBINE: Technical (50%) + E-E-A-T (50%) - 2026 equal weight
-        # Description E-E-A-T now EQUALLY important as technical (up from 45%)
         self.desc_score = int((desc_score * 0.50) + (eeat_analysis['eeat_score'] * 0.50))
         
         return
@@ -898,26 +948,31 @@ Return ONLY valid JSON, no markdown, no preamble."""
                 self.H = "H2"
                 issues.append("⚠ Using H2 as fallback - H1 is required")
 
-        # Extract heading text
-        heading_text = ""
+        # ✅ FIX (UnboundLocalError): initialise all three variables unconditionally
+        #    so the rest of the method never references an unbound name when the
+        #    page has no heading tags at all.
+        com_heading = ""
+        heading_length = 0
+        eeat_analysis = self._fallback_eeat_analysis('heading', '')
+        self.heading = "No Heading Found"
+
+        # Extract heading text (only when heading_tags was populated above)
         if heading_tags:
+            heading_text = ""
             try:
-                # Get first heading only
                 heading_text = heading_tags[0].get_text(strip=True)
                 self.comp_head = heading_text
             except Exception as e:
                 print(f"Error extracting heading: {str(e)}")
 
-        # Clean heading
-        com_heading = self.remove_unicode_characters(heading_text)
-        com_heading = com_heading.strip()
-        heading_length = len(com_heading)
-        
-        # ✅ AI-POWERED E-E-A-T ANALYSIS (with title context)
-        if use_ai and com_heading:
-            eeat_analysis = self._analyze_eeat_with_ai('heading', com_heading, context=self.title)
-        else:
-            eeat_analysis = self._fallback_eeat_analysis('heading', com_heading)
+            com_heading = self.remove_unicode_characters(heading_text).strip()
+            heading_length = len(com_heading)
+
+            # ✅ AI-POWERED E-E-A-T ANALYSIS (with title context)
+            if use_ai and com_heading:
+                eeat_analysis = self._analyze_eeat_with_ai('heading', com_heading, context=self.title)
+            else:
+                eeat_analysis = self._fallback_eeat_analysis('heading', com_heading)
         
         # ✅ TECHNICAL VALIDATION
         if heading_length == 0:
@@ -961,7 +1016,6 @@ Return ONLY valid JSON, no markdown, no preamble."""
                 issues.append("⚠ H1 duplicates title exactly")
                 issues.append("💡 H1 should complement title with different wording")
             
-            # Check if too different (might indicate topic mismatch)
             common_words = set(h1_lower.split()) & set(title_lower.split())
             if len(common_words) < 2 and len(title_lower.split()) > 3:
                 issues.append("⚠ H1 and title have minimal overlap")
@@ -996,13 +1050,12 @@ Return ONLY valid JSON, no markdown, no preamble."""
         
         # ✅ CALCULATE TECHNICAL SCORE
         if h1_count == 0:
-            heading_score = max(0, self.Score(max_length, heading_length) - 40)  # Severe penalty
+            heading_score = max(0, self.Score(max_length, heading_length) - 40)
         elif h1_count > 1:
-            heading_score = max(0, self.Score(max_length, heading_length) - 25)  # Moderate penalty
+            heading_score = max(0, self.Score(max_length, heading_length) - 25)
         elif heading_length == 0:
             heading_score = 0
         elif min_length <= heading_length <= max_length:
-            # Optimal: 60-65 chars
             ideal = 62
             deviation = abs(heading_length - ideal)
             heading_score = 100 - (deviation * 0.8)
@@ -1015,7 +1068,6 @@ Return ONLY valid JSON, no markdown, no preamble."""
             heading_score = min(100, heading_score + 5)
         
         # ✅ COMBINE: Technical (50%) + E-E-A-T (50%) - 2026 equal weight
-        # Headings now have EQUAL weighting (up from 55/45)
         self.heading_score = int((heading_score * 0.50) + (eeat_analysis['eeat_score'] * 0.50))
         
         return
@@ -1026,18 +1078,12 @@ Return ONLY valid JSON, no markdown, no preamble."""
         Combines: Technical SEO + E-E-A-T + Structure + Mobile-First
         """
         try:
-            # ✅ 2026 UPDATED WEIGHTS (Mobile-first + E-E-A-T emphasis)
-            # Technical components
-            title_weight = 0.25        # Slightly reduced (was 0.28)
-            desc_weight = 0.20         # Slightly reduced (was 0.22)
-            heading_weight = 0.15      # Reduced (was 0.18)
-            
-            # ✅ E-E-A-T components (INCREASED importance in 2026)
-            title_eeat_weight = 0.15   # Increased (was 0.12)
-            desc_eeat_weight = 0.15    # Increased (was 0.12)
-            heading_eeat_weight = 0.10 # Increased (was 0.08)
-            
-            # Total: 100% (25+20+15+15+15+10 = 100)
+            title_weight = 0.25
+            desc_weight = 0.20
+            heading_weight = 0.15
+            title_eeat_weight = 0.15
+            desc_eeat_weight = 0.15
+            heading_eeat_weight = 0.10
             
             weighted_score = (
                 (self.title_score * title_weight) +
@@ -1050,11 +1096,9 @@ Return ONLY valid JSON, no markdown, no preamble."""
             
             bonus = 0
             
-            # ✅ PERFECT TECHNICAL BONUS
             if self.title_score >= 90 and self.desc_score >= 90:
                 bonus += 3
             
-            # ✅ E-E-A-T EXCELLENCE BONUS (2026 priority)
             avg_eeat = (
                 self.data.get('title_eeat_score', 0) + 
                 self.data.get('desc_eeat_score', 0) + 
@@ -1062,40 +1106,50 @@ Return ONLY valid JSON, no markdown, no preamble."""
             ) / 3
             
             if avg_eeat >= 85:
-                bonus += 7  # Increased bonus (was 5)
+                bonus += 7
             elif avg_eeat >= 70:
-                bonus += 4  # Increased bonus (was 3)
+                bonus += 4
             
-            # ✅ SEMANTIC STRUCTURE BONUS (WCAG 2.2 + Accessibility)
             if self.data.get('h1_count') == 1:
-                bonus += 3  # Increased (was 2)
+                bonus += 3
             
             if (self.data.get('h2_count', 0) >= 3 and 
                 self.data.get('h3_count', 0) >= 2 and
                 self.data.get('h1_count') == 1):
-                bonus += 4  # Excellent hierarchy (was 3)
+                bonus += 4
             
-            # ✅ MOBILE-FIRST BONUS
             mobile_ready = (
                 20 <= self.data.get('title_length', 0) <= 60 and
                 120 <= self.data.get('desc_length', 0) <= 160 and
                 20 <= self.data.get('heading_length', 0) <= 70
             )
             if mobile_ready:
-                bonus += 3  # All elements mobile-optimized
-            
-            # Calculate final score
+                bonus += 3
+
+            # ✅ FIX (Core Web Vitals — TTFB): factor TTFB into the avg_score.
+            #    Good TTFB (≤0.8 s) earns a bonus; poor TTFB (>1.8 s) is penalised.
+            if self.ttfb is not None:
+                if self.ttfb <= 0.8:
+                    bonus += 5
+                    self.data['ttfb_verdict'] = f"Excellent ✓ ({self.ttfb}s)"
+                elif self.ttfb <= 1.8:
+                    bonus += 2
+                    self.data['ttfb_verdict'] = f"Acceptable ⚠ ({self.ttfb}s)"
+                else:
+                    bonus = max(0, bonus - 3)
+                    self.data['ttfb_verdict'] = f"Poor — optimize server response ✗ ({self.ttfb}s)"
+                self.data['ttfb'] = self.ttfb
+
             self.avg_score = round(weighted_score + bonus)
             self.avg_score = max(0, min(100, self.avg_score))
             
-            # ✅ STORE DETAILED E-E-A-T BREAKDOWN
             self.data['eeat_breakdown'] = {
                 'title_eeat': self.data.get('title_eeat_score', 0),
                 'description_eeat': self.data.get('desc_eeat_score', 0),
                 'heading_eeat': self.data.get('heading_eeat_score', 0),
                 'average_eeat': round(avg_eeat, 1),
                 'trust_level': 'high' if avg_eeat >= 75 else 'medium' if avg_eeat >= 50 else 'low',
-                'helpful_content_ready': avg_eeat >= 70  # 2026 threshold
+                'helpful_content_ready': avg_eeat >= 70
             }
             
         except Exception as e:
@@ -1103,30 +1157,25 @@ Return ONLY valid JSON, no markdown, no preamble."""
             self.avg_score = 0
             avg_eeat = 0
         
-        # ✅ 2026 THRESHOLDS (raised for higher quality bar)
-        excellent = 88  # Raised from 85
-        good = 70       # Raised from 65
+        excellent = 88
+        good = 70
         
         recommendations = []
         
-        # Collect all AI recommendations
         ai_recs = (
             self.data.get('title_eeat_recommendations', []) +
             self.data.get('desc_eeat_recommendations', []) +
             self.data.get('heading_eeat_recommendations', [])
         )
         
-        # Remove duplicates from AI recommendations
         ai_recs = list(dict.fromkeys(ai_recs))
         
-        # ✅ DETERMINE VERDICT & RECOMMENDATIONS
         if self.avg_score >= excellent:
             google1 = "🏆 Excellent - SERP Optimized (2026 Standards)"
             self.data['google_verdict'] = google1
             self.data['verdict'] = True
             self.data['optimization_level'] = 'Excellent'
             
-            # Even excellent pages can improve
             if avg_eeat < 90:
                 recommendations.append("💡 Consider: Further E-E-A-T enhancement for YMYL topics")
             
@@ -1138,7 +1187,6 @@ Return ONLY valid JSON, no markdown, no preamble."""
             self.data['verdict'] = True
             self.data['optimization_level'] = 'Good'
             
-            # Priority recommendations for good pages
             if avg_eeat < 70:
                 recommendations.append("🎯 PRIORITY: Improve E-E-A-T signals (currently below 2026 threshold)")
             
@@ -1148,7 +1196,6 @@ Return ONLY valid JSON, no markdown, no preamble."""
             if self.desc_score < 80:
                 recommendations.append("⚡ Improve description: Add specific benefit/CTA")
             
-            # Add top AI recommendations
             recommendations.extend(ai_recs[:3])
             
             return_val = 1
@@ -1159,7 +1206,6 @@ Return ONLY valid JSON, no markdown, no preamble."""
             self.data['verdict'] = False
             self.data['optimization_level'] = 'Needs Improvement'
             
-            # ✅ CRITICAL FIXES FIRST
             critical_issues = []
             
             if self.data.get('h1_count', 0) == 0:
@@ -1173,10 +1219,8 @@ Return ONLY valid JSON, no markdown, no preamble."""
             if self.data.get('desc_length', 0) == 0:
                 critical_issues.append("🚨 CRITICAL: Add meta description")
             
-            # Add critical issues first
             recommendations.extend(critical_issues)
             
-            # ✅ TECHNICAL FIXES (if no critical issues)
             if not critical_issues:
                 if self.title_score < 70:
                     recommendations.append("⚡ Fix title: Optimize length (50-60 chars) + add freshness")
@@ -1187,17 +1231,14 @@ Return ONLY valid JSON, no markdown, no preamble."""
                 if self.heading_score < 70:
                     recommendations.append("⚡ Fix heading: Ensure ONE H1 + proper hierarchy")
             
-            # ✅ E-E-A-T RECOMMENDATIONS (2026 priority)
             if avg_eeat < 60:
                 recommendations.append("🛡️ E-E-A-T CRITICAL: See AI analysis below for expertise signals")
                 recommendations.append("💡 Add: Author attribution, dates, credentials, data/stats")
             
-            # Add top AI recommendations
             recommendations.extend(ai_recs[:6])
             
             return_val = 0
         
-        # ✅ REMOVE DUPLICATES (preserve order)
         seen = set()
         unique_recs = []
         for rec in recommendations:
@@ -1205,16 +1246,13 @@ Return ONLY valid JSON, no markdown, no preamble."""
                 seen.add(rec)
                 unique_recs.append(rec)
         
-        # Limit to top 10 recommendations
         self.data['recommendations'] = unique_recs[:10] if unique_recs else ['✅ No major issues - maintain optimization']
         
-        # ✅ ADD MOBILE-FIRST SCORE
         self.data['mobile_optimized'] = (
             20 <= self.data.get('title_length', 0) <= 60 and
             120 <= self.data.get('desc_length', 0) <= 160
         )
         
-        # ✅ ADD ACCESSIBILITY SCORE
         self.data['accessibility_ready'] = (
             self.data.get('h1_count') == 1 and
             self.data.get('heading_length', 0) > 0
@@ -1292,11 +1330,9 @@ Return ONLY valid JSON, no markdown, no preamble."""
         for word in words:
             word_lower = word.lower()
             
-            # Skip if already in custom dictionary
             if word_lower in custom_words:
                 continue
             
-            # Skip various patterns
             if (len(word) < 3 or 
                 word.isupper() or 
                 any(c.isdigit() for c in word) or
@@ -1306,7 +1342,6 @@ Return ONLY valid JSON, no markdown, no preamble."""
                 word.isdigit()):
                 continue
                 
-            # Skip common URL parts
             if word_lower in ['www', 'http', 'https', 'com', 'net', 'org', 'io', 'co', 'pk', 'edu', 'gov']:
                 continue
                 
@@ -1332,13 +1367,11 @@ Return ONLY valid JSON, no markdown, no preamble."""
             if correction and correction != word:
                 count = words_lower.count(word)
                 
-                # Check similarity to avoid bad suggestions
                 if len(word) > 4 and len(correction) > 4:
                     common_chars = set(word) & set(correction)
                     if len(common_chars) < len(word) * 0.5:
                         continue
                 
-                # Create error dict with word for button functionality
                 if count > 1:
                     display_text = f"'{word}' → '{correction}' ({count} occurrences)"
                 else:
@@ -1360,7 +1393,6 @@ Return ONLY valid JSON, no markdown, no preamble."""
                 'count': 0
             })
 
-        # Store with button data
         if not spelling_errors_with_buttons:
             spelling_errors_with_buttons = [{
                 'display': '✓ No spelling errors detected',
@@ -1491,7 +1523,7 @@ Return ONLY valid JSON, no markdown, no preamble."""
         # Store results
         self.data['grammar_verdict'] = verdict
         self.data['grammar_score'] = round(grammar_score, 1)
-        self.data['spelling_errors'] = spelling_errors if spelling_errors else ['✓ No spelling errors detected']
+        self.data['spelling_errors'] = self.data.get('spelling_errors', [])
         self.data['grammar_issues'] = grammar_issues if grammar_issues else ['✓ No grammar issues detected']
         self.data['readability_score'] = round(readability_score, 1)
         self.data['grammar_recommendations'] = recommendations if recommendations else ['✓ Content quality is excellent']
@@ -1529,16 +1561,13 @@ Return ONLY valid JSON, no markdown, no preamble."""
         for filename in dict_files:
             filepath = os.path.join(dict_dir, filename)
             
-            # Create file with sample content if it doesn't exist
             if not os.path.exists(filepath):
                 self._create_sample_dictionary(filepath, filename)
             
-            # Load words from file
             try:
                 with open(filepath, 'r', encoding='utf-8') as f:
                     for line in f:
                         line = line.strip().lower()
-                        # Skip empty lines and comments
                         if line and not line.startswith('#'):
                             custom_words.add(line)
             except Exception as e:
@@ -1553,98 +1582,98 @@ Return ONLY valid JSON, no markdown, no preamble."""
         """
         sample_content = {
             'custom_dictionary.txt': '''# Common abbreviations and contractions
-    doesn
-    isn
-    wasn
-    hasn
-    haven
-    didn
-    wouldn
-    shouldn
-    couldn
-    aren
-    weren
-    won
-    don
-    ll
-    ve
-    re
-    ''',
+doesn
+isn
+wasn
+hasn
+haven
+didn
+wouldn
+shouldn
+couldn
+aren
+weren
+won
+don
+ll
+ve
+re
+''',
             'tech_terms.txt': '''# Technology and programming terms
-    app
-    apps
-    api
-    apis
-    css
-    html
-    javascript
-    js
-    python
-    reactjs
-    nodejs
-    github
-    docker
-    kubernetes
-    mongodb
-    postgresql
-    frontend
-    backend
-    fullstack
-    devops
-    seo
-    ui
-    ux
-    admin
-    analytics
-    shopify
-    wordpress
-    blockchain
-    saas
-    ''',
+app
+apps
+api
+apis
+css
+html
+javascript
+js
+python
+reactjs
+nodejs
+github
+docker
+kubernetes
+mongodb
+postgresql
+frontend
+backend
+fullstack
+devops
+seo
+ui
+ux
+admin
+analytics
+shopify
+wordpress
+blockchain
+saas
+''',
             'brand_names.txt': '''# Company and product names
-    google
-    facebook
-    twitter
-    instagram
-    linkedin
-    amazon
-    microsoft
-    apple
-    shopify
-    stripe
-    paypal
-    zoom
-    slack
-    tabnine
-    copilot
-    ''',
+google
+facebook
+twitter
+instagram
+linkedin
+amazon
+microsoft
+apple
+shopify
+stripe
+paypal
+zoom
+slack
+tabnine
+copilot
+''',
             'pakistani_locations.txt': '''# Pakistani cities and locations
-    karachi
-    lahore
-    islamabad
-    rawalpindi
-    faisalabad
-    multan
-    peshawar
-    quetta
-    hyderabad
-    sindh
-    punjab
-    balochistan
-    kpk
-    pakistan
-    pakistani
-    shahrah
-    clifton
-    defence
-    gulshan
-    saddar
-    ''',
+karachi
+lahore
+islamabad
+rawalpindi
+faisalabad
+multan
+peshawar
+quetta
+hyderabad
+sindh
+punjab
+balochistan
+kpk
+pakistan
+pakistani
+shahrah
+clifton
+defence
+gulshan
+saddar
+''',
             'user_ignored_words.txt': '''# Words marked as correct by users
-    # This file is auto-updated when users click "Not a mistake"
-    # Add your custom words below:
-    codup
-    '''
+# This file is auto-updated when users click "Not a mistake"
+# Add your custom words below:
+codup
+'''
         }
         
         try:
@@ -1665,20 +1694,16 @@ Return ONLY valid JSON, no markdown, no preamble."""
             if not word:
                 return JsonResponse({'success': False, 'error': 'No word provided'})
             
-            # Path to user dictionary
             dict_dir = os.path.join(os.path.dirname(__file__), 'dictionaries')
             filepath = os.path.join(dict_dir, 'user_ignored_words.txt')
             
-            # Create directory if needed
             os.makedirs(dict_dir, exist_ok=True)
             
-            # Check if word already exists
             existing_words = set()
             if os.path.exists(filepath):
                 with open(filepath, 'r', encoding='utf-8') as f:
                     existing_words = {line.strip().lower() for line in f if line.strip() and not line.startswith('#')}
             
-            # Add word if not present
             if word not in existing_words:
                 with open(filepath, 'a', encoding='utf-8') as f:
                     f.write(f'\n{word}')
@@ -1928,13 +1953,6 @@ Return ONLY valid JSON, no markdown, no preamble."""
         return
 
     def get_missing_alt(self):
-        """
-        ✅ MODERNIZED: Image accessibility and SEO optimization
-        Modern Google heavily weighs image accessibility (alt attributes)
-        - Missing alt = accessibility issue + SEO penalty
-        - Empty alt is valid for decorative images
-        - Descriptive alt text helps image search rankings
-        """
         alt = ""
         images_found = self.soup.find_all('img')
         
@@ -1950,27 +1968,21 @@ Return ONLY valid JSON, no markdown, no preamble."""
         
         for image in images_found:
             try:
-                # ✅ Check if alt attribute exists
                 if 'alt' not in image.attrs:
-                    # Missing alt attribute entirely - Critical SEO issue
                     missing_alt_images.append(image)
                     alt += f"{self.alt_count + 1}) {str(image)}\n"
                     self.alt_count += 1
                 elif image.get('alt', '').strip() == "":
-                    # ✅ Empty alt is acceptable for decorative images (WCAG compliant)
-                    # Only flag if image has src (actual image, not placeholder)
                     if image.get('src'):
                         missing_alt_images.append(image)
                         alt += f"{self.alt_count + 1}) {str(image)}\n"
                         self.alt_count += 1
             except Exception as e:
-                # ✅ Handle malformed image tags
                 print(f"Error processing image tag: {str(e)}")
                 missing_alt_images.append(image)
                 alt += f"{self.alt_count + 1}) {str(image)}\n"
                 self.alt_count += 1
         
-        # ✅ Calculate image optimization score
         if total_images > 0:
             optimized_images = total_images - self.alt_count
             optimization_percentage = (optimized_images / total_images) * 100
@@ -1982,12 +1994,11 @@ Return ONLY valid JSON, no markdown, no preamble."""
         self.data['total_images'] = total_images
         self.data['alt_links'] = alt if alt else "✓ All images have alt attributes"
         
-        # ✅ Modern SEO verdict
         if self.alt_count == 0:
             self.data['alt_verdict'] = f"✓ Excellent - All {total_images} images have alt attributes"
-        elif self.alt_count <= total_images * 0.2:  # Less than 20% missing
+        elif self.alt_count <= total_images * 0.2:
             self.data['alt_verdict'] = f"⚠️ Good - {self.alt_count} of {total_images} images missing alt text"
-        elif self.alt_count <= total_images * 0.5:  # Less than 50% missing
+        elif self.alt_count <= total_images * 0.5:
             self.data['alt_verdict'] = f"⚠️ Needs Improvement - {self.alt_count} of {total_images} images missing alt text"
         else:
             self.data['alt_verdict'] = f"❌ Critical - {self.alt_count} of {total_images} images missing alt text (Accessibility & SEO issue)"
@@ -1996,24 +2007,14 @@ Return ONLY valid JSON, no markdown, no preamble."""
 
 
     def get_links(self):
-        """
-        ✅ MODERNIZED: Accurate internal vs external link detection
-        Fixed major logic flaws in original code:
-        - Now works with subpage URLs (not just homepage)
-        - Uses proper URL parsing (not string matching)
-        - Correctly identifies internal/external links
-        - Handles relative URLs properly
-        """
         external_links = ""
         internal_links = ""
         
-        # ✅ Use normalized base URL and domain from __init__
-        base_url = self.base_url  # e.g., https://example.com
-        domain = self.domain      # e.g., example.com
+        base_url = self.base_url
+        domain = self.domain
         
         links = self.soup.findAll('a')
         
-        # ✅ Reset counters (they might be initialized as 0 or string)
         self.internal_links = 0
         self.external_links = 0
         
@@ -2025,7 +2026,6 @@ Return ONLY valid JSON, no markdown, no preamble."""
             self.data['links_verdict'] = "⚠️ No links found - Consider adding internal linking"
             return
         
-        # ✅ Track link quality metrics
         broken_links = 0
         nofollow_count = 0
         
@@ -2033,66 +2033,53 @@ Return ONLY valid JSON, no markdown, no preamble."""
             try:
                 href_link = link.get("href", "").strip()
                 
-                # ✅ Skip empty or None hrefs
                 if not href_link or href_link == "":
                     continue
                 
-                # ✅ Skip javascript: and mailto: links
                 if href_link.startswith(('javascript:', 'mailto:', 'tel:')):
                     continue
                 
-                # ✅ Check if link is nofollow (SEO metric)
                 rel = link.get('rel', [])
                 if 'nofollow' in rel or 'nofollow' in str(rel).lower():
                     nofollow_count += 1
                 
-                # ✅ Handle anchor links (same page navigation)
                 if href_link.startswith('#'):
                     self.internal_links += 1
                     internal_links += f"{self.internal_links}) {href_link} (anchor link)\n"
                     continue
                 
-                # ✅ Handle relative URLs (internal by definition)
                 if href_link.startswith('/'):
                     self.internal_links += 1
                     full_url = urljoin(base_url, href_link)
                     internal_links += f"{self.internal_links}) {full_url}\n"
                     continue
                 
-                # ✅ Handle protocol-relative URLs (//example.com)
                 if href_link.startswith('//'):
                     href_link = 'https:' + href_link
                 
-                # ✅ Parse URL to check domain
                 try:
                     parsed_href = urlparse(href_link)
                     
-                    # ✅ Relative URL without leading slash (e.g., "about.html")
                     if not parsed_href.netloc:
                         self.internal_links += 1
                         full_url = urljoin(self.final_url, href_link)
                         internal_links += f"{self.internal_links}) {full_url}\n"
                         continue
                     
-                    # ✅ Compare domains (handle www and non-www)
                     link_domain = parsed_href.netloc.lower()
                     site_domain = domain.lower()
                     
-                    # Remove www for comparison
                     link_domain_clean = link_domain.replace('www.', '')
                     site_domain_clean = site_domain.replace('www.', '')
                     
                     if link_domain_clean == site_domain_clean:
-                        # Internal link
                         self.internal_links += 1
                         internal_links += f"{self.internal_links}) {href_link}\n"
                     else:
-                        # External link
                         self.external_links += 1
                         external_links += f"{self.external_links}) {href_link}\n"
                         
                 except Exception as e:
-                    # ✅ If URL parsing fails, treat as internal (safer)
                     print(f"Error parsing URL {href_link}: {str(e)}")
                     self.internal_links += 1
                     internal_links += f"{self.internal_links}) {href_link} (parse error)\n"
@@ -2101,7 +2088,6 @@ Return ONLY valid JSON, no markdown, no preamble."""
                 print(f"Error processing link: {str(e)}")
                 continue
         
-        # ✅ Store results
         self.data['Internal_links'] = self.internal_links
         self.data['External_links'] = self.external_links
         self.data['i_url'] = internal_links if internal_links else "No internal links found"
@@ -2109,7 +2095,6 @@ Return ONLY valid JSON, no markdown, no preamble."""
         self.data['total_links'] = self.internal_links + self.external_links
         self.data['nofollow_links'] = nofollow_count
         
-        # ✅ Modern SEO analysis
         total_links = self.internal_links + self.external_links
         
         if total_links == 0:
@@ -2119,7 +2104,6 @@ Return ONLY valid JSON, no markdown, no preamble."""
         elif self.internal_links < 3:
             links_verdict = "⚠️ Low internal linking - Increase to improve site structure"
         else:
-            # ✅ Check internal to external ratio
             if self.external_links == 0:
                 links_verdict = f"✓ Good - {self.internal_links} internal links found"
             else:
@@ -2137,12 +2121,6 @@ Return ONLY valid JSON, no markdown, no preamble."""
 
 
     def get_Status(self):
-        """
-        ✅ MODERNIZED: Enhanced HTTP status code detection
-        - Uses existing session (no new session creation)
-        - Provides detailed status information
-        - Tracks redirect chains
-        """
         statuses = {
             200: "Website Available",
             201: "Created",
@@ -2168,22 +2146,18 @@ Return ONLY valid JSON, no markdown, no preamble."""
         }
         
         try:
-            # ✅ Use existing session from __init__ (already has User-Agent)
             web_response = self.session.get(self.url, timeout=30, allow_redirects=True)
             status_code = web_response.status_code
             status_text = statuses.get(status_code, "Unknown Status")
             
-            # ✅ Format status for display
             status = f"{status_code} - {status_text}"
             self.data['status'] = status
             self.data['status_code'] = status_code
             
-            # ✅ Provide SEO verdict based on status
             if status_code == 200:
                 self.data['status_verdict'] = "✓ Excellent - Page loads successfully"
             elif status_code in [301, 302, 307, 308]:
                 self.data['status_verdict'] = f"⚠️ Redirect detected - Consider fixing redirect chain"
-                # Track redirect URL if available
                 if hasattr(self, 'redirect_url') and self.redirect_url:
                     self.data['redirected_to'] = self.redirect_url
             elif status_code == 404:
@@ -2216,19 +2190,10 @@ Return ONLY valid JSON, no markdown, no preamble."""
 
 
     def Score_Graph(self, name, tag, score):
-        """
-        ✅ MODERNIZED: Score visualization with better error handling
-        - Added validation for score values
-        - Better color coding for modern SEO metrics
-        - Error handling for file operations
-        """
         try:
-            # ✅ Validate score is within 0-100 range
             score = max(0, min(100, score))
             
-            # ✅ Determine colors based on metric type
             if name == 'Alt_Image':
-                # For alt images, lower is better (fewer missing alts)
                 if score <= 50:
                     shape1 = 'rgba(0,0,0,0)'
                     shape2 = 'red'
@@ -2236,7 +2201,6 @@ Return ONLY valid JSON, no markdown, no preamble."""
                     shape1 = 'red'
                     shape2 = 'rgba(0,0,0,0)'
             else:
-                # For other metrics, higher is better
                 if score <= 50:
                     shape1 = 'rgba(0,0,0,0)'
                     shape2 = 'red'
@@ -2244,10 +2208,8 @@ Return ONLY valid JSON, no markdown, no preamble."""
                     shape1 = 'green'
                     shape2 = 'rgba(0,0,0,0)'
             
-            # ✅ Create DataFrame
             df = pd.DataFrame({'values': [100 - score, score]})
             
-            # ✅ Create plotly chart
             fig = px.pie(
                 df,
                 values='values',
@@ -2260,12 +2222,10 @@ Return ONLY valid JSON, no markdown, no preamble."""
             
             fig.data[0].textfont.color = 'white'
             
-            # ✅ Save with error handling
             try:
                 fig.write_image(tag)
             except Exception as e:
                 print(f"Error saving chart image {tag}: {str(e)}")
-                # ✅ Try alternative format if image save fails
                 try:
                     html_tag = tag.replace('.png', '.html').replace('.jpg', '.html')
                     fig.write_html(html_tag)
@@ -2280,25 +2240,13 @@ Return ONLY valid JSON, no markdown, no preamble."""
 
 
     def check_robot_txt(self):
-        """
-        ✅ MODERNIZED: Robots.txt detection for all page types
-        - Works with subpages (uses base_url, not current page URL)
-        - Uses existing session
-        - Better validation
-        - Modern SEO recommendations
-        """
         try:
-            # ✅ CRITICAL FIX: Use base_url for robots.txt (always at domain root)
-            # Original code would check /page/subpage/robots.txt which is wrong
             robots_url = self.base_url.rstrip('/') + '/robots.txt'
             
-            # ✅ Use existing session from __init__
             try:
                 req = self.session.get(robots_url, timeout=10)
                 req_text = req.text
                 
-                # ✅ Better validation of robots.txt format
-                # Check for valid User-agent directive
                 valid_patterns = [
                     "User-agent:",
                     "user-agent:",
@@ -2314,11 +2262,9 @@ Return ONLY valid JSON, no markdown, no preamble."""
                     robot_verdict = "✓ Found - Website has robots.txt file"
                     self.robot_flag = True
                     
-                    # ✅ Additional analysis
                     if "Disallow: /" in req_text and "User-agent: *" in req_text:
                         robot_verdict += " (Warning: Site is blocking all crawlers)"
                         
-                    # Check for sitemap reference
                     if "Sitemap:" in req_text or "sitemap:" in req_text:
                         self.data['robots_has_sitemap'] = True
                         
@@ -2343,18 +2289,9 @@ Return ONLY valid JSON, no markdown, no preamble."""
 
 
     def get_sitemap(self):
-        """
-        ✅ MODERNIZED: Comprehensive sitemap detection
-        - Works with subpages (uses base_url)
-        - Checks multiple common sitemap locations
-        - Validates sitemap XML format
-        - Uses existing session
-        """
         try:
-            # ✅ CRITICAL FIX: Use base_url (sitemaps always at domain root)
             base = self.base_url.rstrip('/')
             
-            # ✅ Common sitemap locations to check (in priority order)
             sitemap_paths = [
                 '/sitemap.xml',
                 '/sitemap_index.xml',
@@ -2372,7 +2309,6 @@ Return ONLY valid JSON, no markdown, no preamble."""
                     req = self.session.get(sitemap_url, timeout=10)
                     req_text = req.text
                     
-                    # ✅ Better validation - check for XML sitemap format
                     valid_sitemap = (
                         req.status_code == 200 and
                         (
@@ -2388,7 +2324,6 @@ Return ONLY valid JSON, no markdown, no preamble."""
                         sitemap_location = sitemap_url
                         self.sitemap_flag = True
                         
-                        # ✅ Count URLs in sitemap for additional insight
                         url_count = req_text.count('<loc>')
                         sitemap_index_count = req_text.count('<sitemap>')
                         
@@ -2410,8 +2345,6 @@ Return ONLY valid JSON, no markdown, no preamble."""
             if not sitemap_found:
                 sitemap_verdict = "⚠️ Not Found - Consider adding XML sitemap for better crawlability"
                 self.sitemap_flag = False
-                
-                # ✅ Provide helpful recommendation
                 sitemap_verdict += " (Recommended: /sitemap.xml)"
                 
         except Exception as e:
@@ -2425,25 +2358,11 @@ Return ONLY valid JSON, no markdown, no preamble."""
         return
 
     def get_broken_links(self, max_workers: int = 10, timeout: int = 8) -> Dict[str, any]:
-        """
-        ✅ MODERNIZED: Comprehensive broken link checker
-        - Concurrent link checking for performance
-        - Distinguishes internal vs external broken links
-        - Tracks 403 restricted links separately
-        - Provides SEO-focused recommendations
-        - Handles relative URLs properly
-        
-        Modern SEO Impact:
-        - Internal broken links = Critical SEO issue (crawlability)
-        - External broken links = User experience issue
-        - Excessive redirects = Page speed penalty
-        """
         broken_links = []
         restricted_links = []
         working_links = []
         
         try:
-            # ✅ Use existing soup from __init__ if available
             if hasattr(self, 'soup') and self.soup:
                 soup = self.soup
             else:
@@ -2468,27 +2387,22 @@ Return ONLY valid JSON, no markdown, no preamble."""
             })
             return self.data
         
-        # ✅ Get unique URLs and resolve relative URLs
         unique_urls = set()
-        link_map = {}  # Map URL to anchor text
+        link_map = {}
         
         for link in links:
             href = link.get("href", "").strip()
             if not href:
                 continue
             
-            # ✅ Skip non-HTTP links (javascript:, mailto:, tel:, etc.)
             if href.startswith(('javascript:', 'mailto:', 'tel:', '#')):
                 continue
             
-            # ✅ Resolve relative URLs to absolute
             if href.startswith('/'):
                 href = urljoin(self.base_url, href)
             elif not href.startswith(('http://', 'https://')):
-                # Relative URL without leading slash
                 href = urljoin(self.final_url, href)
             
-            # ✅ Only check HTTP(S) URLs
             if href.startswith(('http://', 'https://')):
                 anchor = link.get_text(strip=True) or "[No Text]"
                 unique_urls.add(href)
@@ -2506,10 +2420,8 @@ Return ONLY valid JSON, no markdown, no preamble."""
         print(f"Checking {len(unique_urls)} unique links out of {total_links} total links...")
         
         def check_link(url: str) -> Optional[Dict]:
-            """Check individual link status with improved error handling."""
             anchor_text = link_map.get(url, "[No Text]")
             
-            # ✅ Determine if internal or external using proper domain comparison
             try:
                 url_domain = urlparse(url).netloc.lower().replace('www.', '')
                 site_domain = self.domain.lower().replace('www.', '')
@@ -2519,159 +2431,82 @@ Return ONLY valid JSON, no markdown, no preamble."""
             
             try:
                 start_time = time.time()
-                # ✅ Use HEAD first (faster), fallback to GET if needed
                 try:
-                    r = self.session.head(
-                        url, 
-                        timeout=timeout, 
-                        allow_redirects=True
-                    )
-                    # Some servers don't support HEAD, check status
+                    r = self.session.head(url, timeout=timeout, allow_redirects=True)
                     if r.status_code == 405 or r.status_code == 501:
-                        # Method not allowed, try GET
-                        r = self.session.get(
-                            url, 
-                            timeout=timeout, 
-                            allow_redirects=True,
-                            stream=True
-                        )
+                        r = self.session.get(url, timeout=timeout, allow_redirects=True, stream=True)
                         r.close()
                 except:
-                    # Fallback to GET
-                    r = self.session.get(
-                        url, 
-                        timeout=timeout, 
-                        allow_redirects=True,
-                        stream=True
-                    )
+                    r = self.session.get(url, timeout=timeout, allow_redirects=True, stream=True)
                     r.close()
                 
                 response_time = round((time.time() - start_time) * 1000, 2)
                 redirects = len(r.history)
                 
-                # ✅ Handle 403 specially (restricted, not broken)
                 if r.status_code == 403:
                     return {
-                        "url": url,
-                        "status": 403,
-                        "reason": "Forbidden / Access Restricted",
-                        "anchor_text": anchor_text,
-                        "type": link_type,
-                        "response_time": f"{response_time} ms",
-                        "restricted": True,
-                        "is_broken": False,
-                        "redirects": redirects
+                        "url": url, "status": 403, "reason": "Forbidden / Access Restricted",
+                        "anchor_text": anchor_text, "type": link_type,
+                        "response_time": f"{response_time} ms", "restricted": True,
+                        "is_broken": False, "redirects": redirects
                     }
                 
-                # ✅ Consider 200-299 as success
                 if 200 <= r.status_code < 300:
-                    # ✅ Warn about excessive redirects (SEO issue)
                     if redirects > 3:
                         return {
-                            "url": url,
-                            "status": r.status_code,
+                            "url": url, "status": r.status_code,
                             "reason": f"⚠️ Excessive Redirects ({redirects}x)",
-                            "anchor_text": anchor_text,
-                            "type": link_type,
-                            "response_time": f"{response_time} ms",
-                            "restricted": False,
-                            "is_broken": True,  # Too many redirects is an issue
-                            "redirects": redirects
+                            "anchor_text": anchor_text, "type": link_type,
+                            "response_time": f"{response_time} ms", "restricted": False,
+                            "is_broken": True, "redirects": redirects
                         }
-                    # Working link
                     return {
-                        "url": url,
-                        "status": r.status_code,
+                        "url": url, "status": r.status_code,
                         "reason": "OK" + (f" (Redirected {redirects}x)" if redirects > 0 else ""),
-                        "anchor_text": anchor_text,
-                        "type": link_type,
-                        "response_time": f"{response_time} ms",
-                        "restricted": False,
-                        "is_broken": False,
-                        "redirects": redirects
+                        "anchor_text": anchor_text, "type": link_type,
+                        "response_time": f"{response_time} ms", "restricted": False,
+                        "is_broken": False, "redirects": redirects
                     }
                 
-                # ✅ Any other status is considered broken
                 status_reasons = {
-                    404: "Not Found",
-                    410: "Gone (Permanently Deleted)",
-                    500: "Internal Server Error",
-                    502: "Bad Gateway",
-                    503: "Service Unavailable",
-                    504: "Gateway Timeout"
+                    404: "Not Found", 410: "Gone (Permanently Deleted)",
+                    500: "Internal Server Error", 502: "Bad Gateway",
+                    503: "Service Unavailable", 504: "Gateway Timeout"
                 }
                 reason = status_reasons.get(r.status_code, r.reason)
                 
                 return {
-                    "url": url,
-                    "status": r.status_code,
+                    "url": url, "status": r.status_code,
                     "reason": reason + (f" (Redirected {redirects}x)" if redirects > 0 else ""),
-                    "anchor_text": anchor_text,
-                    "type": link_type,
-                    "response_time": f"{response_time} ms",
-                    "restricted": False,
-                    "is_broken": True,
-                    "redirects": redirects
+                    "anchor_text": anchor_text, "type": link_type,
+                    "response_time": f"{response_time} ms", "restricted": False,
+                    "is_broken": True, "redirects": redirects
                 }
                 
             except requests.exceptions.SSLError:
-                return {
-                    "url": url,
-                    "status": "SSL Error",
-                    "reason": "SSL Certificate Error",
-                    "anchor_text": anchor_text,
-                    "type": link_type,
-                    "response_time": "-",
-                    "restricted": False,
-                    "is_broken": True,
-                    "redirects": 0
-                }
+                return {"url": url, "status": "SSL Error", "reason": "SSL Certificate Error",
+                        "anchor_text": anchor_text, "type": link_type, "response_time": "-",
+                        "restricted": False, "is_broken": True, "redirects": 0}
             except requests.exceptions.Timeout:
-                return {
-                    "url": url,
-                    "status": "Timeout",
-                    "reason": f"Connection timed out ({timeout}s)",
-                    "anchor_text": anchor_text,
-                    "type": link_type,
-                    "response_time": "-",
-                    "restricted": False,
-                    "is_broken": True,
-                    "redirects": 0
-                }
+                return {"url": url, "status": "Timeout", "reason": f"Connection timed out ({timeout}s)",
+                        "anchor_text": anchor_text, "type": link_type, "response_time": "-",
+                        "restricted": False, "is_broken": True, "redirects": 0}
             except requests.exceptions.ConnectionError:
-                return {
-                    "url": url,
-                    "status": "Connection Error",
-                    "reason": "Unable to establish connection",
-                    "anchor_text": anchor_text,
-                    "type": link_type,
-                    "response_time": "-",
-                    "restricted": False,
-                    "is_broken": True,
-                    "redirects": 0
-                }
+                return {"url": url, "status": "Connection Error", "reason": "Unable to establish connection",
+                        "anchor_text": anchor_text, "type": link_type, "response_time": "-",
+                        "restricted": False, "is_broken": True, "redirects": 0}
             except Exception as e:
-                return {
-                    "url": url,
-                    "status": "Error",
-                    "reason": str(e)[:100],
-                    "anchor_text": anchor_text,
-                    "type": link_type,
-                    "response_time": "-",
-                    "restricted": False,
-                    "is_broken": True,
-                    "redirects": 0
-                }
+                return {"url": url, "status": "Error", "reason": str(e)[:100],
+                        "anchor_text": anchor_text, "type": link_type, "response_time": "-",
+                        "restricted": False, "is_broken": True, "redirects": 0}
         
-        # ✅ Check links concurrently for performance
         try:
             with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
                 results = list(executor.map(check_link, unique_urls))
         except Exception as e:
             print(f"Error in concurrent link checking: {str(e)}")
-            results = [check_link(url) for url in unique_urls]  # Fallback to sequential
+            results = [check_link(url) for url in unique_urls]
         
-        # ✅ Categorize results
         for result in results:
             if result is None:
                 continue
@@ -2682,21 +2517,14 @@ Return ONLY valid JSON, no markdown, no preamble."""
             else:
                 working_links.append(result)
         
-        # ✅ Calculate statistics
         total_broken = len(broken_links)
         total_working = len(working_links)
         internal_broken = sum(1 for link in broken_links if link["type"] == "internal")
         external_broken = sum(1 for link in broken_links if link["type"] == "external")
         
-        # ✅ Group errors by type for better analysis
         error_groups = {
-            "404": [],
-            "500": [],
-            "SSL": [],
-            "Timeout": [],
-            "Connection": [],
-            "Redirects": [],
-            "Other": []
+            "404": [], "500": [], "SSL": [], "Timeout": [],
+            "Connection": [], "Redirects": [], "Other": []
         }
         
         for link in broken_links:
@@ -2716,7 +2544,6 @@ Return ONLY valid JSON, no markdown, no preamble."""
             else:
                 error_groups["Other"].append(link)
         
-        # ✅ Modern SEO verdict with priority for internal broken links
         if total_broken == 0 and len(restricted_links) == 0:
             verdict = "✓ Perfect - No broken links detected"
         elif internal_broken > 0:
@@ -2726,7 +2553,6 @@ Return ONLY valid JSON, no markdown, no preamble."""
         else:
             verdict = f"❌ High Priority - {total_broken} broken links detected (Fix for better UX)"
         
-        # ✅ Format output
         formatted_broken = "\n".join([
             f"{i+1}) [{link['type'].upper()}] {link['url']}\n"
             f"   Status: {link['status']} - {link['reason']}\n"
@@ -2742,11 +2568,9 @@ Return ONLY valid JSON, no markdown, no preamble."""
             for i, link in enumerate(restricted_links[:20])
         ]) if restricted_links else "No restricted links found."
         
-        # ✅ Calculate link health score
         health_score = round((total_working / len(unique_urls) * 100), 1) if unique_urls else 0
         
-        # ✅ Store comprehensive data
-        self.b_links = total_broken  # For backward compatibility
+        self.b_links = total_broken
         
         self.data.update({
             'b_links': total_broken,
@@ -2777,19 +2601,7 @@ Return ONLY valid JSON, no markdown, no preamble."""
 
 
     def get_schema(self):
-        """
-        ✅ MODERNIZED: Schema.org structured data detection
-        - Uses existing soup (no new session)
-        - Detects JSON-LD, Microdata, and RDFa formats
-        - Identifies specific schema types
-        - Provides modern SEO recommendations
-        
-        Modern SEO Impact:
-        - Schema.org = Rich snippets in SERPs
-        - Critical for: Local Business, Products, Articles, Events, FAQs
-        """
         try:
-            # ✅ Use existing soup from __init__
             if not hasattr(self, 'soup') or not self.soup:
                 try:
                     response = self.session.get(self.url, timeout=10)
@@ -2804,19 +2616,16 @@ Return ONLY valid JSON, no markdown, no preamble."""
             schema_types = []
             schema_formats = []
             
-            # ✅ Method 1: JSON-LD (Modern preferred method)
             json_ld_scripts = soup.find_all('script', type='application/ld+json')
             if json_ld_scripts:
                 schema_formats.append("JSON-LD")
                 for script in json_ld_scripts:
                     try:
                         schema_data = json.loads(script.string)
-                        # Extract @type
                         if isinstance(schema_data, dict):
                             schema_type = schema_data.get('@type', '')
                             if schema_type:
                                 schema_types.append(schema_type)
-                            # Handle @graph
                             if '@graph' in schema_data:
                                 for item in schema_data['@graph']:
                                     if isinstance(item, dict) and '@type' in item:
@@ -2828,7 +2637,6 @@ Return ONLY valid JSON, no markdown, no preamble."""
                     except json.JSONDecodeError:
                         pass
             
-            # ✅ Method 2: Check for schema.org in any script or meta tags
             all_scripts = soup.find_all('script')
             for script in all_scripts:
                 script_text = script.string if script.string else ""
@@ -2840,7 +2648,6 @@ Return ONLY valid JSON, no markdown, no preamble."""
                     self.schema_flag = True
                     schema_formats.append("Yoast SEO")
             
-            # ✅ Method 3: Microdata (itemscope, itemtype)
             microdata_items = soup.find_all(attrs={"itemtype": True})
             if microdata_items:
                 schema_formats.append("Microdata")
@@ -2851,7 +2658,6 @@ Return ONLY valid JSON, no markdown, no preamble."""
                         type_name = itemtype.split('/')[-1]
                         schema_types.append(type_name)
             
-            # ✅ Method 4: RDFa (vocab attribute)
             rdfa_items = soup.find_all(attrs={"vocab": True})
             if rdfa_items:
                 for item in rdfa_items:
@@ -2859,9 +2665,7 @@ Return ONLY valid JSON, no markdown, no preamble."""
                         schema_formats.append("RDFa")
                         self.schema_flag = True
             
-            # ✅ Generate verdict
             if self.schema_flag:
-                # Remove duplicates and format
                 schema_types = list(set(schema_types))
                 schema_formats = list(set(schema_formats))
                 
@@ -2871,26 +2675,20 @@ Return ONLY valid JSON, no markdown, no preamble."""
                     schema_verdict += f" ({', '.join(schema_formats)})"
                 
                 if schema_types:
-                    top_types = schema_types[:5]  # Show top 5 types
+                    top_types = schema_types[:5]
                     self.data['schema_types'] = top_types
                     schema_verdict += f"\nTypes: {', '.join(top_types)}"
                 
-                # ✅ Additional recommendations
                 recommendations = []
                 
-                # Prefer JSON-LD
                 if "JSON-LD" not in schema_formats and schema_formats:
                     recommendations.append("Consider migrating to JSON-LD (Google's preferred format)")
                 
-                # Check for common important types
                 important_types = ['Organization', 'WebSite', 'WebPage', 'Article', 'Product', 
                                 'LocalBusiness', 'BreadcrumbList', 'FAQPage']
-                missing_important = []
                 
                 schema_types_lower = [t.lower() for t in schema_types]
-                for imp_type in important_types:
-                    if imp_type.lower() not in schema_types_lower:
-                        missing_important.append(imp_type)
+                missing_important = [t for t in important_types if t.lower() not in schema_types_lower]
                 
                 if missing_important and len(missing_important) <= 3:
                     recommendations.append(f"Consider adding: {', '.join(missing_important[:3])}")
@@ -2917,20 +2715,7 @@ Return ONLY valid JSON, no markdown, no preamble."""
 
 
     def get_Open_GP(self):
-        """
-        ✅ MODERNIZED: Open Graph Protocol detection
-        - Uses existing soup (no new session)
-        - Checks all required and recommended OG tags
-        - Provides specific missing tag recommendations
-        - Validates tag content
-        
-        Modern SEO Impact:
-        - OG tags = Better social media sharing (Facebook, LinkedIn, etc.)
-        - Critical for content marketing and social engagement
-        - Increases click-through rates from social platforms
-        """
         try:
-            # ✅ Use existing soup from __init__
             if not hasattr(self, 'soup') or not self.soup:
                 try:
                     response = self.session.get(self.url, timeout=10)
@@ -2942,37 +2727,31 @@ Return ONLY valid JSON, no markdown, no preamble."""
             else:
                 soup = self.soup
             
-            # ✅ Define OG tags to check with priority
             og_tags = {
-                # Required tags (Core 4)
                 'og:title': {'found': False, 'content': None, 'required': True},
                 'og:type': {'found': False, 'content': None, 'required': True},
                 'og:url': {'found': False, 'content': None, 'required': True},
                 'og:image': {'found': False, 'content': None, 'required': True},
-                # Recommended tags
                 'og:description': {'found': False, 'content': None, 'required': False},
                 'og:site_name': {'found': False, 'content': None, 'required': False},
                 'og:locale': {'found': False, 'content': None, 'required': False},
-                # Additional useful tags
                 'og:image:width': {'found': False, 'content': None, 'required': False},
                 'og:image:height': {'found': False, 'content': None, 'required': False},
                 'og:image:alt': {'found': False, 'content': None, 'required': False}
             }
             
-            # ✅ Check each OG tag
             for tag_name in og_tags.keys():
                 try:
                     tag = soup.find("meta", property=tag_name)
                     if tag and tag.get("content"):
                         content = tag.get("content", "").strip()
-                        if content:  # Non-empty content
+                        if content:
                             og_tags[tag_name]['found'] = True
                             og_tags[tag_name]['content'] = content
                 except Exception as e:
                     print(f"Error checking {tag_name}: {str(e)}")
                     continue
             
-            # ✅ Calculate OG implementation score
             found_tags = [tag for tag, data in og_tags.items() if data['found']]
             required_tags = [tag for tag, data in og_tags.items() if data['required']]
             found_required = [tag for tag in required_tags if og_tags[tag]['found']]
@@ -2980,54 +2759,47 @@ Return ONLY valid JSON, no markdown, no preamble."""
             total_tags = len(og_tags)
             found_count = len(found_tags)
             
-            # Set flag based on required tags
-            self.ogp_flag = len(found_required) >= 4  # All 4 required tags
+            # ✅ FIX (Social SEO 2026): ogp_flag is True only when the three
+            #    content-critical sharing tags are ALL present.  og:type / og:url
+            #    are structural but og:title, og:description and og:image are what
+            #    social platforms actually render in link previews.
+            _SOCIAL_SEO_REQUIRED = {'og:title', 'og:description', 'og:image'}
+            self.ogp_flag = all(og_tags[tag]['found'] for tag in _SOCIAL_SEO_REQUIRED)
             
-            # ✅ Generate detailed verdict
             if len(found_required) == 4:
-                # All required tags present
                 open_gp = f"✓ Excellent - All required Open Graph tags found ({found_count}/{total_tags} total)"
                 
-                # Check image dimensions (recommended)
                 if not og_tags['og:image:width']['found'] or not og_tags['og:image:height']['found']:
                     open_gp += "\n⚠️ Tip: Add og:image:width and og:image:height for better image rendering"
                 
-                # Check description
                 if not og_tags['og:description']['found']:
                     open_gp += "\n⚠️ Tip: Add og:description for better social shares"
                     
             elif len(found_required) >= 2:
-                # Some required tags present
                 missing_required = [tag for tag in required_tags if not og_tags[tag]['found']]
                 open_gp = f"⚠️ Partial - {len(found_required)}/4 required OG tags found"
                 open_gp += f"\nMissing required: {', '.join(missing_required)}"
                 
             elif found_count > 0:
-                # Some OG tags but missing required ones
                 open_gp = f"⚠️ Incomplete - Found {found_count} OG tags but missing required tags"
                 open_gp += f"\nRequired tags: og:title, og:type, og:url, og:image"
                 
             else:
-                # No OG tags found
                 open_gp = "❌ Not Found - No Open Graph Protocol tags detected"
             
-            # ✅ Store detailed data
             self.data['open_gp'] = open_gp
             self.data['og_tags_found'] = found_tags
             self.data['og_tags_missing'] = [tag for tag, data in og_tags.items() if not data['found']]
             self.data['og_required_complete'] = len(found_required) == 4
             
-            # ✅ Store actual OG values for reference
             og_values = {}
             for tag, data in og_tags.items():
                 if data['found'] and data['content']:
-                    # Store only first 100 chars for display
                     og_values[tag] = data['content'][:100]
             
             if og_values:
                 self.data['og_values'] = og_values
             
-            # ✅ Provide recommendations
             recommendations = []
             
             if not self.ogp_flag:
@@ -3050,63 +2822,40 @@ Return ONLY valid JSON, no markdown, no preamble."""
 
 
     def get_favicon(self):
-        """
-        ✅ MODERNIZED: Favicon detection and validation
-        - Better error handling
-        - Validates favicon accessibility
-        - Checks multiple favicon formats
-        - Security improvements (validates URLs)
-        
-        Modern SEO Impact:
-        - Favicon = Brand recognition in browser tabs and bookmarks
-        - Appears in Google search results (mobile)
-        - Critical for user trust and brand consistency
-        """
         try:
-            # ✅ Method 1: Use favicon library (checks multiple sources)
             try:
                 icons = favicon.get(self.url, timeout=10)
                 
                 if icons and len(icons) > 0:
-                    # Sort by size (prefer larger icons)
                     icons_sorted = sorted(icons, key=lambda x: (x.width or 0) * (x.height or 0), reverse=True)
                     icon = icons_sorted[0]
                     
-                    # ✅ Validate icon URL
                     icon_url = icon.url
                     if not icon_url.startswith(('http://', 'https://')):
-                        # Relative URL, make absolute
                         icon_url = urljoin(self.base_url, icon_url)
                     
-                    # ✅ Get file extension
-                    ext = 'ico'  # default
+                    ext = 'ico'
                     if '.' in icon_url:
                         ext = icon_url.split('.')[-1].split('?')[0].lower()
-                        # Validate extension
                         if ext not in ['ico', 'png', 'jpg', 'jpeg', 'gif', 'svg']:
                             ext = 'ico'
                     
-                    # ✅ Try to download favicon (with size limit for security)
                     try:
-                        # Use session with timeout
                         response = self.session.get(icon_url, timeout=5, stream=True)
                         
-                        # Check file size (limit to 1MB for security)
                         content_length = response.headers.get('content-length')
                         if content_length and int(content_length) > 1024 * 1024:
                             raise ValueError("Favicon too large (>1MB)")
                         
-                        # Download with size limit
                         filename = f"favicon.{ext}"
                         with open(filename, "wb") as f:
                             downloaded = 0
                             for chunk in response.iter_content(chunk_size=8192):
                                 downloaded += len(chunk)
-                                if downloaded > 1024 * 1024:  # 1MB limit
+                                if downloaded > 1024 * 1024:
                                     raise ValueError("Favicon too large")
                                 f.write(chunk)
                         
-                        # ✅ Success with details
                         size_info = ""
                         if icon.width and icon.height:
                             size_info = f" ({icon.width}x{icon.height}px)"
@@ -3118,7 +2867,6 @@ Return ONLY valid JSON, no markdown, no preamble."""
                         self.data['favicon_format'] = ext.upper()
                         
                     except Exception as download_error:
-                        # Favicon exists but couldn't download
                         Favicon = f"✓ Found - Favicon detected at {icon_url} (download failed: {str(download_error)})"
                         self.icon_flag = True
                         self.data['favicon_url'] = icon_url
@@ -3127,7 +2875,6 @@ Return ONLY valid JSON, no markdown, no preamble."""
                     raise ValueError("No favicon found")
                     
             except Exception as e:
-                # ✅ Method 2: Manual check for common favicon locations
                 favicon_locations = [
                     '/favicon.ico',
                     '/favicon.png',
@@ -3151,7 +2898,6 @@ Return ONLY valid JSON, no markdown, no preamble."""
                         continue
                 
                 if not favicon_found:
-                    # ✅ Check link tags in HTML
                     if hasattr(self, 'soup') and self.soup:
                         favicon_links = self.soup.find_all('link', rel=lambda x: x and 'icon' in x.lower())
                         if favicon_links:
@@ -3189,7 +2935,6 @@ Return ONLY valid JSON, no markdown, no preamble."""
             "linkedin": ["linkedin.com/in/", "linkedin.com/company/"],
         }
 
-
         self.s_count = 0
         found_links = {key: set() for key in social_platforms}
         verdicts = {}
@@ -3206,35 +2951,25 @@ Return ONLY valid JSON, no markdown, no preamble."""
             self.data["social_links"] = {}
             return
 
-        # 🔥 MAGIC STARTS HERE
         for tag in soup.find_all("a", href=True):
-
             raw_link = tag["href"].strip()
             link = raw_link.lower()
-
-            # 1️⃣ Convert relative → absolute
             full_link = urljoin(self.url, raw_link)
 
-            # 2️⃣ Check via href
             for platform, patterns in social_platforms.items():
-
                 matched = False
 
-                # A. Direct domain match
                 if any(p in link for p in patterns):
                     matched = True
 
-                # B. Path based match
                 path = urlparse(full_link).path.lower()
                 if any(p in path for p in patterns):
                     matched = True
 
-                # C. Text match (inside <a>)
                 text = tag.get_text().lower()
                 if any(p in text for p in patterns):
                     matched = True
 
-                # D. aria-label / title match
                 aria = (tag.get("aria-label") or "").lower()
                 title = (tag.get("title") or "").lower()
 
@@ -3245,7 +2980,6 @@ Return ONLY valid JSON, no markdown, no preamble."""
                     if self._is_valid_social_link(full_link, platform):
                         found_links[platform].add(full_link)
 
-        # Score system
         for platform, links in found_links.items():
             if links:
                 verdicts[platform] = f"{platform.capitalize()} found!"
@@ -3258,10 +2992,9 @@ Return ONLY valid JSON, no markdown, no preamble."""
         self.data.update(verdicts)
         self.data["social_links"] = {k: list(v) for k, v in found_links.items()}
         self.data["social_accounts_found"] = sum(1 for v in found_links.values() if v)
-        self.data["social_verdict"] = f"Score: {self.s_count}%"    
-    def _is_valid_social_link(self, link, platform):
-        """Elite level filter – no more clown results"""
+        self.data["social_verdict"] = f"Score: {self.s_count}%"
 
+    def _is_valid_social_link(self, link, platform):
         excluded = [
             "sharer.php", "share?", "intent/tweet", 
             "shareArticle", "sharing", "share-button",
@@ -3272,12 +3005,9 @@ Return ONLY valid JSON, no markdown, no preamble."""
         if any(exc in link for exc in excluded):
             return False
 
-        # Domain extract karo
         parsed = urlparse(link)
         domain = parsed.netloc.lower()
         path = parsed.path.lower()
-
-        # 🔥 PLATFORM WISE PRO CHECKS
 
         if platform == "twitter":
             return (
@@ -3373,7 +3103,6 @@ Return ONLY valid JSON, no markdown, no preamble."""
                 self.Doctype="Not Found!"
                 self.doc_flag = False
             try:
-                # Extract charset from second part
                 encoding_part = a[1].strip() if len(a) > 1 else ""
                 if 'charset=' in encoding_part:
                     self.Encoding = encoding_part.split('=')[1].strip()
@@ -3405,7 +3134,6 @@ Return ONLY valid JSON, no markdown, no preamble."""
         else:
             url=self.url
         
-        # Remove path and query parameters
         url = url.split('/')[0].split('?')[0].strip()
         
         try:
@@ -3447,7 +3175,6 @@ Return ONLY valid JSON, no markdown, no preamble."""
         url = self.url.replace("https://", "").replace("http://", "")
         host = url.split("/")[0].split("?")[0].strip()
 
-        # defaults
         self.data['ssl_name'] = "Not Found!"
         self.data['ssl_verdict'] = "Website doesn't have a valid SSL!"
         self.data['ssl_organ'] = "Not Found!"
@@ -3455,9 +3182,6 @@ Return ONLY valid JSON, no markdown, no preamble."""
         self.data['http_redir'] = "Not checked"
         self.ssl = False
 
-        # ---------------------------
-        # ✔ HTTPS REDIRECTION CHECK
-        # ---------------------------
         try:
             test_urls = [f"http://{host}", f"http://www.{host}"]
 
@@ -3466,22 +3190,18 @@ Return ONLY valid JSON, no markdown, no preamble."""
                     r = requests.get(url, timeout=5, allow_redirects=True)
                     if r.url.startswith("https://"):
                         self.data['http_redir'] = f"Yes, HTTP → HTTPS redirection is enabled ✔ (Final URL: {r.url})"
-                        break  # stop loop but continue to SSL check
+                        break
                 except requests.exceptions.SSLError:
                     self.data['http_redir'] = f"Yes, HTTPS enforced (SSL error on HTTP access) ✔"
                     break
                 except requests.RequestException:
                     continue
             else:
-                # If loop completes with no break
                 self.data['http_redir'] = "No, website does NOT redirect to HTTPS ❌"
 
         except Exception:
             self.data['http_redir'] = "Could not check redirection"
 
-        # ---------------------------
-        # ✔ SSL CERTIFICATE CHECK
-        # ---------------------------
         try:
             context = ssl.create_default_context()
             conn = socket.create_connection((host, 443), timeout=5)
@@ -3496,14 +3216,12 @@ Return ONLY valid JSON, no markdown, no preamble."""
             issuer_org = issuer.get("organizationName", issuer_cn)
             expiry = cert.get("notAfter")
             
-            # Handle different datetime formats
             try:
                 expires = datetime.datetime.strptime(expiry, "%b %d %H:%M:%S %Y %Z")
             except ValueError:
                 try:
                     expires = datetime.datetime.strptime(expiry, "%b %d %H:%M:%S %Y")
                 except ValueError:
-                    # Fallback for other formats
                     expires = datetime.datetime.utcnow() + datetime.timedelta(days=365)
             
             days_left = (expires - datetime.datetime.utcnow()).days
@@ -3512,13 +3230,12 @@ Return ONLY valid JSON, no markdown, no preamble."""
             self.data['ssl_organ'] = issuer_org or "Not Found!"
             self.data['ssl_expiry'] = expiry
 
-            # Check if SSL is valid and not expired
             if days_left < 0:
                 self.data['ssl_verdict'] = "SSL certificate is EXPIRED!"
                 self.ssl = False
             elif days_left < 15:
                 self.data['ssl_verdict'] = f"SSL expiring soon! ({days_left} days left)"
-                self.ssl = True  # Still valid but expiring soon
+                self.ssl = True
             else:
                 if self.data.get('ssl_name') != "Not Found!" and self.data.get('ssl_organ') != "Not Found!":
                     self.data['ssl_verdict'] = "SSL certificate is valid!"
@@ -3551,7 +3268,6 @@ Return ONLY valid JSON, no markdown, no preamble."""
             response.raise_for_status()
             content = response.text
 
-            # Single regex for multiple terms
             dmca_pattern = re.compile(r"DMCA|Digital Millennium Copyright Act", re.IGNORECASE)
 
             if dmca_pattern.search(content):
@@ -3567,14 +3283,6 @@ Return ONLY valid JSON, no markdown, no preamble."""
 
 
     async def measure_website_speed(self):
-        """
-        Measure website speed and fetch Core Web Vitals (LCP, CLS, INP, Full Page Load)
-        using Google PageSpeed Insights API.
-        """
-
-        # --------------------------
-        # Step 1: Basic server response time
-        # --------------------------
         try:
             start_time = asyncio.get_event_loop().time()
             async with aiohttp.ClientSession() as session:
@@ -3583,13 +3291,12 @@ Return ONLY valid JSON, no markdown, no preamble."""
                     headers={"User-Agent": "Mozilla/5.0"}, 
                     timeout=aiohttp.ClientTimeout(total=120)
                 ) as response:
-                    await response.text()  # Fetch content to complete request
+                    await response.text()
                     end_time = asyncio.get_event_loop().time()
                     self.speed = round(end_time - start_time, 2)
 
             self.data['website_speed'] = self.speed
             
-            # More granular speed assessment based on Google's recommendations
             if self.speed < 1.0:
                 self.data['speed_verdict'] = "Excellent! Server response time is very fast."
             elif self.speed < 2.5:
@@ -3612,13 +3319,9 @@ Return ONLY valid JSON, no markdown, no preamble."""
             self.data['website_speed'] = 0
             self.data['speed_verdict'] = f"Unexpected error: {e}"
 
-        # --------------------------
-        # Step 2: Core Web Vitals via Google PageSpeed Insights API
-        # --------------------------
         try:
-            API_KEY = "AIzaSyB6HmPxrc8gcdp6zvElkyYvnULXy6f4Rmw"
+            API_KEY = getattr(settings, 'PAGESPEED_API_KEY', '')
             
-            # Fetch both mobile and desktop for comprehensive analysis
             psi_url_mobile = f"https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url={self.url}&strategy=mobile&key={API_KEY}"
             psi_url_desktop = f"https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url={self.url}&strategy=desktop&key={API_KEY}"
 
@@ -3627,15 +3330,12 @@ Return ONLY valid JSON, no markdown, no preamble."""
                 response.raise_for_status()
                 return response.json()
             
-            # Fetch mobile data (primary for SEO)
             psi_data = await asyncio.to_thread(fetch_psi, psi_url_mobile)
             audits = psi_data.get("lighthouseResult", {}).get("audits", {})
             
-            # Extract performance score (0-100)
             performance_score = psi_data.get("lighthouseResult", {}).get("categories", {}).get("performance", {}).get("score", 0)
             self.data['performance_score'] = round(performance_score * 100) if performance_score else 0
 
-            # Extract Core Web Vitals with proper error handling
             lcp_value = audits.get("largest-contentful-paint", {}).get("numericValue", 0)
             self.data['lcp'] = round(lcp_value / 1000, 2) if lcp_value else 0
             
@@ -3648,22 +3348,17 @@ Return ONLY valid JSON, no markdown, no preamble."""
             speed_index = audits.get("speed-index", {}).get("numericValue", 0)
             self.data['full_page_load'] = round(speed_index / 1000, 2) if speed_index else 0
             
-            # First Contentful Paint (FCP) - Important for SEO
             fcp_value = audits.get("first-contentful-paint", {}).get("numericValue", 0)
             self.data['fcp'] = round(fcp_value / 1000, 2) if fcp_value else 0
             
-            # Time to Interactive (TTI) - User experience metric
             tti_value = audits.get("interactive", {}).get("numericValue", 0)
             self.data['tti'] = round(tti_value / 1000, 2) if tti_value else 0
             
-            # Total Blocking Time (TBT) - Affects interactivity
             tbt_value = audits.get("total-blocking-time", {}).get("numericValue", 0)
             self.data['tbt'] = round(tbt_value, 2) if tbt_value else 0
             
-            # Add Core Web Vitals assessment based on Google thresholds
             vitals_assessment = []
             
-            # LCP Assessment (Good: <2.5s, Needs Improvement: 2.5-4s, Poor: >4s)
             if self.data['lcp'] > 0:
                 if self.data['lcp'] <= 2.5:
                     vitals_assessment.append("LCP: Good ✓")
@@ -3672,7 +3367,6 @@ Return ONLY valid JSON, no markdown, no preamble."""
                 else:
                     vitals_assessment.append("LCP: Poor ✗")
             
-            # CLS Assessment (Good: <0.1, Needs Improvement: 0.1-0.25, Poor: >0.25)
             if self.data['cls'] >= 0:
                 if self.data['cls'] <= 0.1:
                     vitals_assessment.append("CLS: Good ✓")
@@ -3681,7 +3375,6 @@ Return ONLY valid JSON, no markdown, no preamble."""
                 else:
                     vitals_assessment.append("CLS: Poor ✗")
             
-            # FCP Assessment (Good: <1.8s, Needs Improvement: 1.8-3s, Poor: >3s)
             if self.data['fcp'] > 0:
                 if self.data['fcp'] <= 1.8:
                     vitals_assessment.append("FCP: Good ✓")
@@ -3692,15 +3385,12 @@ Return ONLY valid JSON, no markdown, no preamble."""
             
             self.data['vitals_assessment'] = ", ".join(vitals_assessment) if vitals_assessment else "Unable to assess"
             
-            # SEO Score from PageSpeed Insights
             seo_score = psi_data.get("lighthouseResult", {}).get("categories", {}).get("seo", {}).get("score", 0)
             self.data['seo_score'] = round(seo_score * 100) if seo_score else 0
             
-            # Accessibility Score (affects SEO indirectly)
             accessibility_score = psi_data.get("lighthouseResult", {}).get("categories", {}).get("accessibility", {}).get("score", 0)
             self.data['accessibility_score'] = round(accessibility_score * 100) if accessibility_score else 0
             
-            # Best Practices Score
             best_practices_score = psi_data.get("lighthouseResult", {}).get("categories", {}).get("best-practices", {}).get("score", 0)
             self.data['best_practices_score'] = round(best_practices_score * 100) if best_practices_score else 0
 
@@ -3725,23 +3415,20 @@ Return ONLY valid JSON, no markdown, no preamble."""
             css_links = []
             soup = BeautifulSoup(self.response, "html.parser")
             
-            # Find all external CSS links
             for link in soup.find_all("link", rel="stylesheet"):
                 href = link.get("href")
                 if href:
-                    # Skip data URIs and external CDN links that are already minified
                     if href.startswith('data:') or 'min.css' in href.lower():
                         continue
                     full_url = urljoin(self.url, href)
                     css_links.append(full_url)
             
-            # Also check for inline styles (SEO consideration)
             inline_styles = soup.find_all("style")
             has_inline_css = len(inline_styles) > 0
             
             if not css_links and not has_inline_css:
                 self.data['css_minified'] = "No CSS found to check."
-                self.css = True  # No CSS is technically "optimized"
+                self.css = True
                 return
             
             if not css_links:
@@ -3753,29 +3440,26 @@ Return ONLY valid JSON, no markdown, no preamble."""
             minified_css = 0
             unminified_files = []
             
-            for css_url in css_links[:10]:  # Limit to first 10 to avoid timeout
+            for css_url in css_links[:10]:
                 try:
                     r = self.session.get(css_url, timeout=10)
                     r.raise_for_status()
                     css_code = r.text
                     
-                    # Skip if already empty or very small
                     if len(css_code.strip()) < 50:
                         continue
                     
                     total_css += 1
                     compressed_css = csscompressor.compress(css_code)
                     
-                    # Calculate compression ratio (minified files have <5% reduction)
                     reduction = ((len(css_code) - len(compressed_css)) / len(css_code)) * 100
                     
-                    if reduction > 5:  # More than 5% reduction means it wasn't minified
+                    if reduction > 5:
                         unminified_files.append(css_url)
                     else:
                         minified_css += 1
                         
                 except requests.RequestException:
-                    # Skip this file if it can't be fetched
                     continue
             
             if total_css == 0:
@@ -3795,7 +3479,6 @@ Return ONLY valid JSON, no markdown, no preamble."""
                 self.data['css_minified'] = f"Poor. Only {minified_css}/{total_css} CSS files are minified ({int(minification_ratio)}%)."
                 self.css = False
             
-            # Add additional CSS optimization checks for SEO
             self.data['inline_css_count'] = len(inline_styles)
             self.data['external_css_count'] = len(css_links)
             
@@ -3808,23 +3491,20 @@ Return ONLY valid JSON, no markdown, no preamble."""
             js_links = []
             soup = BeautifulSoup(self.response, "html.parser")
             
-            # Find all external JS scripts
             for script in soup.find_all("script", src=True):
                 src = script.get("src")
                 if src:
-                    # Skip data URIs and already minified files
                     if src.startswith('data:') or 'min.js' in src.lower():
                         continue
                     full_url = urljoin(self.url, src)
                     js_links.append(full_url)
             
-            # Check for inline scripts (bad for performance and SEO)
             inline_scripts = soup.find_all("script", src=False)
             has_inline_js = len([s for s in inline_scripts if s.string and len(s.string.strip()) > 50]) > 0
             
             if not js_links and not has_inline_js:
                 self.data['jss_minified'] = "No JS found to check."
-                self.jss = True  # No JS is technically "optimized"
+                self.jss = True
                 return
             
             if not js_links:
@@ -3836,29 +3516,26 @@ Return ONLY valid JSON, no markdown, no preamble."""
             minified_js = 0
             unminified_files = []
             
-            for js_url in js_links[:10]:  # Limit to first 10 to avoid timeout
+            for js_url in js_links[:10]:
                 try:
                     r = self.session.get(js_url, timeout=10)
                     r.raise_for_status()
                     js_code = r.text
                     
-                    # Skip if already empty or very small
                     if len(js_code.strip()) < 50:
                         continue
                     
                     total_js += 1
                     compressed_js = jsmin(js_code)
                     
-                    # Calculate compression ratio
                     reduction = ((len(js_code) - len(compressed_js)) / len(js_code)) * 100
                     
-                    if reduction > 5:  # More than 5% reduction means it wasn't minified
+                    if reduction > 5:
                         unminified_files.append(js_url)
                     else:
                         minified_js += 1
                         
                 except requests.RequestException:
-                    # Skip this file if it can't be fetched
                     continue
             
             if total_js == 0:
@@ -3878,11 +3555,9 @@ Return ONLY valid JSON, no markdown, no preamble."""
                 self.data['jss_minified'] = f"Poor. Only {minified_js}/{total_js} JS files are minified ({int(minification_ratio)}%)."
                 self.jss = False
             
-            # SEO-relevant JS checks
             self.data['inline_js_count'] = len([s for s in inline_scripts if s.string and len(s.string.strip()) > 50])
             self.data['external_js_count'] = len(js_links)
             
-            # Check for render-blocking JS (bad for SEO)
             render_blocking = []
             for script in soup.find_all("script", src=True):
                 if not script.get("async") and not script.get("defer"):
@@ -3905,16 +3580,13 @@ Return ONLY valid JSON, no markdown, no preamble."""
                     if response.status == 200:
                         html_content = await response.read()
 
-                        # Parse the HTML content using BeautifulSoup
                         soup = BeautifulSoup(html_content, 'html.parser')
 
-                        # Search for various performance optimization techniques
                         preload_links = soup.find_all('link', {'rel': 'preload'})
                         prefetch_links = soup.find_all('link', {'rel': 'prefetch'})
                         preconnect_links = soup.find_all('link', {'rel': 'preconnect'})
                         dns_prefetch_links = soup.find_all('link', {'rel': 'dns-prefetch'})
                         
-                        # Check for resource hints (important for performance)
                         optimization_count = 0
                         optimizations_found = []
                         
@@ -3934,13 +3606,11 @@ Return ONLY valid JSON, no markdown, no preamble."""
                             optimization_count += len(dns_prefetch_links)
                             optimizations_found.append(f"DNS-Prefetch ({len(dns_prefetch_links)})")
                         
-                        # Check for lazy loading (SEO best practice)
                         lazy_images = soup.find_all('img', {'loading': 'lazy'})
                         if lazy_images:
                             optimization_count += len(lazy_images)
                             optimizations_found.append(f"Lazy Loading ({len(lazy_images)} images)")
                         
-                        # Check for async/defer scripts
                         async_scripts = soup.find_all('script', {'async': True})
                         defer_scripts = soup.find_all('script', {'defer': True})
                         if async_scripts or defer_scripts:
@@ -3948,7 +3618,6 @@ Return ONLY valid JSON, no markdown, no preamble."""
                             optimization_count += script_count
                             optimizations_found.append(f"Async/Defer Scripts ({script_count})")
                         
-                        # Store detailed optimization info
                         self.data['optimization_techniques'] = ", ".join(optimizations_found) if optimizations_found else "None"
                         self.data['optimization_count'] = optimization_count
                         
@@ -3983,16 +3652,13 @@ Return ONLY valid JSON, no markdown, no preamble."""
     
 
     def Report(self, dict, output_dir=None):
-        """Generate SEO report and optionally send via email"""
+        """Generate and optionally send SEO report via email"""
         try:
-            # Get user email safely
             current_user_email = self._get_user_email(dict)
             
-            # Email credentials
-            sender_email = os.getenv('SENDER_EMAIL', 'moazzamrazaghori@gmail.com')
-            sender_password = os.getenv('SENDER_PASSWORD', 'ahdbwmrxdpiaxiew')
+            sender_email = os.getenv('SENDER_EMAIL', '')
+            sender_password = os.getenv('SENDER_PASSWORD', '')
             
-            # Set output directory
             if output_dir is None:
                 try:
                     from django.conf import settings
@@ -4000,10 +3666,8 @@ Return ONLY valid JSON, no markdown, no preamble."""
                 except:
                     output_dir = os.path.join(os.getcwd(), 'reports')
             
-            # Decide whether to send email
             send_email = bool(current_user_email)
             
-            # Generate PDF report
             logger.info(f"Generating report for URL: {dict.get('url', 'Unknown')}")
             result = generate_seo_report(
                 data_dict=dict,
@@ -4014,7 +3678,6 @@ Return ONLY valid JSON, no markdown, no preamble."""
                 send_email=send_email
             )
             
-            # Log the result
             if result['success']:
                 logger.info(f"Report generated successfully: {result['pdf_path']}")
                 if result['email_sent']:
@@ -4035,14 +3698,8 @@ Return ONLY valid JSON, no markdown, no preamble."""
             }
 
 
-    # ============================================================================
-    # SECTION 4: ADD THIS NEW METHOD TO Website_Audit CLASS
-    # Add this method anywhere in the Website_Audit class
-    # ============================================================================
-
     def _get_user_email(self, data_dict):
         """Get user email from request or data dict"""
-        # Try Django authenticated user
         try:
             if self.request and hasattr(self.request, 'user') and self.request.user.is_authenticated:
                 email = self.request.user.email
@@ -4051,18 +3708,18 @@ Return ONLY valid JSON, no markdown, no preamble."""
         except Exception as e:
             logger.debug(f"Could not get email from request.user: {e}")
         
-        # Try from data dict
         email = data_dict.get('user_email')
         if email:
             return email
         
-        # No email found
         logger.warning("No user email found - report will be generated without sending email")
         return None
 
     def get_data(self):
-        global Report_variables
-        self.data['url']=self.url
+        # ✅ FIX (Global State): all audit variables live in self.data.
+        #    The old Report_variables global dict is replaced by self.data so
+        #    concurrent requests for different users never overwrite each other.
+        self.data['url'] = self.url
         self.get_title()
         self.get_description()
         self.get_Heading()
@@ -4085,106 +3742,89 @@ Return ONLY valid JSON, no markdown, no preamble."""
         self.get_content()
         self.get_server()
         self.SSL()
-        #self.Https_Redirection()
         self.DMCA()
-        # self.measure_website_speed()
         self.CSS_minification()
         self.JSS_minification()
-        # self.Optmized_Plugins()
-        # self.Mobile_speed()
-        # self.AMP()
-        # self.Mobile_rendering()
-        # asyncio.run(self.mobile_preview())
 
         async def analyze_and_get_results():
             coroutines = [
                 self.measure_website_speed(),
                 self.Optmized_Plugins(),
-                # Add other methods that you want to call together
             ]
             await asyncio.gather(*coroutines)
 
         asyncio.run(analyze_and_get_results())
 
-
-
-        Report_variables['url']=self.url
-        Report_variables['title']=self.title
-        Report_variables['title_score']=self.title_score
-        Report_variables['desc_score']=self.desc_score
-        Report_variables['H']=self.H
-        Report_variables['heading_score']=self.heading_score
-        Report_variables['alt_count']=self.alt_count
-        Report_variables['external_links']=self.external_links
-        Report_variables['robot_flag']=self.robot_flag
-        Report_variables['sitemap_flag']=self.sitemap_flag
-        Report_variables['b_links']=self.b_links
-        Report_variables['icon_flag']=self.icon_flag
-        Report_variables['ogp_flag']=self.ogp_flag
-        Report_variables['tech_flag']=self.tech_flag
-        Report_variables['analytics_flag']=self.analytics_flag
-        Report_variables['doc_flag']=self.doc_flag
-        Report_variables['Doctype'] = self.Doctype
-        Report_variables['Encoding'] = self.Encoding
-        Report_variables['dmca']=self.dmca
-        Report_variables['https']=self.https
-        Report_variables['facebook_flag']=self.facebook_flag
-        Report_variables['instagram_flag']=self.instagram_flag
-        Report_variables['twitter_flag']=self.twitter_flag
-        Report_variables['linkedin_flag']=self.linkedin_flag
-        Report_variables['speed']=self.speed
-        Report_variables['css']=self.css
-        Report_variables['jss']=self.jss
-        Report_variables['mob_score']=self.mob_score
-        Report_variables['amp']=self.amp
-        Report_variables['render']=self.render
-        Report_variables['desc']=self.desc
-        Report_variables['heading']=self.heading
-        Report_variables['comp_desc']=self.comp_desc
-        Report_variables['lst']=self.lst
-        Report_variables['comp_head']=self.comp_head
-        Report_variables['conversion']=self.conversion
-        Report_variables['internal_links']=self.internal_links
-        Report_variables['schema_flag']=self.schema_flag
-        Report_variables['s_count']=self.s_count
-        Report_variables['ip_flag']=self.ip_flag
-        Report_variables['ip']=self.ip
-        Report_variables['server_loc_flag']=self.server_loc_flag
-        Report_variables['loc_name']=self.loc_name
-        Report_variables['webserver']=self.webserver
-        Report_variables['error_len']=self.error_len
-        Report_variables['warn_len']=self.warn_len
-        Report_variables['encod_flag']=self.encod_flag
-        Report_variables['plugins']=self.plugins
-        Report_variables['mobpreview']=self.mobpreview
-        Report_variables['ssl']=self.ssl
-        Report_variables['ssl_name']=self.name
-        Report_variables['ssl_organ']=self.organization
-        Report_variables['ssl_expiry']=self.expiry_date
-
-
+        # ✅ FIX (Global State): mirror all instance attributes into self.data so
+        #    callers (templates, Report method) have a single serialisable dict.
+        #    The Report view now reads from self.data instead of Report_variables.
+        self.data.setdefault('title',       self.title)
+        self.data.setdefault('title_score',  self.title_score)
+        self.data.setdefault('desc_score',   self.desc_score)
+        self.data.setdefault('H',            self.H)
+        self.data.setdefault('heading_score',self.heading_score)
+        self.data.setdefault('alt_count',    self.alt_count)
+        self.data.setdefault('external_links',self.external_links)
+        self.data.setdefault('internal_links',self.internal_links)
+        self.data.setdefault('robot_flag',   self.robot_flag)
+        self.data.setdefault('sitemap_flag', self.sitemap_flag)
+        self.data.setdefault('b_links',      self.b_links)
+        self.data.setdefault('icon_flag',    self.icon_flag)
+        self.data.setdefault('ogp_flag',     self.ogp_flag)
+        self.data.setdefault('tech_flag',    self.tech_flag)
+        self.data.setdefault('analytics_flag',self.analytics_flag)
+        self.data.setdefault('doc_flag',     self.doc_flag)
+        self.data.setdefault('Doctype',      self.Doctype)
+        self.data.setdefault('Encoding',     self.Encoding)
+        self.data.setdefault('dmca',         self.dmca)
+        self.data.setdefault('https',        self.https)
+        self.data.setdefault('facebook_flag',self.facebook_flag)
+        self.data.setdefault('instagram_flag',self.instagram_flag)
+        self.data.setdefault('twitter_flag', self.twitter_flag)
+        self.data.setdefault('linkedin_flag',self.linkedin_flag)
+        self.data.setdefault('speed',        self.speed)
+        self.data.setdefault('css',          self.css)
+        self.data.setdefault('jss',          self.jss)
+        self.data.setdefault('mob_score',    self.mob_score)
+        self.data.setdefault('amp',          self.amp)
+        self.data.setdefault('render',       self.render)
+        self.data.setdefault('desc',         self.desc)
+        self.data.setdefault('heading',      self.heading)
+        self.data.setdefault('comp_desc',    self.comp_desc)
+        self.data.setdefault('lst',          self.lst)
+        self.data.setdefault('comp_head',    self.comp_head)
+        self.data.setdefault('conversion',   self.conversion)
+        self.data.setdefault('schema_flag',  self.schema_flag)
+        self.data.setdefault('s_count',      self.s_count)
+        self.data.setdefault('ip_flag',      self.ip_flag)
+        self.data.setdefault('ip',           self.ip)
+        self.data.setdefault('server_loc_flag',self.server_loc_flag)
+        self.data.setdefault('loc_name',     self.loc_name)
+        self.data.setdefault('webserver',    self.webserver)
+        self.data.setdefault('error_len',    self.error_len)
+        self.data.setdefault('warn_len',     self.warn_len)
+        self.data.setdefault('encod_flag',   self.encod_flag)
+        self.data.setdefault('plugins',      self.plugins)
+        self.data.setdefault('mobpreview',   self.mobpreview)
+        self.data.setdefault('ssl',          self.ssl)
+        self.data.setdefault('ssl_name',     self.data.get('ssl_name', 'Not Found!'))
+        self.data.setdefault('ssl_organ',    self.data.get('ssl_organ', 'Not Found!'))
+        self.data.setdefault('ssl_expiry',   self.data.get('ssl_expiry', 'Not Found!'))
+        # Expose user_email so the Report method can reach it from self.data
+        self.data['user_email'] = self.user_email
 
         return self.data
 
 
 
 def sentiment_analysis_page(request):
-    """
-    Display the sentiment analysis form page
-    Route: /sentimentanalysis/
-    """
     return render(request, 'sentiment_analysis.html')
 
 
-# ⭐ NEW FUNCTION 2: Handle sentiment analysis
 def analyze_sentiment_view(request):
-    """
-    Process sentiment analysis request
-    Route: /sentimentanalysis/analyze/
-    """
     if request.method == 'POST':
         url = request.POST.get('url', '').strip()
-        mode = request.POST.get('mode', 'auto')  # fast, deep, or auto
+        mode = request.POST.get('mode', 'auto')
         
         if not url:
             return render(request, 'sentiment_analysis.html', {
@@ -4192,42 +3832,33 @@ def analyze_sentiment_view(request):
             })
         
         try:
-            # Step 1: Scrape the URL
             headers = {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
             }
             response = requests.get(url, headers=headers, timeout=10)
             response.raise_for_status()
             
-            # Step 2: Extract content
             soup = BeautifulSoup(response.content, 'html.parser')
             
-            # Remove scripts, styles, nav, footer
             for tag in soup(['script', 'style', 'nav', 'footer', 'header']):
                 tag.decompose()
             
-            # Get title
             title = soup.find('title')
             page_title = title.get_text().strip() if title else 'No title'
             
-            # Get main content
             page_text = soup.get_text(separator=' ', strip=True)
             
-            # Get meta description
             meta_desc = soup.find('meta', attrs={'name': 'description'})
             meta_description = meta_desc['content'] if meta_desc else ''
             
-            # Word count
             word_count = len(page_text.split())
             
-            # Step 3: Analyze sentiment
             sentiment_result = analyze_sentiment(
                 text=page_text,
-                api_key=os.getenv('OPENROUTER_API_KEY'),
+                api_key=None,  # let analyze_sentiment pick the right key based on USE_GROQ
                 mode=mode
             )
             
-            # Step 4: Prepare context for template
             context = {
                 'success': True,
                 'url': url,
@@ -4249,27 +3880,33 @@ def analyze_sentiment_view(request):
                 'error': f'Error analyzing content: {str(e)}'
             })
     
-    # If GET request, redirect to form page
     return render(request, 'sentiment_analysis.html')
 
 def upload(request, url):
-    upload.get_url = str(url)
-    if url == "":
+    if not url:
         return
-    obj = Website_Audit(str(url), request=request)  # ADD request=request HERE
+    obj = Website_Audit(str(url), request=request)
     return obj
 
 
 def Report(request):
-    """Generate and send SEO report"""
+    """Generate and send SEO report.
+
+    ✅ FIX (Global State): Report_variables global dict is gone.  The audit data
+    is retrieved by re-running get_data() on a fresh Website_Audit instance whose
+    URL comes from the POST/GET parameter, matching how the show() view works.
+    The user email flows via self.user_email on the instance.
+    """
     try:
-        # Create Website_Audit object with request
-        obj = Website_Audit(Report_variables['url'], request=request)
+        url = request.POST.get('url') or request.GET.get('url', '')
+        if not url:
+            messages.error(request, 'No URL provided for report generation.')
+            return render(request, 'home.html')
+
+        obj = Website_Audit(url, request=request)
+        audit_data = obj.get_data()
+        result = obj.Report(audit_data)
         
-        # Generate the report
-        result = obj.Report(Report_variables)
-        
-        # Check if report generation was successful
         if result['success']:
             if result['email_sent']:
                 messages.success(
@@ -4301,8 +3938,6 @@ def Report(request):
 
 @login_required(login_url='login')
 def index(request):
-    # data=upload(request)
-    # data['message']="URL entered"
     return render(request, 'index.html')
 
 @login_required(login_url='login')
@@ -4312,16 +3947,12 @@ def show(request):
     if not url:
         return render(request, 'index.html')
     
-    # Basic cleanup
     url = url.strip()
     
-    # Validate URL
     if not validators.url(url):
-        # Try adding https:// if missing
         if not url.startswith(('http://', 'https://')):
             url = 'https://' + url
         
-        # Validate again
         if not validators.url(url):
             messages.error(request, 'Invalid URL format.')
             return render(request, 'index.html')
@@ -4342,164 +3973,70 @@ def show(request):
 
 
 @login_required(login_url='login')
-def backlink(request):
+def seo_metrics(request):
     data = {}
-    if request.method == "POST":
-        target_url = request.POST.get("url")
-        if not target_url:
-            messages.error(request, "Please enter a URL.")
-            return render(request, "backlink.html", data)
 
-        # Ensure URL has a scheme
-        if not target_url.startswith(('http://', 'https://')):
-            target_url = 'https://' + target_url
+    if request.method == "GET":
+        return render(request, 'seo_metrics.html')
 
-        # ------------------------------
-        # Moz API v1 credentials
-        # ------------------------------
-        access_id = "mozscape-Gp8EfVlQOZ"
-        secret_key = "r5eGovQ09YIFBpxKv2kUPq764yp6tZ3J"
+    url = request.POST.get("fname")
 
-        try:
-            # ------------------------------
-            # Generate signature
-            # ------------------------------
-            expires = str(int(time.time()) + 300)
-            string_to_sign = f"{access_id}\n{expires}"
-            signature = hmac.new(secret_key.encode(), string_to_sign.encode(), hashlib.sha1).digest()
-            safe_signature = urllib.parse.quote(base64.b64encode(signature))
+    if not url or not validators.url(url):
+        messages.error(request, 'Please enter a valid URL.')
+        return render(request, 'seo_metrics.html')
 
-            # ------------------------------
-            # URL Metrics - single call fetches everything
-            # ------------------------------
-            # Cols bitmask — all values summed so only 1 API row is used:
-            #   1            = Page Authority        (upaNum)
-            #   4            = MozRank               (mozRank)
-            #   16           = MozTrust              (mozTrust)
-            #   32           = External Equity Links (ueid)   ← was the only one before
-            #   64           = Linking Root Domains  (ufeid)
-            #   128          = Total Links           (uid)
-            #   8388608      = Spam Score            (spamScore)
-            #   68719476736  = Domain Authority      (udaNum)
-            #   ──────────────────────────────────────────────
-            #   68727865589  ← combined total
-            cols = "68727865589"
+    if not url.startswith(('http://', 'https://')):
+        url = 'https://' + url
 
-            # URL-encode the target URL
-            encoded_url = urllib.parse.quote(target_url, safe='')
+    access_id = getattr(settings, 'MOZ_ACCESS_ID', '')
+    secret_key = getattr(settings, 'MOZ_SECRET_KEY', '')
 
-            metrics_url = (
-                f"https://lsapi.seomoz.com/linkscape/url-metrics/{encoded_url}"
-                f"?Cols={cols}&AccessID={access_id}&Expires={expires}&Signature={safe_signature}"
-            )
-
-            metrics_resp = requests.get(metrics_url, timeout=30)
-
-            if metrics_resp.status_code != 200:
-                messages.error(request, f"Moz API error (Status {metrics_resp.status_code}): {metrics_resp.text[:200]}")
-                return render(request, "backlink.html", data)
-
-            metrics_json = metrics_resp.json()
-            print(metrics_json)
-
-            # ------------------------------
-            # Parse all metrics from the single response
-            # ------------------------------
-            if isinstance(metrics_json, dict):
-                data.update({
-                    "url": target_url,
-                    "moz_rank":             metrics_json.get("pjr", 0),
-                    "moz_trust":            metrics_json.get("pjp", 0),
-                    "total_backlinks":      metrics_json.get("ueid", 0),
-                    "linking_root_domains": metrics_json.get("feid", 0),
-                })
-            else:
-                messages.error(request, "Unexpected response format from Moz API.")
-
-        except requests.exceptions.Timeout:
-            messages.error(request, "Request timed out. Please try again.")
-        except requests.exceptions.RequestException as e:
-            messages.error(request, f"Network error: {str(e)}")
-        except ValueError as e:
-            messages.error(request, f"Invalid JSON response: {str(e)}")
-        except Exception as e:
-            messages.error(request, f"Error: {str(e)}")
-            data.update({
-                "total_backlinks": 0
-            })
-
-    return render(request, "backlink.html", data)
-
-@login_required(login_url='login')
-def DomainAuthority(request):
     try:
-        if request.method == "GET":
-            return render(request, 'DomainAuthority.html')
-        url = request.POST["fname"]
-        if not url or not validators.url(url):
-            return render(request, 'DomainAuthority.html')
-        data={}
-        access_id = 'mozscape-14743efc78'
-        secret_key = 'd437141078506f5aa883e3ffef9ad549'
-        obj_url = urllib.parse.urlparse(url).hostname
+        # 🔐 Moz API v1 (Linkscape) Authentication with query string
+        from urllib.parse import quote
         expires = str(int(time.time()) + 300)
-        sign_in_str = access_id + "\n" + expires
-        binary_signature = hmac.new(secret_key.encode('utf-8'), sign_in_str.encode('utf-8'), hashlib.sha1).digest()
-        safe_signature = urllib.parse.quote(base64.b64encode(binary_signature).decode('utf-8'))
-        cols = '103079231488'
-        flags = '103079215108'
-        req_url = f"http://lsapi.seomoz.com/linkscape/url-metrics/{obj_url}?Cols={cols}&AccessID={access_id}&Expires={expires}&Signature={safe_signature}"
-        response = requests.get(req_url)
-        res_obj = json.loads(response.content.decode('utf-8'))
-        domain_score=round(res_obj['pda'], 2)
-        data["url"]=url
-        data["da"]=domain_score
+        string_to_sign = f"{access_id}\n{expires}"
+        binary_signature = hmac.new(
+            secret_key.encode('utf-8'),
+            string_to_sign.encode('utf-8'),
+            hashlib.sha1
+        ).digest()
+        safe_signature = quote(base64.b64encode(binary_signature))
 
-        return render(request, 'DomainAuthority.html',data)
+        # Cols bitmask: pda(68719476736) + upa(34359738368) + umrp(16384) + ueid(32) + uid(2048) = 103079233568
+        cols = "103079233568"
+        encoded_url = quote(url, safe='')
+        api_url = (
+            f"https://lsapi.seomoz.com/linkscape/url-metrics/{encoded_url}"
+            f"?Cols={cols}&AccessID={access_id}&Expires={expires}&Signature={safe_signature}"
+        )
 
-    except requests.exceptions.Timeout as e:
-        # Handle timeout error
-        messages.error(request, 'Connection timed out!Website is taking Too much time.')
-        return render(request, 'DomainAuthority.html')
+        response = requests.get(api_url, timeout=30)
+
+        if response.status_code != 200:
+            messages.error(request, f"Moz API error (Status {response.status_code}): {response.text[:200]}")
+            return render(request, 'seo_metrics.html', data)
+
+        result = response.json()
+
+        # 🎯 Extract metrics from v1 API response
+        data.update({
+            "url": url,
+            "da": round(result.get("pda", 0), 2),  # Domain Authority
+            "pa": round(result.get("upa", 0), 2),  # Page Authority
+            "total_backlinks": result.get("ueid", 0),  # External links
+            "linking_root_domains": result.get("uid", 0),  # Root domains linking
+            "moz_rank": round(result.get("umrp", 0), 2),  # MozRank
+        })
+
+    except requests.exceptions.Timeout:
+        messages.error(request, 'Connection timed out. Please try again.')
     except requests.exceptions.RequestException as e:
-        # Handle connection error
-        messages.error(request, 'Check your internet connection! OR May be Network Error.')
-        return render(request, 'DomainAuthority.html')
+        messages.error(request, f'Network error: {str(e)}')
+    except Exception as e:
+        messages.error(request, f'Error: {str(e)}')
 
-@login_required(login_url='login')
-def pageAuthority(request):
-    try:
-        if request.method=="GET":
-            return render(request, 'pageAuthority.html')
-        url = request.POST["fname"]
-        if not url or not validators.url(url):
-            return render(request, 'pageAuthority.html')
-        data = {}
-        access_id = 'mozscape-14743efc78'
-        secret_key = 'd437141078506f5aa883e3ffef9ad549'
-        obj_url = urllib.parse.urlparse(url).hostname
-        expires = str(int(time.time()) + 300)
-        sign_in_str = access_id + "\n" + expires
-        binary_signature = hmac.new(secret_key.encode('utf-8'), sign_in_str.encode('utf-8'), hashlib.sha1).digest()
-        safe_signature = urllib.parse.quote(base64.b64encode(binary_signature).decode('utf-8'))
-        cols = '103079231488'
-        flags = '103079215108'
-        req_url = f"http://lsapi.seomoz.com/linkscape/url-metrics/{obj_url}?Cols={cols}&AccessID={access_id}&Expires={expires}&Signature={safe_signature}"
-        response = requests.get(req_url)
-        res_obj = json.loads(response.content.decode('utf-8'))
-        page_score = round(res_obj['upa'], 2)
-        data["pa"] = page_score
-        data["url"]=url
-        return render(request, 'pageAuthority.html',data)
-    except requests.exceptions.Timeout as e:
-        # Handle timeout error
-        messages.error(request, 'Connection timed out!Website is taking Too much time.')
-        return render(request, 'pageAuthority.html')
-    except requests.exceptions.RequestException as e:
-        # Handle connection error
-        messages.error(request, 'Check your internet connection! OR May be Network Error.')
-        return render(request, 'pageAuthority.html')
-
+    return render(request, 'seo_metrics.html', data)
 
 @login_required(login_url='login')
 def mobiletest(request):
@@ -4512,7 +4049,6 @@ def mobiletest(request):
         if not url or not validators.url(url):
             messages.error(request, "Invalid URL")
             return render(request, 'mobiletest.html')
-
         data = {
             "url": url,
             "performance_score": None,
@@ -4521,35 +4057,58 @@ def mobiletest(request):
             "final_verdict": ""
         }
 
-        # ---------------------------
-        # 1️⃣ Google PageSpeed Insights API
-        # ---------------------------
         api_data = {}
         try:
             api_url = "https://www.googleapis.com/pagespeedonline/v5/runPagespeed"
-            params = {
-                "url": url,
-                "strategy": "mobile",
-                "key": "AIzaSyATWa7msKvirO8vgWg0xZ0RbkztK9JuC5g",  # replace with your actual API key
-                "category": ["performance", "accessibility", "best-practices", "seo", "pwa"]
-            }
+            params = [
+                ("url", url),
+                ("strategy", "mobile"),
+                ("key", getattr(settings, 'PAGESPEED_API_KEY', '')),
+                ("category", "performance"),
+                ("category", "accessibility"),
+                ("category", "best-practices"),
+                ("category", "seo"),
+            ]
 
-            response = requests.get(api_url, params=params, timeout=30)
+            # PageSpeed Insights runs full Lighthouse on Google's servers and can
+            # take 60-90s for slow/mobile pages. Use a generous timeout + one retry
+            # so transient slowness doesn't break the Mobile-Friendly Test.
+            response = None
+            last_err = None
+            for attempt in range(2):
+                try:
+                    response = requests.get(api_url, params=params, timeout=120)
+                    break
+                except requests.exceptions.Timeout as te:
+                    last_err = te
+                    logger.warning(f"PageSpeed API timeout (attempt {attempt + 1}/2): {te}")
+            if response is None:
+                raise last_err if last_err else Exception("PageSpeed API: no response")
+
+            if response.status_code != 200:
+                error_detail = response.json().get("error", {}).get("message", response.text[:200])
+                logger.warning(f"PageSpeed API error {response.status_code}: {error_detail}")
+                data["lighthouse_error"] = f"PageSpeed API error ({response.status_code}): {error_detail}"
+                raise Exception(data["lighthouse_error"])
+
             api_data = response.json()
-            pretty_data = json.dumps(api_data, indent=4)
-            # print(pretty_data)
             lh = api_data.get("lighthouseResult", {}).get("categories", {})
 
+            if not lh:
+                logger.warning(f"PageSpeed API returned no lighthouseResult: {api_data}")
+                raise Exception("PageSpeed API returned no Lighthouse data.")
+
             data.update({
-                "performance_score": lh.get("performance", {}).get("score", 0) * 100,
-                "accessibility_score": lh.get("accessibility", {}).get("score", 0) * 100,
-                "best_practices_score": lh.get("best-practices", {}).get("score", 0) * 100,
-                "seo_score": lh.get("seo", {}).get("score", 0) * 100,
+                "performance_score": round((lh.get("performance", {}).get("score") or 0) * 100),
+                "accessibility_score": round((lh.get("accessibility", {}).get("score") or 0) * 100),
+                "best_practices_score": round((lh.get("best-practices", {}).get("score") or 0) * 100),
+                "seo_score": round((lh.get("seo", {}).get("score") or 0) * 100),
                 "pwa_score": lh.get("pwa", {}).get("score", None)
             })
-            print(data)
         except Exception as e:
-            print("Lighthouse fetch error:", e)
+            logger.warning(f"Lighthouse fetch error: {e}")
+            if "lighthouse_error" not in data:
+                data["lighthouse_error"] = str(e)
             data.update({
                 "performance_score": None,
                 "accessibility_score": None,
@@ -4558,33 +4117,22 @@ def mobiletest(request):
                 "pwa_score": None
             })
 
-        # Extract Mobile score (0-100)
-        try:
-            data["performance_score"] = api_data["lighthouseResult"]["categories"]["performance"]["score"] * 100
-        except KeyError:
-            data["performance_score"] = None
 
-        # ---------------------------
-        # 2️⃣ HTML + CSS Analysis
-        # ---------------------------
         try:
             html = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=20).text
             soup = BeautifulSoup(html, "html.parser")
 
-            # Viewport
             viewport = soup.find("meta", attrs={"name": "viewport"})
             data["ux_checks"]["viewport"] = bool(viewport)
             viewport_content = viewport.get("content", "") if viewport else ""
             data["ux_checks"]["content_fit"] = "width=device-width" in viewport_content
             data["ux_checks"]["scalable"] = "user-scalable=no" not in viewport_content
 
-            # Responsive Images
             images = soup.find_all("img")
             responsive_images = sum(1 for img in images if "max-width" in img.get("style", "") or img.get("width") is None)
             data["ux_checks"]["responsive_images"] = responsive_images > 0
             data["ux_checks"]["alt_text"] = all(img.get("alt") for img in images) if images else True
 
-            # Font size heuristic
             small_fonts = 0
             for tag in soup.find_all(style=True):
                 if "font-size" in tag["style"]:
@@ -4596,18 +4144,14 @@ def mobiletest(request):
                         pass
             data["ux_checks"]["font_size_ok"] = small_fonts == 0
 
-            # Tap Targets
             buttons = soup.find_all(["button", "a"])
             data["ux_checks"]["tap_targets"] = len(buttons) > 0
 
         except Exception:
             data["ux_checks"] = {}
 
-        # ---------------------------
-        # 3️⃣ Final Verdict
-        # ---------------------------
         checks_passed = sum(1 for check in data["ux_checks"].values() if check)
-        if data.get("performance_score", 0) >= 90 and checks_passed >= 5:
+        if (data.get("performance_score") or 0) >= 90 and checks_passed >= 5:
             data["final_verdict"] = "Fully Mobile Optimized"
         elif checks_passed >= 3:
             data["final_verdict"] = "Partially Mobile Friendly"
@@ -4645,13 +4189,12 @@ def robot(request):
         data["url"]=url
         return render(request, 'robot.html', data)
     except requests.exceptions.Timeout as e:
-        # Handle timeout error
         messages.error(request, 'Connection timed out!Website is taking Too much time.')
         return render(request, 'robot.html')
     except requests.exceptions.RequestException as e:
-        # Handle connection error
         messages.error(request, 'Check your internet connection! OR May be Network Error.')
         return render(request, 'robot.html')
+
 @login_required(login_url='login')
 def keyPosition(request):
     from googlesearch import search
@@ -4678,7 +4221,6 @@ def keyPosition(request):
                 url = url.replace("://", "://www.")
             if not url.endswith('/'):
                 url += '/'
-
             return url
 
         url1=check_url(url)
@@ -4692,8 +4234,7 @@ def keyPosition(request):
             for position, url in enumerate(search_results, 1):
                 if url == link:
                     return position
-
-            return -1  # Return -1 if the link is not found in the top 10 search results.
+            return -1
 
         position = find_link_position(keyword, url1)
         if position != -1:
@@ -4703,13 +4244,12 @@ def keyPosition(request):
 
         return render(request, 'keyPosition.html',data)
     except requests.exceptions.Timeout as e:
-        # Handle timeout error
         messages.error(request, 'Connection timed out!Website is taking Too much time.')
         return render(request, 'keyPosition.html')
     except requests.exceptions.RequestException as e:
-        # Handle connection error
         messages.error(request, 'Check your internet connection! OR May be Network Error.')
         return render(request, 'keyPosition.html')
+
 @login_required(login_url='login')
 def keysuggestion(request):
     try:
@@ -4734,31 +4274,101 @@ def keysuggestion(request):
         data["keyword"]=keyword
         return render(request, 'keysuggestion.html',data)
     except requests.exceptions.Timeout as e:
-        # Handle timeout error
         messages.error(request, 'Connection timed out!Website is taking Too much time.')
         return render(request, 'keysuggestion.html')
     except requests.exceptions.RequestException as e:
-        # Handle connection error
         messages.error(request, 'Check your internet connection! OR May be Network Error.')
         return render(request, 'keysuggestion.html')
 
-def loginuser (request):
-    global current_user_email
-    if request.method=='POST':
+@login_required(login_url='login')
+def keyword_ai_suggestions(request):
+    """
+    AI-Powered Keyword Suggestion using keyword_ai pipeline.
+    Analyzes URL or text to extract, expand, and rank keywords using ML.
+    """
+    try:
+        if request.method == "GET":
+            return render(request, 'keyword_ai_suggestions.html')
+        
+        data = {}
+        url = request.POST.get("url", "").strip()
+        text = request.POST.get("text", "").strip()
+        page_topic = request.POST.get("page_topic", "").strip()
+        use_llm = request.POST.get("use_llm", "true").lower() != "false"
+        
+        # Validate input
+        if not url and not text:
+            messages.error(request, 'Please provide either a URL or text content.')
+            return render(request, 'keyword_ai_suggestions.html', data)
+        
+        # Run the AI pipeline v2 with all advanced features
+        result = run_keyword_pipeline_v2(
+            url=url if url else None,
+            text=text if text else None,
+            page_topic=page_topic,
+            use_llm=use_llm,
+            use_advanced_ai=True,
+            analyze_competitors=False,
+            generate_optimization=False,
+            save_to_db=True,
+        )
+        
+        if "error" in result:
+            messages.error(request, f"Analysis failed: {result['error']}")
+            return render(request, 'keyword_ai_suggestions.html', data)
+        
+        # Prepare data for template
+        data["url"] = url
+        data["text"] = text[:200] + "..." if len(text) > 200 else text
+        data["page_topic"] = page_topic
+        data["page_title"] = result.get("page_title", "")
+        data["relevant_keywords"] = result.get("relevant_keywords", [])
+        data["scored_keywords"] = result.get("scored_keywords", [])[:20]  # Top 20
+        data["intent_groups"] = result.get("intent_groups", {})
+        data["focus_keywords"] = result.get("focus_keywords", [])
+        data["keybert_keywords"] = result.get("keybert_keywords", [])[:10]
+        data["expanded_keywords"] = result.get("expanded_keywords", [])[:10]
+        
+        # Phase 2 ML features
+        data["ml_generated_suggestions"] = result.get("ml_generated_suggestions", [])[:15]
+        data["semantic_keywords"] = result.get("semantic_keywords", [])[:15]
+        data["tfidf_keywords"] = result.get("tfidf_keywords", [])[:10]
+        
+        # Phase 3 AI features
+        data["ai_expanded_keywords"] = result.get("ai_expanded_keywords", [])[:10]
+        data["question_keywords"] = result.get("question_keywords", [])[:8]
+        data["intent_classifications"] = result.get("intent_classifications", [])
+        data["content_analysis"] = result.get("content_analysis", {})
+        
+        data["keyword_count"] = len(result.get("relevant_keywords", []))
+        
+        messages.success(request, f'Successfully analyzed and found {data["keyword_count"]} relevant keywords!')
+        return render(request, 'keyword_ai_suggestions.html', data)
+        
+    except Exception as e:
+        logger.error(f"Keyword AI analysis failed: {str(e)}")
+        messages.error(request, f'Analysis failed: {str(e)}')
+        return render(request, 'keyword_ai_suggestions.html')
+
+def loginuser(request):
+    # ✅ FIX (Global State): removed `global current_user_email`.
+    #    The email is available anywhere via request.user.email after login()
+    #    and is stored on Website_Audit instances via self.user_email.
+    if request.method == 'POST':
         username = request.POST.get('username')
         pass1 = request.POST.get('pass')
-        user=authenticate(request,username=username,password=pass1)
         if username == '' or pass1 == '':
             messages.error(request, 'Please fill to Proceed!')
             return redirect('login')
+        user = authenticate(request, username=username, password=pass1)
         if user is not None:
-            login(request,user)
-            current_user_email=request.user.email
+            login(request, user)
             return redirect('Home')
         else:
             messages.error(request, 'Invalid Credentials!')
             return redirect('login')
     return render(request, 'fyplogin.html')
+
 def register(request):
 
     def is_valid_email(email):
@@ -4810,11 +4420,9 @@ def register(request):
 def logoutuser(request):
     logout(request)
     response = redirect('login')
-    # Disable caching of the page to prevent the user from navigating back to it
     response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     response['Pragma'] = 'no-cache'
     response['Expires'] = '0'
-
     return response
 
 def ChangePassword(request, token):
@@ -4830,11 +4438,11 @@ def ChangePassword(request, token):
             user_id = request.POST.get('user_id')
 
             if user_id is None:
-                messages.success(request, 'No user id found.')
+                messages.error(request, 'No user id found.')
                 return redirect(f'/change-password/{token}/')
 
             if new_password != confirm_password:
-                messages.success(request, 'Both should be equal.')
+                messages.error(request, 'Passwords do not match.')
                 return redirect(f'/change-password/{token}/')
 
             user_obj = User.objects.get(id=user_id)
@@ -4842,9 +4450,8 @@ def ChangePassword(request, token):
             user_obj.save()
             return redirect('login')
 
-
     except Exception as e:
-        print(e)
+        logger.error(f'ChangePassword error: {str(e)}')
     return render(request, 'change-password.html', context)
 
 
@@ -4854,13 +4461,13 @@ def ForgetPassword(request):
             email = request.POST.get('email')
 
             if not email:
-                messages.error(request, 'Email dalna bhool gaye king 👑')
+                messages.error(request, 'Please enter your email address.')
                 return redirect('forget_password')
 
             user = User.objects.filter(email=email).first()
 
             if not user:
-                messages.error(request, 'Ye email hamare database me nahi hai boss.')
+                messages.error(request, 'No account found with this email address.')
                 return redirect('forget_password')
 
             token = str(uuid.uuid4())
@@ -4871,10 +4478,11 @@ def ForgetPassword(request):
 
             send_forget_password_mail(user.email, token)
 
-            messages.success(request, 'Email sent! Inbox check karo hero 🚀')
+            messages.success(request, 'Password reset email sent! Please check your inbox.')
             return redirect('forget_password')
 
     except Exception as e:
-        messages.error(request, f'System bola: {str(e)}')
+        logger.error(f'ForgetPassword error: {str(e)}')
+        messages.error(request, 'An error occurred. Please try again.')
 
     return render(request, 'forget-password.html')

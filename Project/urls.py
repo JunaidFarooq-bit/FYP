@@ -17,21 +17,18 @@ from django.contrib import admin
 from django.urls import path,include
 from SEOAnalyzer import views
 
-app_name='SEOAnalyzer'
-
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('home',views.index,name="Home"),
-    path('show', views.show, name="show"),
+    path('home/',views.index,name="Home"),
+    path('show/', views.show, name="show"),
     path('upload/',views.upload,name='upload'),
     path('report/',views.Report,name='report'),
-    path('backlink',views.backlink,name="backlink"),
-    path('DomainAuthority',views.DomainAuthority,name="DomainAuthority"),
-    path('pageAuthority',views.pageAuthority,name="pageAuthority"),
-    path('mobiletest',views.mobiletest,name="mobiletest"),
-    path('robot',views.robot,name="robot"),
-    path('keyPosition',views.keyPosition,name="keyPosition"),
-    path('keysuggestion',views.keysuggestion,name="keysuggestion"),
+    path('seo-metrics/', views.seo_metrics, name="seo_metrics"),
+    path('mobiletest/',views.mobiletest,name="mobiletest"),
+    path('robot/',views.robot,name="robot"),
+    path('keyPosition/',views.keyPosition,name="keyPosition"),
+    path('keysuggestion/',views.keysuggestion,name="keysuggestion"),
+    path('keyword-ai-suggestions/', views.keyword_ai_suggestions, name="keyword_ai_suggestions"),
     path('', views.loginuser, name="login"),
     path('register/', views.register, name="register"),
     path('logout/', views.logoutuser, name="logout"),
@@ -40,6 +37,5 @@ urlpatterns = [
     path('sentimentanalysis/', views.sentiment_analysis_page, name='sentiment_analysis'),
     path('sentimentanalysis/analyze/', views.analyze_sentiment_view, name='analyze_sentiment'),
     path('comparative-analysis/', include('comparative_analysis.urls')),
-    path("api/", include("keyword_suggestion.urls")),
-
+    path("api/keywords/", include("keyword_ai.urls"))
 ]
