@@ -4,8 +4,8 @@ RAG (Retrieval-Augmented Generation) Service for Keyword AI
 Provides semantic search capabilities to retrieve relevant historical
 content analyses for augmenting LLM prompts with contextual knowledge.
 
-Note: Full RAG with vector similarity requires PostgreSQL + pgvector.
-On SQLite, RAG retrieval is skipped (graceful fallback).
+Supports both PostgreSQL + pgvector (default) and Pinecone (cloud vector DB).
+The backend is automatically selected based on USE_PINECONE setting.
 """
 
 import numpy as np
@@ -29,6 +29,8 @@ def retrieve_similar_analyses(
     This is the core RAG retrieval function that finds historically similar
     content to augment LLM prompts with contextual knowledge.
     
+    Automatically uses Pinecone if USE_PINECONE=True, otherwise uses pgvector.
+    
     Args:
         content_embedding: The embedding vector of current content (384-dim)
         top_k: Number of similar analyses to retrieve
@@ -38,68 +40,19 @@ def retrieve_similar_analyses(
     Returns:
         List of dicts with similar analyses and their keywords
     """
-    # RAG requires PostgreSQL with pgvector
-    if connection.vendor != 'postgresql':
-        logger.debug("RAG retrieval skipped: requires PostgreSQL with pgvector")
-        return []
-    
-    if content_embedding is None or len(content_embedding) == 0:
-        return []
-    
-    # Ensure embedding is list format for Django ORM
-    if isinstance(content_embedding, np.ndarray):
-        embedding_list = content_embedding.tolist()
-    else:
-        embedding_list = content_embedding
-    
-    # Use pgvector's distance operator (<-> for L2, <=> for cosine, <#> for inner product)
-    # Cosine similarity is best for semantic similarity
-    similar_analyses = ContentAnalysis.objects.filter(
-        quality_score__gte=min_quality_score,
-        embedding__isnull=False
-    ).annotate(
-        distance=models.Func(
-            models.F('embedding'),
-            embedding_list,
-            function='embedding <=>',
-            output_field=models.FloatField()
+    # Use the unified vector database adapter
+    # This handles switching between Pinecone and pgvector automatically
+    try:
+        from .vector_db_adapter import search_similar_analyses as adapter_search
+        return adapter_search(
+            content_embedding=content_embedding,
+            top_k=top_k,
+            min_quality_score=min_quality_score,
+            include_keywords=include_keywords
         )
-    ).order_by('distance')[:top_k]
-    
-    results = []
-    for analysis in similar_analyses:
-        result = {
-            'url': analysis.url,
-            'quality_score': analysis.quality_score,
-            'similarity_score': 1 - analysis.distance,  # Convert distance to similarity
-            'analyzed_at': analysis.analyzed_at.isoformat(),
-            'title': analysis.title,
-        }
-        
-        if include_keywords:
-            # Get top keywords from this similar analysis
-            keywords = KeywordOpportunity.objects.filter(
-                content_analysis=analysis,
-                is_rejected=False
-            ).order_by('-relevance_score')[:10]
-            
-            result['top_keywords'] = [
-                {
-                    'keyword': kw.keyword,
-                    'score': kw.relevance_score,
-                    'intent': kw.search_intent,
-                    'type': kw.keyword_type
-                }
-                for kw in keywords
-            ]
-            
-            # Also include TF-IDF keywords
-            if analysis.tfidf_keywords:
-                result['tfidf_keywords'] = analysis.tfidf_keywords[:10]
-        
-        results.append(result)
-    
-    return results
+    except Exception as e:
+        logger.error(f"Vector search failed: {e}")
+        return []
 
 
 def retrieve_by_keyword_gap(

@@ -113,6 +113,78 @@
             font-size: 0.875rem;
             resize: vertical;
         }
+        
+        /* Feedback Buttons */
+        .feedback-cell {
+            white-space: nowrap;
+        }
+        
+        .feedback-buttons {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .btn-feedback {
+            width: 32px;
+            height: 32px;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .btn-accept {
+            background: #e8f5e9;
+            color: #28a745;
+        }
+        
+        .btn-accept:hover {
+            background: #28a745;
+            color: white;
+            transform: scale(1.1);
+        }
+        
+        .btn-reject {
+            background: #ffebee;
+            color: #dc3545;
+        }
+        
+        .btn-reject:hover {
+            background: #dc3545;
+            color: white;
+            transform: scale(1.1);
+        }
+        
+        .btn-feedback:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
     </style>
 </head>
 
@@ -299,27 +371,28 @@
                     </div>
                     {% endif %}
                     
-                    <!-- Scored Keywords Table -->
+                    <!-- Scored Keywords Table with Feedback -->
                     <div class="mb-4">
                         <h5 class="metrics-group-title">
                             <i class="fas fa-list-ol" style="margin-right: 6px;"></i>
                             Top Keywords by Relevance Score
                         </h5>
                         <div class="table-responsive">
-                            <table class="keywords-table">
+                            <table class="keywords-table" id="keywordsTable">
                                 <thead>
                                     <tr>
                                         <th>#</th>
                                         <th>Keyword</th>
                                         <th>Relevance Score</th>
                                         <th>Status</th>
+                                        <th>Feedback</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {% for item in scored_keywords %}
-                                    <tr>
+                                    <tr data-opportunity-id="{{ item.opportunity_id }}">
                                         <td>{{ forloop.counter }}</td>
-                                        <td>{{ item.keyword }}</td>
+                                        <td class="keyword-text">{{ item.keyword }}</td>
                                         <td>
                                             <span class="score-badge">{{ item.relevance_score }}</span>
                                         </td>
@@ -330,10 +403,39 @@
                                                 <span class="badge badge-secondary">Low Relevance</span>
                                             {% endif %}
                                         </td>
+                                        <td class="feedback-cell">
+                                            {% if item.opportunity_id %}
+                                            <div class="feedback-buttons" id="feedback-buttons-{{ item.opportunity_id }}">
+                                                <button class="btn-feedback btn-accept" 
+                                                        onclick="submitKeywordFeedback({{ item.opportunity_id }}, 'accepted', this)"
+                                                        title="Accept this keyword">
+                                                    <i class="fas fa-check"></i>
+                                                </button>
+                                                <button class="btn-feedback btn-reject" 
+                                                        onclick="submitKeywordFeedback({{ item.opportunity_id }}, 'rejected', this)"
+                                                        title="Reject this keyword">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </div>
+                                            <span class="feedback-status" id="feedback-status-{{ item.opportunity_id }}" style="display: none;"></span>
+                                            {% else %}
+                                            <span class="badge badge-secondary">No ID</span>
+                                            {% endif %}
+                                        </td>
                                     </tr>
                                     {% endfor %}
                                 </tbody>
                             </table>
+                        </div>
+                        
+                        <!-- Feedback Legend -->
+                        <div class="feedback-legend" style="margin-top: 10px; font-size: 0.85rem; color: var(--gray-600);">
+                            <small>
+                                <i class="fas fa-info-circle"></i>
+                                Click <i class="fas fa-check" style="color: #28a745;"></i> to accept or 
+                                <i class="fas fa-times" style="color: #dc3545;"></i> to reject keywords. 
+                                Your feedback helps improve future suggestions!
+                            </small>
                         </div>
                     </div>
                     
@@ -567,32 +669,84 @@
             }
         }
 
-        // Feedback submission
-        async function submitFeedback(opportunityId, action, comment = '') {
+        // Keyword feedback submission
+        async function submitKeywordFeedback(opportunityId, action, buttonElement) {
             try {
+                // Show loading state
+                const row = buttonElement.closest('tr');
+                const buttons = row.querySelectorAll('.btn-feedback');
+                buttons.forEach(btn => btn.disabled = true);
+                
                 const response = await fetch('/api/keywords/feedback/', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
                     },
                     body: JSON.stringify({
                         opportunity_id: opportunityId,
                         action: action,
-                        comment: comment
+                        comment: ''
                     })
                 });
 
                 const data = await response.json();
+                
                 if (data.success) {
                     // Update UI to show feedback recorded
-                    const btn = document.querySelector(`[data-opportunity-id="${opportunityId}"]`);
-                    if (btn) {
-                        btn.classList.add('feedback-recorded');
+                    const feedbackCell = buttonElement.closest('.feedback-cell');
+                    const buttonsDiv = feedbackCell.querySelector('.feedback-buttons');
+                    const statusSpan = feedbackCell.querySelector('.feedback-status');
+                    
+                    buttonsDiv.style.display = 'none';
+                    statusSpan.style.display = 'inline';
+                    
+                    if (action === 'accepted') {
+                        statusSpan.innerHTML = '<span class="badge badge-success"><i class="fas fa-check"></i> Accepted</span>';
+                        row.style.background = '#d4edda';
+                    } else if (action === 'rejected') {
+                        statusSpan.innerHTML = '<span class="badge badge-danger"><i class="fas fa-times"></i> Rejected</span>';
+                        row.style.background = '#f8d7da';
+                        row.style.opacity = '0.6';
                     }
+                    
+                    // Show toast notification
+                    showToast(`Feedback recorded: ${action}`, 'success');
+                } else {
+                    showToast('Error: ' + (data.error || 'Failed to record feedback'), 'error');
+                    buttons.forEach(btn => btn.disabled = false);
                 }
             } catch (error) {
                 console.error('Feedback error:', error);
+                showToast('Network error. Please try again.', 'error');
+                const row = buttonElement.closest('tr');
+                const buttons = row.querySelectorAll('.btn-feedback');
+                buttons.forEach(btn => btn.disabled = false);
             }
+        }
+        
+        // Show toast notification
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `alert alert-${type === 'success' ? 'success' : type === 'error' ? 'danger' : 'info'}`;
+            toast.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                z-index: 9999;
+                padding: 12px 20px;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                animation: slideIn 0.3s ease;
+            `;
+            toast.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i> ${message}`;
+            
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.animation = 'slideOut 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
         }
     </script>
 

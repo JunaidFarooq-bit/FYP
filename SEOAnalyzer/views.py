@@ -4342,6 +4342,22 @@ def keyword_ai_suggestions(request):
         
         data["keyword_count"] = len(result.get("relevant_keywords", []))
         
+        # Fetch actual opportunity IDs from database for feedback buttons
+        try:
+            from keyword_ai.models import ContentAnalysis, KeywordOpportunity
+            content_analysis = ContentAnalysis.objects.filter(url=url).order_by('-analyzed_at').first()
+            if content_analysis:
+                # Get all opportunities for this analysis
+                opportunities = {
+                    opp.keyword: opp.id 
+                    for opp in KeywordOpportunity.objects.filter(content_analysis=content_analysis)
+                }
+                # Add opportunity_id to each scored keyword
+                for item in data["scored_keywords"]:
+                    item["opportunity_id"] = opportunities.get(item["keyword"], None)
+        except Exception as e:
+            logger.warning(f"Could not fetch opportunity IDs: {e}")
+        
         messages.success(request, f'Successfully analyzed and found {data["keyword_count"]} relevant keywords!')
         return render(request, 'keyword_ai_suggestions.html', data)
         

@@ -89,17 +89,32 @@ WSGI_APPLICATION = 'Project.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.1/ref/settings/#databases
 
-# PostgreSQL with pgvector support for RAG
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'keywordai_db',
-        'USER': 'postgres',
-        'PASSWORD': 'admin123',
-        'HOST': 'localhost',
-        'PORT': '5432',
+# Choose database: SQLite (USE_SQLITE=true) or PostgreSQL (default)
+# Note: SQLite works best with Pinecone for vector storage (pgvector requires PostgreSQL)
+USE_SQLITE = os.getenv('USE_SQLITE', 'false').lower() == 'true'
+
+if USE_SQLITE:
+    # SQLite - simple file-based database, good for development
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
     }
-}
+else:
+    # PostgreSQL with pgvector support for RAG (Supabase or local)
+    # Configure via environment variables:
+    #   DB_NAME, DB_USER, DB_PASSWORD, DB_HOST, DB_PORT
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.getenv('DB_NAME', 'postgres'),
+            'USER': os.getenv('DB_USER', 'postgres'),
+            'PASSWORD': os.getenv('DB_PASSWORD', ''),
+            'HOST': os.getenv('DB_HOST', 'localhost'),
+            'PORT': os.getenv('DB_PORT', '5432'),
+        }
+    }
 
 # Password validation
 # https://docs.djangoproject.com/en/4.1/ref/settings/#auth-password-validators
@@ -181,6 +196,15 @@ OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY')
 USE_GROQ = os.getenv('USE_GROQ', 'true').lower() == 'true'
 GROQ_API_KEY = os.getenv('GROQ_API_KEY', '')
 GROQ_MODEL = os.getenv('GROQ_MODEL', 'llama-3.3-70b-versatile')
+
+# Pinecone Vector Database Configuration
+USE_PINECONE = os.getenv('USE_PINECONE', 'false').lower() == 'true'
+PINECONE_API_KEY = os.getenv('PINECONE_API_KEY', '')
+PINECONE_INDEX_NAME = os.getenv('PINECONE_INDEX_NAME', 'keyword-ai-vectors')
+PINECONE_CLOUD = os.getenv('PINECONE_CLOUD', 'aws')  # aws, gcp, azure
+PINECONE_REGION = os.getenv('PINECONE_REGION', 'us-east-1')
+PINECONE_DIMENSIONS = 384  # Matches all-MiniLM-L6-v2 embedding model
+PINECONE_METRIC = 'cosine'  # cosine, euclidean, dotproduct
 
 
 CACHES = {

@@ -320,3 +320,33 @@ INFO 2026-05-09 18:56:40,553 views primary.authority.domain_authority: 30
 INFO 2026-05-09 18:56:40,554 views ================================================================================
 INFO 2026-05-09 18:56:40,554 views [EXPLANATION] preview='Both URLs have similar SEO strength.\n\n1. **On Page Score** (22 point advantage)\n   • Overall stronger performance in this category\n\n2. **Intent Alignment Score** (Your advantage: 20 points)\n   • Bette'
 INFO 2026-05-09 18:56:40,555 views [EXPLANATION] Not JSON, treating as plain text
+INFO 2026-05-14 15:02:15,648 pinecone_service Pinecone client initialized for index: keyword-ai-vectors
+ERROR 2026-05-14 15:02:16,929 pinecone_service Failed to get index reference: [404 NOT_FOUND] Resource keyword-ai-vectors not found
+INFO 2026-05-14 15:02:34,938 pinecone_service Pinecone client initialized for index: keyword-ai-vectors
+INFO 2026-05-14 15:02:36,152 pinecone_service Creating Pinecone index: keyword-ai-vectors
+INFO 2026-05-14 15:02:44,752 pinecone_service Index keyword-ai-vectors created successfully
+INFO 2026-05-14 15:09:10,275 pinecone_service Pinecone client initialized for index: keyword-ai-vectors
+INFO 2026-05-14 15:11:33,292 pinecone_service Pinecone client initialized for index: keyword-ai-vectors
+INFO 2026-05-14 15:29:24,943 pinecone_service Pinecone client initialized for index: keyword-ai-vectors
+WARNING 2026-05-14 15:29:28,142 vector_db_adapter Pinecone returned no results, falling back to pgvector
+INFO 2026-05-14 15:29:28,143 pipeline_v2 RAG: Retrieved 0 similar analyses for context
+WARNING 2026-05-14 15:31:03,742 vector_db_adapter Pinecone returned no results, falling back to pgvector
+INFO 2026-05-14 15:31:03,744 pipeline_v2 RAG: Retrieved 0 similar analyses for context
+WARNING 2026-05-14 15:31:04,438 vector_db_adapter Pinecone returned no results, falling back to pgvector
+INFO 2026-05-14 15:31:04,439 pipeline_v2 RAG: Retrieved 0 similar analyses for context
+WARNING 2026-05-14 15:31:11,223 pipeline_v2 Failed to save keyword opportunities: database is locked
+WARNING 2026-05-14 15:33:14,393 vector_db_adapter Pinecone returned no results, falling back to pgvector
+INFO 2026-05-14 15:33:14,393 pipeline_v2 RAG: Retrieved 0 similar analyses for context
+WARNING 2026-05-14 15:37:13,835 vector_db_adapter Pinecone returned no results, falling back to pgvector
+INFO 2026-05-14 15:37:13,837 pipeline_v2 RAG: Retrieved 0 similar analyses for context
+WARNING 2026-05-14 15:40:04,667 vector_db_adapter Pinecone returned no results, falling back to pgvector
+INFO 2026-05-14 15:40:04,668 pipeline_v2 RAG: Retrieved 0 similar analyses for context
+WARNING 2026-05-14 15:41:04,591 vector_db_adapter Pinecone returned no results, falling back to pgvector
+INFO 2026-05-14 15:41:04,592 pipeline_v2 RAG: Retrieved 0 similar analyses for context
+WARNING 2026-05-14 15:42:16,396 vector_db_adapter Pinecone returned no results, falling back to pgvector
+INFO 2026-05-14 15:42:16,397 pipeline_v2 RAG: Retrieved 0 similar analyses for context
+INFO 2026-05-14 15:43:19,135 pinecone_service Pinecone client initialized for index: keyword-ai-vectors
+INFO 2026-05-14 15:43:54,215 pinecone_service Pinecone client initialized for index: keyword-ai-vectors
+INFO 2026-05-14 15:43:57,762 pinecone_service Upserted 12 vectors to Pinecone
+INFO 2026-05-14 15:45:06,675 pinecone_service Pinecone client initialized for index: keyword-ai-vectors
+INFO 2026-05-14 15:46:09,213 pipeline_v2 RAG: Retrieved 3 similar analyses for context

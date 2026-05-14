@@ -20,6 +20,7 @@ transformers>=4.35.0           # HuggingFace transformers (dep of sentence-trans
 faiss-cpu>=1.8.0               # CPU FAISS (change to faiss-gpu for CUDA)
 pgvector>=0.2.5              # PostgreSQL vector extension
 psycopg2-binary>=2.9.0       # PostgreSQL adapter
+pinecone>=6.0.0              # Pinecone vector database (alternative to pgvector)
 
 # ── Data Processing ──────────────────────────────────────────
 pandas>=2.0.0
