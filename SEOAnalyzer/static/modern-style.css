@@ -2120,6 +2120,128 @@ Copy
 }
 
 /* ========================================
+   Mini Metric Cards (for stats display)
+   ======================================== */
+
+.mini-metric {
+  background: var(--gray-100);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  text-align: center;
+  border: 1px solid var(--gray-200);
+}
+
+.mini-metric-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--primary-dark);
+  line-height: 1.2;
+  margin-bottom: 0.25rem;
+}
+
+.mini-metric-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--gray-600);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Mini metric variants */
+.mini-metric.metric-success {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.mini-metric.metric-success .mini-metric-value {
+  color: var(--success);
+}
+
+.mini-metric.metric-warning {
+  background: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.mini-metric.metric-warning .mini-metric-value {
+  color: var(--warning);
+}
+
+.mini-metric.metric-danger {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.mini-metric.metric-danger .mini-metric-value {
+  color: var(--error);
+}
+
+/* Metric cards in analysis sections */
+.metric-card {
+  background: var(--white);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  text-align: center;
+  border: 1px solid var(--gray-200);
+  box-shadow: var(--shadow-sm);
+}
+
+.metric-card .metric-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--gray-500);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.5rem;
+}
+
+.metric-card .metric-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--gray-800);
+}
+
+/* ========================================
+   Vital Cards (Performance Metrics)
+   ======================================== */
+
+.vital-card .metric-value {
+  color: var(--gray-800);
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.vital-card .metric-label {
+  color: var(--gray-500);
+  font-size: 0.875rem;
+}
+
+/* ========================================
+   Fix white text on light backgrounds
+   ======================================== */
+
+/* Ensure text in regular cards is visible */
+.analysis-card .card-body .result-text {
+  color: var(--gray-800);
+}
+
+/* Override any inherited white text in non-featured cards */
+.analysis-card:not(.featured-card) .card-body,
+.analysis-card:not(.featured-card) .card-body p,
+.analysis-card:not(.featured-card) .card-body span {
+  color: var(--gray-700);
+}
+
+/* Technology stack and other specific card fixes */
+.analysis-card .card-body p.result-text {
+  color: var(--gray-800) !important;
+}
+
+/* Ensure verdict badges have proper contrast */
+.verdict-badge {
+  color: var(--gray-700);
+}
+
+/* ========================================
    Print Styles for E-E-A-T Data
    ======================================== */
 
