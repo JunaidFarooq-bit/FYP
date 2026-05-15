@@ -2400,12 +2400,29 @@
           </div>
         </section>
 
-        <!-- Download Report Button -->
+        <!-- Report Actions -->
         <div class="report-action">
-          <a href="{% url 'report' %}" class="btn btn-download">
-            <i class="fas fa-file-pdf"></i>
-            <span>Download PDF Report</span>
-          </a>
+          <div class="report-buttons">
+            <!-- Send via Email -->
+            <form action="{% url 'report' %}" method="post" style="display: inline;">
+              {% csrf_token %}
+              <input type="hidden" name="url" value="{{ url }}" />
+              <button type="submit" class="btn btn-download btn-email">
+                <i class="fas fa-envelope"></i>
+                <span>Send via Email</span>
+              </button>
+            </form>
+            
+            <!-- Download to Device -->
+            <form action="{% url 'download_report' %}" method="post" style="display: inline;">
+              {% csrf_token %}
+              <input type="hidden" name="url" value="{{ url }}" />
+              <button type="submit" class="btn btn-download btn-download-direct">
+                <i class="fas fa-download"></i>
+                <span>Download PDF</span>
+              </button>
+            </form>
+          </div>
         </div>
       </div>
     </main>

@@ -16,7 +16,7 @@ from bs4 import BeautifulSoup
 from googlesearch import search
 
 from django.shortcuts import render, redirect, reverse
-from django.http import JsonResponse
+from django.http import JsonResponse, FileResponse, HttpResponse
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
@@ -111,16 +111,44 @@ def upload(request, url):
 
 
 def Report(request):
-    """Generate and send SEO report via email."""
+    """Generate and send SEO report via email using cached audit data."""
+    import hashlib
+    from django.core.cache import cache
+    
     try:
         url = request.POST.get('url') or request.GET.get('url', '')
         if not url:
             messages.error(request, 'No URL provided for report generation.')
             return render(request, 'home.html')
-
+        
+        # Normalize URL
+        if not url.startswith(('http://', 'https://')):
+            url = 'https://' + url
+        
+        # Try to get cached audit results first (from show() view)
+        cache_key = f"audit_results_{hashlib.md5(url.encode()).hexdigest()}"
+        cached_audit_data = cache.get(cache_key)
+        
+        if cached_audit_data:
+            # Use the exact same data that was displayed on the page
+            logger.info(f"Using cached audit data for email report")
+            audit_data = cached_audit_data
+            used_cached = True
+        else:
+            # Fallback: run fresh audit
+            logger.warning(f"No cached audit data found, running fresh audit for email")
+            obj = Website_Audit(url, request=request)
+            audit_data = obj.get_data()
+            used_cached = False
+        
+        # Log key data points for verification
+        logger.info(f"Email Report Data - Title: '{audit_data.get('title', '')[:50]}...', Score: {audit_data.get('title_score')}")
+        logger.info(f"Email Report Data - Speed: {audit_data.get('speed')}s, Links: {audit_data.get('internal_links')}/{audit_data.get('external_links')}")
+        logger.info(f"Email Report Data - Flags: robots={audit_data.get('robot_flag')}, sitemap={audit_data.get('sitemap_flag')}, schema={audit_data.get('schema_flag')}")
+        
+        # Generate report using cached/fresh data
         obj = Website_Audit(url, request=request)
-        audit_data = obj.get_data()
-        result = obj.Report(audit_data)
+        result = obj.Report(audit_data, use_comprehensive=True)
         
         if result['success']:
             if result['email_sent']:
@@ -133,7 +161,7 @@ def Report(request):
                     request, 
                     'Report generated successfully!'
                 )
-            logger.info(f"Report generated: {result['pdf_path']}")
+            logger.info(f"Report generated: {result['pdf_path']} (cached_audit={used_cached})")
         else:
             messages.error(
                 request, 
@@ -152,6 +180,160 @@ def Report(request):
 
 
 @login_required(login_url='login')
+def download_report(request):
+    """
+    Generate and download SEO report PDF directly to device.
+    
+    This view uses the CACHED audit results (from show() view) to ensure
+    the PDF matches exactly what was displayed on the page.
+    """
+    try:
+        url = request.POST.get('url') or request.GET.get('url', '')
+        if not url:
+            messages.error(request, 'No URL provided for report generation.')
+            return render(request, 'home.html')
+        
+        # Normalize URL
+        if not url.startswith(('http://', 'https://')):
+            url = 'https://' + url
+        
+        logger.info(f"Generating downloadable PDF report for: {url}")
+        
+        # Try to get cached audit results first (from show() view)
+        import hashlib
+        from django.core.cache import cache
+        from .services.report_orchestrator import generate_comprehensive_report_data
+        
+        cache_key = f"audit_results_{hashlib.md5(url.encode()).hexdigest()}"
+        cached_audit_data = cache.get(cache_key)
+        
+        if cached_audit_data:
+            # Use the exact same data that was displayed on the page
+            logger.info(f"Using cached audit data for PDF generation")
+            audit_data = cached_audit_data
+            used_cached = True
+        else:
+            # Fallback: run fresh audit (shouldn't happen in normal flow)
+            logger.warning(f"No cached audit data found, running fresh audit")
+            obj = Website_Audit(url, request=request)
+            audit_data = obj.get_data()
+            used_cached = False
+        
+        # Get SEO metrics and keyword data (these can be from cache or fresh)
+        # but merge them with the SAME audit data that was displayed
+        comprehensive_data = generate_comprehensive_report_data(
+            url=url,
+            request=request,
+            use_cache=True,
+            force_refresh=False
+        )
+        
+        # Merge: Use the SAME audit data that was displayed + fresh/comprehensive metrics
+        # This ensures consistency between page display and PDF
+        if 'error' not in comprehensive_data or comprehensive_data.get('analysis_sources'):
+            # Use comprehensive structure but override SEO section with cached data
+            report_data = comprehensive_data.copy()
+            report_data['seo'] = audit_data  # Use the EXACT same data from page
+            report_data['from_cached_audit'] = used_cached
+            
+            # Also copy legacy fields that PDF expects at root level
+            report_data['url'] = audit_data.get('url', url)
+            report_data['title'] = audit_data.get('title', '')
+            report_data['desc'] = audit_data.get('desc', '')
+            report_data['title_score'] = audit_data.get('title_score', 0)
+            report_data['desc_score'] = audit_data.get('desc_score', 0)
+            report_data['H'] = audit_data.get('H', 'None')
+            report_data['heading_score'] = audit_data.get('heading_score', 0)
+            report_data['speed'] = audit_data.get('speed', 0)
+            report_data['internal_links'] = audit_data.get('internal_links', 0)
+            report_data['external_links'] = audit_data.get('external_links', 0)
+            report_data['b_links'] = audit_data.get('b_links', 0)
+            report_data['alt_count'] = audit_data.get('alt_count', 0)
+            report_data['lst'] = audit_data.get('lst', [])
+            report_data['dens'] = audit_data.get('dens', [])
+            report_data['robot_flag'] = audit_data.get('robot_flag', False)
+            report_data['sitemap_flag'] = audit_data.get('sitemap_flag', False)
+            report_data['schema_flag'] = audit_data.get('schema_flag', False)
+            report_data['ogp_flag'] = audit_data.get('ogp_flag', False)
+            report_data['icon_flag'] = audit_data.get('icon_flag', False)
+            report_data['analytics_flag'] = audit_data.get('analytics_flag', False)
+            report_data['https'] = audit_data.get('https', False)
+            report_data['dmca'] = audit_data.get('dmca', False)
+            report_data['ssl_name'] = audit_data.get('ssl_name', '')
+            report_data['ssl_expiry'] = audit_data.get('ssl_expiry', '')
+            report_data['ip'] = audit_data.get('ip', '')
+            report_data['loc_name'] = audit_data.get('loc_name', '')
+            report_data['webserver'] = audit_data.get('webserver', '')
+            report_data['error_len'] = audit_data.get('error_len', 0)
+            report_data['warn_len'] = audit_data.get('warn_len', 0)
+            report_data['mob_score'] = audit_data.get('mob_score', 0)
+            report_data['amp'] = audit_data.get('amp', False)
+            report_data['render'] = audit_data.get('render', False)
+            report_data['s_count'] = audit_data.get('s_count', 0)
+            report_data['facebook_flag'] = audit_data.get('facebook_flag', False)
+            report_data['instagram_flag'] = audit_data.get('instagram_flag', False)
+            report_data['twitter_flag'] = audit_data.get('twitter_flag', False)
+            report_data['linkedin_flag'] = audit_data.get('linkedin_flag', False)
+            
+            # Log key data points for verification
+            logger.info(f"PDF Data Verification - Title: '{report_data.get('title')[:50]}...', Score: {report_data.get('title_score')}")
+            logger.info(f"PDF Data Verification - Speed: {report_data.get('speed')}s, Links: {report_data.get('internal_links')}/{report_data.get('external_links')}")
+            logger.info(f"PDF Data Verification - Flags: robots={report_data.get('robot_flag')}, sitemap={report_data.get('sitemap_flag')}, schema={report_data.get('schema_flag')}")
+        else:
+            # Fallback to just audit data if comprehensive failed
+            report_data = audit_data
+        
+        # Generate PDF without sending email
+        from .modern_report import generate_seo_report
+        import os
+        
+        output_dir = os.path.join(settings.MEDIA_ROOT, 'reports') if hasattr(settings, 'MEDIA_ROOT') else os.path.join(os.getcwd(), 'reports')
+        os.makedirs(output_dir, exist_ok=True)
+        
+        result = generate_seo_report(
+            data_dict=report_data,
+            user_email='',  # No email
+            sender_email='',
+            sender_password='',
+            output_dir=output_dir,
+            send_email=False  # Don't send email, just generate
+        )
+        
+        if not result['success']:
+            messages.error(request, f'PDF generation failed: {result["message"]}')
+            return redirect('Home')
+        
+        pdf_path = result['pdf_path']
+        
+        # Check if file exists
+        if not os.path.exists(pdf_path):
+            messages.error(request, 'PDF file not found after generation.')
+            return redirect('Home')
+        
+        # Create filename for download
+        from urllib.parse import urlparse
+        domain = urlparse(url).netloc.replace('www.', '').replace('.', '_')
+        download_filename = f"WEB_LIFT_Report_{domain}_{time.strftime('%Y%m%d')}.pdf"
+        
+        # Return file as downloadable response
+        response = FileResponse(
+            open(pdf_path, 'rb'),
+            content_type='application/pdf'
+        )
+        response['Content-Disposition'] = f'attachment; filename="{download_filename}"'
+        response['Content-Length'] = os.path.getsize(pdf_path)
+        
+        logger.info(f"PDF downloaded: {download_filename} (cached_audit={used_cached})")
+        return response
+        
+    except Exception as e:
+        error_msg = f'Error generating PDF download: {str(e)}'
+        messages.error(request, error_msg)
+        logger.error(error_msg)
+        return redirect('Home')
+
+
+@login_required(login_url='login')
 def index(request):
     """Render the main index page."""
     return render(request, 'index.html')
@@ -161,6 +343,9 @@ def index(request):
 def show(request):
     """Main SEO audit view - runs full analysis and displays results."""
     import validators
+    import hashlib
+    import json
+    from django.core.cache import cache
     
     url = request.POST.get("fname")
     
@@ -178,9 +363,29 @@ def show(request):
             return render(request, 'index.html')
     
     try:
+        # Run the audit
         data = upload(request, url)
-        data = data.get_data()
-        return render(request, 'home.html', data)
+        audit_data = data.get_data()
+        
+        # Store audit results in cache for PDF generation consistency
+        # Use URL-based cache key so PDF generation retrieves the same data
+        cache_key = f"audit_results_{hashlib.md5(url.encode()).hexdigest()}"
+        cache.set(cache_key, audit_data, timeout=3600)  # 1 hour cache
+        
+        # Also store URL in session for reference
+        request.session['last_audited_url'] = url
+        request.session['last_audit_cache_key'] = cache_key
+        
+        # Log key data points for verification
+        logger.info(f"=" * 60)
+        logger.info(f"AUDIT CACHED - URL: {url}")
+        logger.info(f"AUDIT CACHED - Key: {cache_key}")
+        logger.info(f"AUDIT DATA - Title: '{audit_data.get('title', '')[:50]}...', Score: {audit_data.get('title_score')}")
+        logger.info(f"AUDIT DATA - Speed: {audit_data.get('speed')}s, Links: {audit_data.get('internal_links')}/{audit_data.get('external_links')}")
+        logger.info(f"AUDIT DATA - Flags: robots={audit_data.get('robot_flag')}, sitemap={audit_data.get('sitemap_flag')}, schema={audit_data.get('schema_flag')}")
+        logger.info(f"=" * 60)
+        
+        return render(request, 'home.html', audit_data)
     except requests.exceptions.Timeout as e:
         messages.error(request, 'Connection timed out! Website is taking too much time.')
         return render(request, 'index.html')

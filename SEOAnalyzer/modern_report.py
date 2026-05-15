@@ -221,15 +221,42 @@ class ModernPDFReport:
         self.story.append(PageBreak())
     
     def _create_summary_scores(self):
-        """Create summary scores overview on cover page"""
+        """Create summary scores overview on cover page with comprehensive metrics"""
+        # Get data from both legacy and comprehensive structures
+        seo = self.data.get('seo', {})
+        metrics = self.data.get('metrics', {})
+        keyword_ai = self.data.get('keyword_ai', {})
+        
+        # Use comprehensive data if available, fall back to legacy
+        title_score = seo.get('title_score', 0) or self.data.get('title_score', 0)
+        desc_score = seo.get('description_score', 0) or self.data.get('desc_score', 0)
+        heading_score = seo.get('heading_score', 0) or self.data.get('heading_score', 0)
+        social_score = seo.get('social_score', 0) or self.data.get('s_count', 0)
+        speed = seo.get('speed', 0) or self.data.get('speed', 0)
+        
+        # Get Moz SEO Metrics
+        da = metrics.get('domain_authority')
+        
+        # Get AI Content Quality
+        content_stats = keyword_ai.get('content_stats', {})
+        ai_quality = content_stats.get('quality_score', 0)
+        
         scores_data = [
             ['Metric', 'Score', 'Status'],
-            ['Title Optimization', f"{self.data.get('title_score', 0)}%", self._get_status(self.data.get('title_score', 0))],
-            ['Description Quality', f"{self.data.get('desc_score', 0)}%", self._get_status(self.data.get('desc_score', 0))],
-            ['Heading Structure', f"{self.data.get('heading_score', 0)}%", self._get_status(self.data.get('heading_score', 0))],
-            ['Social Presence', f"{self.data.get('s_count', 0)}%", self._get_status(self.data.get('s_count', 0))],
-            ['Website Speed', f"{self.data.get('speed', 0)}s", '✓ Good' if self.data.get('speed', 99) < 2.5 else '⚠ Slow'],
+            ['Title Optimization', f"{title_score}%", self._get_status(title_score)],
+            ['Description Quality', f"{desc_score}%", self._get_status(desc_score)],
+            ['Heading Structure', f"{heading_score}%", self._get_status(heading_score)],
+            ['Social Presence', f"{social_score}%", self._get_status(social_score)],
+            ['Website Speed', f"{speed}s", '✓ Good' if speed and speed < 2.5 else '⚠ Slow'],
         ]
+        
+        # Add Moz metrics if available
+        if da is not None:
+            scores_data.append(['Domain Authority', str(da), self._get_authority_rating(da)])
+        
+        # Add AI content quality if available
+        if ai_quality:
+            scores_data.append(['AI Content Quality', f"{ai_quality}%", self._get_status(ai_quality)])
         
         table = Table(scores_data, colWidths=[2.5*inch, 1.5*inch, 1.5*inch])
         table.setStyle(TableStyle([
@@ -906,9 +933,383 @@ class ModernPDFReport:
             )
             self.story.append(success_msg)
     
+    def _create_seo_metrics(self):
+        """Create SEO Metrics section with Moz Authority data and backlinks"""
+        metrics = self.data.get('metrics', {})
+        
+        if not metrics:
+            return
+        
+        self.story.append(Paragraph("SEO Metrics & Authority", self.styles['SectionTitle']))
+        self.story.append(Spacer(1, 0.2*inch))
+        
+        # Authority Metrics from Moz API
+        da = metrics.get('domain_authority')
+        pa = metrics.get('page_authority')
+        moz_rank = metrics.get('moz_rank')
+        
+        if da is not None or pa is not None:
+            self.story.append(Paragraph("Domain Authority & Page Authority (Moz)", self.styles['SubsectionTitle']))
+            
+            # Authority scores table
+            auth_data = [
+                ['Metric', 'Score', 'Rating'],
+            ]
+            
+            if da is not None:
+                auth_data.append(['Domain Authority', f"{da}", self._get_authority_rating(da)])
+            if pa is not None:
+                auth_data.append(['Page Authority', f"{pa}", self._get_authority_rating(pa)])
+            if moz_rank is not None:
+                auth_data.append(['MozRank', f"{moz_rank}", '✓ Good' if moz_rank >= 5 else '⚠ Fair'])
+            
+            if len(auth_data) > 1:
+                table = Table(auth_data, colWidths=[2.5*inch, 2*inch, 2*inch])
+                table.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, 0), self.PRIMARY_DARK),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                    ('GRID', (0, 0), (-1, -1), 1, self.PRIMARY_LIGHT),
+                    ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, self.GRAY_50]),
+                    ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+                    ('FONTSIZE', (0, 0), (-1, -1), 10),
+                    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ]))
+                
+                self.story.append(table)
+                self.story.append(Spacer(1, 0.2*inch))
+        
+        # Backlink profile from Moz
+        backlinks = metrics.get('backlinks', {})
+        linking_domains = metrics.get('linking_root_domains')
+        total_backlinks = metrics.get('total_backlinks')
+        
+        if linking_domains is not None or total_backlinks is not None:
+            self.story.append(Paragraph("Backlink Profile", self.styles['SubsectionTitle']))
+            
+            backlink_data = [
+                ['Metric', 'Value'],
+            ]
+            
+            if linking_domains is not None:
+                backlink_data.append(['Linking Root Domains', str(linking_domains)])
+            if total_backlinks is not None:
+                backlink_data.append(['Total Backlinks', str(total_backlinks)])
+            
+            ref_domains = backlinks.get('referring_domains', 'N/A')
+            if ref_domains != 'N/A':
+                backlink_data.append(['Referring Domains (API)', str(ref_domains)])
+            
+            if len(backlink_data) > 1:
+                table = Table(backlink_data, colWidths=[3*inch, 3.5*inch])
+                table.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, 0), self.PRIMARY_MID),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                    ('GRID', (0, 0), (-1, -1), 1, self.PRIMARY_LIGHT),
+                    ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, self.GRAY_50]),
+                    ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+                    ('FONTSIZE', (0, 0), (-1, -1), 10),
+                    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ]))
+                
+                self.story.append(table)
+                self.story.append(Spacer(1, 0.2*inch))
+            
+            # Backlink recommendations
+            if linking_domains is not None and linking_domains < 10:
+                rec = Paragraph(
+                    "<b>⚠ Backlink Strategy Needed:</b> Your site has few referring domains. "
+                    "Focus on building quality backlinks through guest posting, partnerships, and content marketing.",
+                    ParagraphStyle(
+                        name='BacklinkWarning',
+                        parent=self.styles['BodyText'],
+                        textColor=self.WARNING
+                    )
+                )
+                self.story.append(rec)
+                self.story.append(Spacer(1, 0.2*inch))
+        
+        self.story.append(PageBreak())
+    
+    def _create_semantic_analysis(self):
+        """Create Semantic Analysis section with AI-powered content insights"""
+        keyword_ai = self.data.get('keyword_ai', {})
+        
+        if not keyword_ai:
+            return
+        
+        self.story.append(Paragraph("Semantic Analysis & Content Insights", self.styles['SectionTitle']))
+        self.story.append(Spacer(1, 0.2*inch))
+        
+        # AI Content Stats
+        content_stats = keyword_ai.get('content_stats', {})
+        if content_stats:
+            self.story.append(Paragraph("AI-Powered Content Analysis", self.styles['SubsectionTitle']))
+            
+            word_count = content_stats.get('word_count', 0)
+            ai_quality = content_stats.get('quality_score', 0)
+            ai_readability = content_stats.get('readability_score', 0)
+            
+            content_data = [
+                ['Metric', 'Value', 'Status'],
+            ]
+            
+            if word_count > 0:
+                content_data.append(['Word Count', f"{word_count}", '✓' if word_count >= 300 else '⚠'])
+            if ai_quality > 0:
+                content_data.append(['AI Quality Score', f"{ai_quality}%", self._get_status(ai_quality)])
+            if ai_readability > 0:
+                content_data.append(['Readability Score', f"{ai_readability}%", self._get_status(ai_readability)])
+            
+            if len(content_data) > 1:
+                table = Table(content_data, colWidths=[2.5*inch, 1.5*inch, 2.5*inch])
+                table.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, 0), self.PRIMARY_DARK),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                    ('ALIGN', (1, 0), (-1, -1), 'CENTER'),
+                    ('GRID', (0, 0), (-1, -1), 1, self.PRIMARY_LIGHT),
+                    ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, self.GRAY_50]),
+                    ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+                    ('FONTSIZE', (0, 0), (-1, -1), 10),
+                    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ]))
+                
+                self.story.append(table)
+                self.story.append(Spacer(1, 0.2*inch))
+            
+            # Content quality recommendations
+            if ai_quality < 50:
+                rec = Paragraph(
+                    "<b>⚠ Content Quality Improvements:</b><br/>"
+                    "• Expand content with more comprehensive information<br/>"
+                    "• Use proper heading structure (H1, H2, H3)<br/>"
+                    "• Include relevant keywords naturally<br/>"
+                    "• Add internal and external links<br/>"
+                    "• Improve readability with shorter paragraphs",
+                    ParagraphStyle(
+                        name='QualityWarning',
+                        parent=self.styles['BodyText'],
+                        textColor=self.WARNING
+                    )
+                )
+                self.story.append(rec)
+                self.story.append(Spacer(1, 0.2*inch))
+        
+        # Search Intent Analysis
+        intent_analysis = keyword_ai.get('intent_analysis', {})
+        search_intent = keyword_ai.get('search_intent', '')
+        
+        if search_intent or intent_analysis:
+            self.story.append(Paragraph("Search Intent Analysis", self.styles['SubsectionTitle']))
+            
+            intent_text = Paragraph(
+                f"<b>Primary Search Intent:</b> {search_intent.title() if search_intent else 'Informational'}<br/>"
+                f"<b>Intent Alignment:</b> Content should match user intent to rank effectively. "
+                f"Create content that directly answers user queries for better rankings.",
+                self.styles['BodyText']
+            )
+            self.story.append(intent_text)
+            self.story.append(Spacer(1, 0.2*inch))
+        
+        self.story.append(PageBreak())
+    
+    def _create_keyword_suggestions(self):
+        """Create AI-Powered Keyword Suggestions section"""
+        keyword_ai = self.data.get('keyword_ai', {})
+        
+        if not keyword_ai:
+            return
+        
+        self.story.append(Paragraph("AI-Powered Keyword Opportunities", self.styles['SectionTitle']))
+        self.story.append(Spacer(1, 0.2*inch))
+        
+        # Top Keywords Table
+        top_keywords = keyword_ai.get('top_keywords', [])
+        if top_keywords:
+            self.story.append(Paragraph("Top Keyword Opportunities", self.styles['SubsectionTitle']))
+            
+            # Limit to top 15
+            display_keywords = top_keywords[:15]
+            
+            keyword_data = [['Keyword', 'Score', 'Priority', 'Type']]
+            
+            for kw in display_keywords:
+                if isinstance(kw, dict):
+                    keyword = kw.get('keyword', '')
+                    score = kw.get('relevance_score', kw.get('score', 0))
+                    priority = kw.get('priority', 'medium')
+                    kw_type = kw.get('keyword_type', 'suggested')
+                else:
+                    keyword = str(kw)
+                    score = 50
+                    priority = 'medium'
+                    kw_type = 'suggested'
+                
+                keyword_data.append([
+                    keyword[:35],  # Limit length
+                    f"{int(score)}%",
+                    priority.upper(),
+                    kw_type.title()
+                ])
+            
+            table = Table(keyword_data, colWidths=[3*inch, 1*inch, 1.2*inch, 1.3*inch])
+            
+            # Dynamic coloring based on priority
+            table_style = [
+                ('BACKGROUND', (0, 0), (-1, 0), self.PRIMARY_DARK),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('ALIGN', (1, 0), (-1, -1), 'CENTER'),
+                ('GRID', (0, 0), (-1, -1), 1, self.PRIMARY_LIGHT),
+                ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+                ('FONTSIZE', (0, 0), (-1, -1), 9),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, self.GRAY_50]),
+            ]
+            
+            # Color code priority badges
+            for idx, row in enumerate(display_keywords, start=1):
+                if isinstance(row, dict):
+                    priority = row.get('priority', 'medium')
+                else:
+                    priority = 'medium'
+                
+                if priority == 'high':
+                    table_style.append(('BACKGROUND', (2, idx), (2, idx), self.ERROR))
+                    table_style.append(('TEXTCOLOR', (2, idx), (2, idx), colors.white))
+                elif priority == 'medium':
+                    table_style.append(('BACKGROUND', (2, idx), (2, idx), self.WARNING))
+                    table_style.append(('TEXTCOLOR', (2, idx), (2, idx), colors.white))
+                else:
+                    table_style.append(('BACKGROUND', (2, idx), (2, idx), self.SUCCESS))
+                    table_style.append(('TEXTCOLOR', (2, idx), (2, idx), colors.white))
+            
+            table.setStyle(TableStyle(table_style))
+            self.story.append(table)
+            self.story.append(Spacer(1, 0.3*inch))
+        
+        # Search Intent Analysis
+        intent_analysis = keyword_ai.get('intent_analysis', {})
+        search_intent = keyword_ai.get('search_intent', '')
+        
+        if search_intent or intent_analysis:
+            self.story.append(Paragraph("Search Intent Analysis", self.styles['SubsectionTitle']))
+            
+            intent_text = Paragraph(
+                f"<b>Primary Search Intent:</b> {search_intent.title() if search_intent else 'Informational'}<br/>"
+                f"<b>Intent Alignment:</b> Content should match user intent to rank effectively.<br/>"
+                f"Create content that directly answers user queries for better rankings.",
+                self.styles['BodyText']
+            )
+            self.story.append(intent_text)
+            self.story.append(Spacer(1, 0.2*inch))
+        
+        # Keyword Clusters with AI Reasoning
+        clusters = keyword_ai.get('keyword_clusters', {})
+        if clusters:
+            self.story.append(Paragraph("Keyword Clusters & AI Insights", self.styles['SubsectionTitle']))
+            
+            for cluster_name, cluster_data in list(clusters.items())[:3]:  # Top 3 clusters
+                if isinstance(cluster_data, dict):
+                    keywords = cluster_data.get('keywords', [])
+                    theme = cluster_data.get('theme', '')
+                    reasoning = cluster_data.get('reasoning', '')
+                elif isinstance(cluster_data, list):
+                    keywords = cluster_data
+                    theme = ''
+                    reasoning = ''
+                else:
+                    continue
+                
+                if not keywords:
+                    continue
+                
+                # Cluster header
+                cluster_title = Paragraph(
+                    f"<b>Cluster: {cluster_name}</b>",
+                    ParagraphStyle(
+                        name='ClusterTitle',
+                        parent=self.styles['SubsectionTitle'],
+                        fontSize=11,
+                        textColor=self.PRIMARY_MID
+                    )
+                )
+                self.story.append(cluster_title)
+                
+                if theme:
+                    theme_text = Paragraph(f"<b>Theme:</b> {theme}", self.styles['BodyText'])
+                    self.story.append(theme_text)
+                
+                # Keywords in cluster
+                kw_text = f"<b>Keywords:</b> {', '.join(keywords[:10])}"
+                if len(keywords) > 10:
+                    kw_text += f" (+{len(keywords) - 10} more)"
+                
+                kw_para = Paragraph(kw_text, self.styles['BodyText'])
+                self.story.append(kw_para)
+                
+                # AI Reasoning
+                if reasoning:
+                    reasoning_para = Paragraph(
+                        f"<b>🤖 AI Insight:</b> {reasoning[:200]}...",
+                        ParagraphStyle(
+                            name='AIReasoning',
+                            parent=self.styles['BodyText'],
+                            textColor=self.PRIMARY_MID,
+                            fontSize=9,
+                            leftIndent=20
+                        )
+                    )
+                    self.story.append(reasoning_para)
+                
+                self.story.append(Spacer(1, 0.15*inch))
+        
+        # Content Optimization Suggestions
+        optimizations = keyword_ai.get('optimization_suggestions', [])
+        if optimizations:
+            self.story.append(Paragraph("AI Content Optimization Suggestions", self.styles['SubsectionTitle']))
+            
+            for opt in optimizations[:5]:  # Top 5 suggestions
+                if isinstance(opt, dict):
+                    suggestion = opt.get('suggestion', '')
+                    impact = opt.get('impact', 'medium')
+                else:
+                    suggestion = str(opt)
+                    impact = 'medium'
+                
+                impact_color = self.ERROR if impact == 'high' else (self.WARNING if impact == 'medium' else self.SUCCESS)
+                
+                opt_text = Paragraph(
+                    f"• <b>[{impact.upper()}]</b> {suggestion[:150]}",
+                    self.styles['BodyText']
+                )
+                self.story.append(opt_text)
+                self.story.append(Spacer(1, 0.1*inch))
+        
+        self.story.append(PageBreak())
+    
+    def _get_authority_rating(self, score):
+        """Get rating text for authority score"""
+        if score is None or score == 'N/A':
+            return 'N/A'
+        try:
+            score = int(score)
+            if score >= 50:
+                return '✓ Strong'
+            elif score >= 30:
+                return '⚠ Moderate'
+            else:
+                return '✗ Weak'
+        except (ValueError, TypeError):
+            return 'N/A'
+    
+    
     def     generate(self):
         """
-        Generate the complete PDF report
+        Generate the complete comprehensive PDF report
         
         Returns:
             str: Path to generated PDF file
@@ -933,6 +1334,9 @@ class ModernPDFReport:
             self._create_technical_analysis()
             self._create_security_analysis()
             self._create_performance_analysis()
+            self._create_seo_metrics()  # NEW: Authority & Technical scores
+            self._create_semantic_analysis()  # NEW: E-E-A-T & Content Quality
+            self._create_keyword_suggestions()  # NEW: AI-Powered keywords
             self._create_mobile_analysis()
             self._create_social_analysis()
             self._create_action_plan()
@@ -940,8 +1344,8 @@ class ModernPDFReport:
             # Build PDF
             doc.build(self.story, onFirstPage=self._header_footer, onLaterPages=self._header_footer)
             
-            logger.info(f"✓ PDF Report generated: {self.filepath}")
-            print(f"✓ PDF Report generated: {self.filepath}")
+            logger.info(f"✓ Comprehensive PDF Report generated: {self.filepath}")
+            print(f"✓ Comprehensive PDF Report generated: {self.filepath}")
             return self.filepath
             
         except Exception as e:
@@ -980,8 +1384,10 @@ Thank you for using WEB LIFT for your SEO audit needs.
 Please find attached your comprehensive SEO audit report for:
 {self.data.get('url', 'your website')}
 
-This report includes:
-• Content Analysis & Optimization
+This comprehensive report includes:
+• Website Audit (Titles, Meta, Headings, Speed)
+• SEO Metrics (Domain Authority, Page Authority, Backlinks via Moz)
+• AI-Powered Keyword Suggestions & Semantic Analysis
 • Technical SEO Assessment
 • Security Evaluation
 • Performance Metrics

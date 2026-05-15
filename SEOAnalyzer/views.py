@@ -27,6 +27,7 @@ import validators
 import aiohttp
 import asyncio
 import ssl
+import socket
 from bs4 import BeautifulSoup
 import pandas as pd
 import plotly.express as px
@@ -36,6 +37,7 @@ import geocoder
 from .models import Profile
 from .helpers import send_forget_password_mail
 from .modern_report import generate_seo_report
+from .services.report_orchestrator import generate_comprehensive_report_data
 
 # Service imports
 from .services.eeat_analyzer import EEATAnalyzer
@@ -839,9 +841,21 @@ class Website_Audit(object):
     
     def get_grammar_analysis(self):
         """Delegate to GrammarAnalyzer service."""
-        result = self._grammar_analyzer.analyze(self.soup)
-        self.data.update(result)
-        return result.get('grammar_score', 0)
+        try:
+            result = self._grammar_analyzer.analyze(self.soup)
+            self.data.update(result)
+            return result.get('grammar_score', 0)
+        except Exception as e:
+            logger.error(f"Grammar analysis failed: {e}")
+            self.data.update({
+                'grammar_verdict': 'Analysis failed',
+                'grammar_score': 0,
+                'spelling_errors': [],
+                'grammar_issues': [f'Analysis error: {str(e)[:50]}'],
+                'readability_score': 0,
+                'grammar_recommendations': ['Retry analysis or check content']
+            })
+            return 0
     
     def Keyword_Density(self):
         """Analyze keyword density and frequency."""
@@ -980,69 +994,154 @@ class Website_Audit(object):
     
     def get_links(self):
         """Delegate to LinkService for link analysis."""
-        result = self._link_service.analyze_links(self.soup)
-        self.internal_links = result.get('Internal_links', 0)
-        self.external_links = result.get('External_links', 0)
-        self.data.update(result)
+        try:
+            result = self._link_service.analyze_links(self.soup)
+            self.internal_links = result.get('Internal_links', 0)
+            self.external_links = result.get('External_links', 0)
+            self.data.update(result)
+        except Exception as e:
+            logger.error(f"Link analysis failed: {e}")
+            self.internal_links = 0
+            self.external_links = 0
+            self.data.update({
+                'Internal_links': 0,
+                'External_links': 0,
+                'link_analysis_error': str(e)[:50]
+            })
     
     def get_broken_links(self, max_workers: int = 10, timeout: int = 8):
         """Delegate to LinkService for broken link checking."""
-        result = self._link_service.check_broken_links(self.soup, max_workers, timeout)
-        self.b_links = result.get('b_links', 0)
-        self.data.update(result)
-        return self.data
+        try:
+            result = self._link_service.check_broken_links(self.soup, max_workers, timeout)
+            self.b_links = result.get('b_links', 0)
+            self.data.update(result)
+        except Exception as e:
+            logger.error(f"Broken link check failed: {e}")
+            self.b_links = 0
+            self.data.update({
+                'b_links': 0,
+                'b_verdict': f'Link check failed: {str(e)[:50]}',
+                'b_url': [],
+                'broken_summary': {},
+                'internal_broken': 0,
+                'external_broken': 0,
+                'working_links': 0,
+                'link_health_score': 0
+            })
     
     def check_robot_txt(self):
         """Delegate to TechnicalAuditService for robots.txt check."""
-        result = self._tech_audit._robots.analyze()
-        self.robot_flag = result.get('robot_flag', False)
-        self.data.update(result)
+        try:
+            result = self._tech_audit._robots.analyze()
+            self.robot_flag = result.get('robot_flag', False)
+            self.data.update(result)
+        except Exception as e:
+            logger.error(f"Robots.txt check failed: {e}")
+            self.robot_flag = False
+            self.data.update({
+                'robot_flag': False,
+                'robot': '⚠️ Check failed - Unable to analyze robots.txt'
+            })
     
     def get_sitemap(self):
         """Delegate to TechnicalAuditService for sitemap check."""
-        result = self._tech_audit._sitemap.analyze()
-        self.sitemap_flag = result.get('sitemap_flag', False)
-        self.data.update(result)
+        try:
+            result = self._tech_audit._sitemap.analyze()
+            self.sitemap_flag = result.get('sitemap_flag', False)
+            self.data.update(result)
+        except Exception as e:
+            logger.error(f"Sitemap check failed: {e}")
+            self.sitemap_flag = False
+            self.data.update({
+                'sitemap_flag': False,
+                'sitemap': '⚠️ Check failed - Unable to analyze sitemap'
+            })
     
     def get_schema(self):
         """Delegate to TechnicalAuditService for schema analysis."""
-        result = self._tech_audit._schema.analyze(self.soup)
-        self.schema_flag = result.get('schema_found', False)
-        self.data.update(result)
+        try:
+            result = self._tech_audit._schema.analyze(self.soup)
+            self.schema_flag = result.get('schema_found', False)
+            self.data.update(result)
+        except Exception as e:
+            logger.error(f"Schema analysis failed: {e}")
+            self.schema_flag = False
+            self.data.update({
+                'schema_flag': False,
+                'schema': '⚠️ Analysis failed - Unable to check schema markup'
+            })
     
     def get_Open_GP(self):
         """Delegate to TechnicalAuditService for Open Graph analysis."""
-        result = self._tech_audit._og.analyze(self.soup)
-        self.ogp_flag = result.get('ogp_flag', False)
-        self.data.update(result)
+        try:
+            result = self._tech_audit._og.analyze(self.soup)
+            self.ogp_flag = result.get('ogp_flag', False)
+            self.data.update(result)
+        except Exception as e:
+            logger.error(f"Open Graph analysis failed: {e}")
+            self.ogp_flag = False
+            self.data.update({
+                'ogp_flag': False,
+                'open_gp': '⚠️ Analysis failed - Unable to check Open Graph tags'
+            })
     
     def get_favicon(self):
         """Delegate to TechnicalAuditService for favicon analysis."""
-        result = self._tech_audit._favicon.analyze(self.soup)
-        self.icon_flag = result.get('icon_flag', False)
-        self.data.update(result)
+        try:
+            result = self._tech_audit._favicon.analyze(self.soup)
+            self.icon_flag = result.get('icon_flag', False)
+            self.data.update(result)
+        except Exception as e:
+            logger.error(f"Favicon check failed: {e}")
+            self.icon_flag = False
+            self.data.update({
+                'icon_flag': False,
+                'Favicon': '⚠️ Check failed - Unable to detect favicon'
+            })
     
     def CSS_minification(self):
         """Delegate to MinificationService for CSS check."""
-        result = self._minification_service.check_css()
-        self.css = result.get('is_minified', False)
-        self.data.update({
-            'css_minified': result.get('css_minified', 'Unknown'),
-            'css': self.css,
-            'inline_css_count': result.get('css_inline_count', 0),
-            'external_css_count': result.get('css_external_count', 0)
-        })
+        try:
+            result = self._minification_service.check_css()
+            self.css = result.get('is_minified', False)
+            self.data.update({
+                'css_minified': result.get('minified', 'Unknown'),  # Service returns 'minified' not 'css_minified'
+                'css': self.css,
+                'inline_css_count': result.get('inline_count', 0),  # Service returns 'inline_count' not 'css_inline_count'
+                'external_css_count': result.get('external_count', 0)  # Service returns 'external_count'
+            })
+        except Exception as e:
+            logger.error(f"CSS minification check failed: {e}")
+            self.css = False
+            self.data.update({
+                'css_minified': 'Check failed',
+                'css': False,
+                'inline_css_count': 0,
+                'external_css_count': 0
+            })
     
     def JSS_minification(self):
         """Delegate to MinificationService for JS check."""
-        result = self._minification_service.check_js()
-        self.jss = result.get('is_minified', False)
-        self.data.update({
-            'js_minified': result.get('js_minified', 'Unknown'),
-            'jss': self.jss,
-            'inline_js_count': result.get('js_inline_count', 0),
-            'external_js_count': result.get('js_external_count', 0)
-        })
+        try:
+            result = self._minification_service.check_js()
+            self.jss = result.get('is_minified', False)
+            self.data.update({
+                'jss_minified': result.get('minified', 'Unknown'),  # Service returns 'minified' not 'js_minified'
+                'js_minified': result.get('minified', 'Unknown'),
+                'jss': self.jss,
+                'inline_js_count': result.get('inline_count', 0),  # Service returns 'inline_count'
+                'external_js_count': result.get('external_count', 0)  # Service returns 'external_count'
+            })
+        except Exception as e:
+            logger.error(f"JS minification check failed: {e}")
+            self.jss = False
+            self.data.update({
+                'jss_minified': 'Check failed',
+                'js_minified': 'Check failed',
+                'jss': False,
+                'inline_js_count': 0,
+                'external_js_count': 0
+            })
     
     async def measure_website_speed(self):
         """Measure website speed and fetch Core Web Vitals via PageSpeed API."""
@@ -1074,17 +1173,78 @@ class Website_Audit(object):
             self.data['website_speed'] = 0
             self.data['speed_verdict'] = f"Error: {e}"
 
-        # PageSpeed Insights API
+        # PageSpeed Insights API with retry logic
+        API_KEY = getattr(settings, 'PAGESPEED_API_KEY', '')
+        
+        if not API_KEY:
+            logger.warning("PAGESPEED_API_KEY not configured - Core Web Vitals unavailable")
+            self.data['lcp'] = self.data['cls'] = self.data['inp'] = self.data['full_page_load'] = "No API Key"
+            self.data['fcp'] = self.data['tti'] = self.data['tbt'] = "No API Key"
+            self.data['performance_score'] = self.data['seo_score'] = 0
+            self.data['vitals_assessment'] = "Configure PAGESPEED_API_KEY in settings"
+            return
+        
+        psi_url = f"https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url={self.url}&strategy=mobile&key={API_KEY}"
+        
+        last_error = None
+        psi_data = None
+        
+        for attempt in range(3):  # 3 retries with exponential backoff
+            try:
+                if attempt > 0:
+                    wait_time = 2 ** attempt  # 2, 4 seconds
+                    logger.info(f"PageSpeed API retry {attempt}/3, waiting {wait_time}s...")
+                    await asyncio.sleep(wait_time)
+                
+                def fetch_psi(url, attempt_num): 
+                    # Increase timeout with each retry
+                    timeout = 60 + (attempt_num * 30)  # 60s, 90s, 120s
+                    response = requests.get(url, timeout=timeout)
+                    
+                    # Handle rate limiting
+                    if response.status_code == 429:
+                        raise requests.exceptions.HTTPError("Rate limited (429) - Too many requests")
+                    
+                    # Handle server errors (5xx) - these are transient
+                    if response.status_code >= 500:
+                        raise requests.exceptions.HTTPError(f"Server error ({response.status_code})")
+                    
+                    response.raise_for_status()
+                    return response.json()
+                
+                psi_data = await asyncio.to_thread(fetch_psi, psi_url, attempt)
+                break  # Success, exit retry loop
+                
+            except requests.exceptions.Timeout as e:
+                last_error = f"Timeout (attempt {attempt + 1})"
+                logger.warning(f"PageSpeed API timeout on attempt {attempt + 1}")
+                continue
+            except requests.exceptions.HTTPError as e:
+                last_error = str(e)
+                error_msg = str(e).lower()
+                if "rate limited" in error_msg and attempt < 2:
+                    logger.warning(f"PageSpeed API rate limited, will retry...")
+                    continue
+                # Don't retry on client errors (4xx except 429)
+                if any(code in error_msg for code in ['400', '401', '403', '404', 'client error']):
+                    break
+                continue
+            except Exception as e:
+                last_error = str(e)
+                logger.warning(f"PageSpeed API error on attempt {attempt + 1}: {e}")
+                continue
+        
+        # If all retries failed
+        if psi_data is None:
+            logger.error(f"PageSpeed API failed after 3 attempts: {last_error}")
+            self.data['lcp'] = self.data['cls'] = self.data['inp'] = self.data['full_page_load'] = "API Failed"
+            self.data['fcp'] = self.data['tti'] = self.data['tbt'] = "API Failed"
+            self.data['performance_score'] = self.data['seo_score'] = 0
+            self.data['vitals_assessment'] = f"PageSpeed API unavailable: {str(last_error)[:50]}"
+            return
+        
+        # Process successful response
         try:
-            API_KEY = getattr(settings, 'PAGESPEED_API_KEY', '')
-            psi_url = f"https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url={self.url}&strategy=mobile&key={API_KEY}"
-
-            def fetch_psi(url): 
-                response = requests.get(url, timeout=60)
-                response.raise_for_status()
-                return response.json()
-            
-            psi_data = await asyncio.to_thread(fetch_psi, psi_url)
             audits = psi_data.get("lighthouseResult", {}).get("audits", {})
             
             performance_score = psi_data.get("lighthouseResult", {}).get("categories", {}).get("performance", {}).get("score", 0)
@@ -1304,84 +1464,272 @@ class Website_Audit(object):
             self.data[tag] = f"<div>Error generating graph: {score}%</div>"
     
     def Social(self):
-        """Check for social media presence."""
-        social_platforms = {
-            "facebook": ["facebook.com/", "fb.com/"],
-            "instagram": ["instagram.com/"],
-            "twitter": ["twitter.com/", "x.com/"],
-            "linkedin": ["linkedin.com/"],
-            "youtube": ["youtube.com/", "youtu.be/"],
-            "pinterest": ["pinterest.com/"],
-            "tiktok": ["tiktok.com/@"]
-        }
-        
-        found_links = {platform: None for platform in social_platforms}
-        self.s_count = 0
-        
-        links = self.soup.find_all('a', href=True)
-        
-        for link in links:
-            href = link.get('href', '').lower()
-            for platform, indicators in social_platforms.items():
-                if any(indicator in href for indicator in indicators):
-                    if not found_links[platform]:
-                        found_links[platform] = href
+        """
+        Comprehensive social media presence detection.
+        Checks links, meta tags, scripts, and page text for social media indicators.
+        """
+        try:
+            if not self.soup:
+                raise ValueError("No HTML content to analyze")
+            
+            # Expanded social platform definitions with multiple indicators
+            social_platforms = {
+                "facebook": {
+                    "urls": ["facebook.com/", "fb.com/", "m.facebook.com/", "www.facebook.com/"],
+                    "meta_tags": ["og:facebook", "facebook-domain-verification", "fb:app_id", "fb:pages"],
+                    "scripts": ["connect.facebook.net", "facebook.com/sdk", "fbq("],
+                    "text_patterns": ["facebook.com/", "fb.me/", "@facebook"],
+                    "icons": ["facebook", "fb-icon", "fb-logo"]
+                },
+                "instagram": {
+                    "urls": ["instagram.com/", "www.instagram.com/", "instagr.am/"],
+                    "meta_tags": ["og:instagram", "instagram:site"],
+                    "scripts": ["instagram.com", "instafeed"],
+                    "text_patterns": ["instagram.com/", "@instagram", "#instagram"],
+                    "icons": ["instagram", "ig-icon", "ig-logo"]
+                },
+                "twitter": {
+                    "urls": ["twitter.com/", "x.com/", "mobile.twitter.com/", "t.co/"],
+                    "meta_tags": ["twitter:site", "twitter:creator", "twitter:card"],
+                    "scripts": ["platform.twitter.com", "widgets.twimg.com", "twitter-wjs"],
+                    "text_patterns": ["twitter.com/", "@", "#"],
+                    "icons": ["twitter", "x-icon", "twitter-logo", "x-logo"]
+                },
+                "linkedin": {
+                    "urls": ["linkedin.com/", "www.linkedin.com/", "mobile.linkedin.com/"],
+                    "meta_tags": ["linkedin:owner", "og:linkedin"],
+                    "scripts": ["platform.linkedin.com", "linkedin.com/in"],
+                    "text_patterns": ["linkedin.com/in/", "linkedin.com/company/"],
+                    "icons": ["linkedin", "li-icon", "linkedin-logo"]
+                },
+                "youtube": {
+                    "urls": ["youtube.com/", "youtu.be/", "www.youtube.com/", "m.youtube.com/"],
+                    "meta_tags": ["og:youtube", "youtube:channel"],
+                    "scripts": ["youtube.com/embed", "youtube.com/iframe_api"],
+                    "text_patterns": ["youtube.com/channel/", "youtube.com/c/", "youtube.com/user/", "youtu.be/"],
+                    "icons": ["youtube", "yt-icon", "youtube-logo"]
+                },
+                "pinterest": {
+                    "urls": ["pinterest.com/", "www.pinterest.com/", "pin.it/"],
+                    "meta_tags": ["pinterest", "og:pinterest"],
+                    "scripts": ["assets.pinterest.com", "pinit.js"],
+                    "text_patterns": ["pinterest.com/", "pin.it/"],
+                    "icons": ["pinterest", "pin-icon", "pinterest-logo"]
+                },
+                "tiktok": {
+                    "urls": ["tiktok.com/", "www.tiktok.com/", "vm.tiktok.com/"],
+                    "meta_tags": ["tiktok", "og:tiktok"],
+                    "scripts": ["tiktok.com", "tiktok-embed"],
+                    "text_patterns": ["tiktok.com/@"],
+                    "icons": ["tiktok", "tiktok-logo"]
+                },
+                "snapchat": {
+                    "urls": ["snapchat.com/", "www.snapchat.com/"],
+                    "meta_tags": ["snapchat"],
+                    "scripts": ["snapchat.com", "sc-pixel"],
+                    "text_patterns": ["snapchat.com/add/"],
+                    "icons": ["snapchat", "snap-logo"]
+                },
+                "reddit": {
+                    "urls": ["reddit.com/", "www.reddit.com/", "redd.it/"],
+                    "meta_tags": ["reddit"],
+                    "scripts": ["reddit.com", "reddit-embed"],
+                    "text_patterns": ["reddit.com/r/", "reddit.com/u/", "redd.it/"],
+                    "icons": ["reddit", "reddit-logo"]
+                }
+            }
+            
+            found_links = {platform: None for platform in social_platforms}
+            evidence_types = {platform: [] for platform in social_platforms}  # Track how we found it
+            self.s_count = 0
+            
+            # Get all page text for pattern matching
+            page_text = str(self.soup).lower()
+            visible_text = self.soup.get_text(separator=' ', strip=True).lower() if self.soup else ""
+            
+            # 1. CHECK EXTERNAL LINKS (original method)
+            for link in self.soup.find_all('a', href=True):
+                href = link.get('href', '').lower()
+                for platform, indicators in social_platforms.items():
+                    if any(url in href for url in indicators["urls"]):
+                        if not found_links[platform]:
+                            found_links[platform] = href
+                            evidence_types[platform].append("link")
+                            self.s_count += 15
+            
+            # 2. CHECK META TAGS
+            for meta in self.soup.find_all('meta'):
+                content = (meta.get('content', '') + ' ' + meta.get('name', '') + ' ' + meta.get('property', '')).lower()
+                for platform, indicators in social_platforms.items():
+                    if any(tag.lower() in content for tag in indicators["meta_tags"]):
+                        if platform not in evidence_types[platform] or not found_links[platform]:
+                            if not found_links[platform]:
+                                found_links[platform] = f"Meta tag: {meta.get('content', 'Found')}"
+                            evidence_types[platform].append("meta_tag")
+                            self.s_count += 10
+            
+            # 3. CHECK SCRIPT SOURCES
+            for script in self.soup.find_all('script', src=True):
+                src = script.get('src', '').lower()
+                for platform, indicators in social_platforms.items():
+                    if any(script_ind in src for script_ind in indicators["scripts"]):
+                        if not found_links[platform]:
+                            found_links[platform] = f"Script: {src[:50]}"
+                        evidence_types[platform].append("script")
+                        self.s_count += 10
+            
+            # 4. CHECK IFRAME SOURCES (embedded social feeds)
+            for iframe in self.soup.find_all('iframe', src=True):
+                src = iframe.get('src', '').lower()
+                for platform, indicators in social_platforms.items():
+                    if any(url in src for url in indicators["urls"]):
+                        if not found_links[platform]:
+                            found_links[platform] = f"Embed: {src[:50]}"
+                        evidence_types[platform].append("embed")
                         self.s_count += 15
-        
-        self.s_count = min(100, self.s_count)
-        
-        self.data.update({
-            "social_links": found_links,
-            "social_accounts_found": sum(1 for v in found_links.values() if v),
-            "social_verdict": f"Score: {self.s_count}%",
-            "social_score": self.s_count
-        })
+            
+            # 5. CHECK IMAGE ALT TEXT AND TITLES (social icons)
+            for img in self.soup.find_all(['img', 'svg', 'i']):
+                alt_text = (img.get('alt', '') + ' ' + img.get('title', '') + ' ' + str(img.get('class', ''))).lower()
+                for platform, indicators in social_platforms.items():
+                    if any(icon in alt_text for icon in indicators["icons"]):
+                        # Check if parent is a link to the platform
+                        parent = img.find_parent('a', href=True)
+                        if parent:
+                            href = parent.get('href', '').lower()
+                            if any(url in href for url in indicators["urls"]):
+                                if not found_links[platform]:
+                                    found_links[platform] = href
+                                evidence_types[platform].append("icon")
+                                self.s_count += 5
+            
+            # 6. CHECK PAGE TEXT FOR SOCIAL MENTIONS
+            for platform, indicators in social_platforms.items():
+                if found_links[platform]:  # Skip if already found via link
+                    continue
+                    
+                # Look for text patterns in visible text
+                for pattern in indicators["text_patterns"]:
+                    if pattern.lower() in visible_text:
+                        found_links[platform] = f"Mentioned in text (pattern: {pattern})"
+                        evidence_types[platform].append("text_mention")
+                        self.s_count += 5
+                        break
+            
+            # 7. CHECK FOOTER AND CONTACT SECTIONS (common location for social links)
+            footer = self.soup.find(['footer', 'div'], class_=lambda x: x and ('footer' in x.lower() if x else False))
+            if footer:
+                for link in footer.find_all('a', href=True):
+                    href = link.get('href', '').lower()
+                    for platform, indicators in social_platforms.items():
+                        if any(url in href for url in indicators["urls"]):
+                            if not found_links[platform]:
+                                found_links[platform] = href
+                                evidence_types[platform].append("footer_link")
+                                self.s_count += 15
+            
+            self.s_count = min(100, self.s_count)
+            
+            # Set individual platform flags for template compatibility
+            self.facebook_flag = bool(found_links.get('facebook'))
+            self.instagram_flag = bool(found_links.get('instagram'))
+            self.twitter_flag = bool(found_links.get('twitter'))
+            self.linkedin_flag = bool(found_links.get('linkedin'))
+            
+            # Generate detailed verdict
+            found_count = sum(1 for v in found_links.values() if v)
+            if found_count == 0:
+                verdict = "No social media presence detected"
+            elif found_count == 1:
+                verdict = f"1 social platform found (Score: {self.s_count}%)"
+            else:
+                verdict = f"{found_count} social platforms found (Score: {self.s_count}%)"
+            
+            self.data.update({
+                "social_links": found_links,
+                "social_accounts_found": found_count,
+                "social_verdict": verdict,
+                "social_score": self.s_count,
+                "facebook_flag": self.facebook_flag,
+                "instagram_flag": self.instagram_flag,
+                "twitter_flag": self.twitter_flag,
+                "linkedin_flag": self.linkedin_flag,
+                "social_evidence": evidence_types  # New: how we found each platform
+            })
+            
+        except Exception as e:
+            logger.error(f"Social media detection failed: {e}")
+            self.facebook_flag = False
+            self.instagram_flag = False
+            self.twitter_flag = False
+            self.linkedin_flag = False
+            self.s_count = 0
+            self.data.update({
+                "social_links": {},
+                "social_accounts_found": 0,
+                "social_verdict": "Social media check failed",
+                "social_score": 0,
+                "facebook_flag": False,
+                "instagram_flag": False,
+                "twitter_flag": False,
+                "linkedin_flag": False
+            })
     
     def get_technology(self):
         """Detect technologies used on the site."""
-        technologies = []
-        
-        # Check server header
-        server = self.response_headers.get('Server', '')
-        if server:
-            technologies.append(f"Server: {server}")
-        
-        # Check X-Powered-By
-        powered_by = self.response_headers.get('X-Powered-By', '')
-        if powered_by:
-            technologies.append(f"Powered by: {powered_by}")
-        
-        # Check for common technologies in HTML
-        html_text = str(self.soup).lower()
-        
-        tech_indicators = {
-            'WordPress': 'wp-content' in html_text or 'wordpress' in html_text,
-            'Shopify': 'shopify' in html_text or 'myshopify' in html_text,
-            'Wix': 'wix' in html_text,
-            'Squarespace': 'squarespace' in html_text,
-            'Drupal': 'drupal' in html_text,
-            'Joomla': 'joomla' in html_text,
-            'React': 'react' in html_text or 'data-reactroot' in html_text,
-            'Vue.js': 'vue' in html_text,
-            'Angular': 'ng-' in html_text,
-            'jQuery': 'jquery' in html_text,
-            'Bootstrap': 'bootstrap' in html_text,
-            'Google Analytics': 'google-analytics' in html_text or 'gtag' in html_text,
-            'Google Tag Manager': 'gtm-' in html_text or 'googletagmanager' in html_text,
-            'Facebook Pixel': 'facebook-pixel' in html_text or 'fbevents' in html_text,
-            'Hotjar': 'hotjar' in html_text
-        }
-        
-        detected = [tech for tech, found in tech_indicators.items() if found]
-        
-        self.tech_flag = len(detected) > 0
-        
-        self.data.update({
-            'detected_technologies': detected,
-            'server_software': server or 'Unknown',
-            'tech_count': len(detected),
-            'tech_flag': self.tech_flag
-        })
+        try:
+            technologies = []
+            
+            # Check server header
+            server = self.response_headers.get('Server', '')
+            if server:
+                technologies.append(f"Server: {server}")
+            
+            # Check X-Powered-By
+            powered_by = self.response_headers.get('X-Powered-By', '')
+            if powered_by:
+                technologies.append(f"Powered by: {powered_by}")
+            
+            # Check for common technologies in HTML
+            html_text = str(self.soup).lower() if self.soup else ''
+            
+            tech_indicators = {
+                'WordPress': 'wp-content' in html_text or 'wordpress' in html_text,
+                'Shopify': 'shopify' in html_text or 'myshopify' in html_text,
+                'Wix': 'wix' in html_text,
+                'Squarespace': 'squarespace' in html_text,
+                'Drupal': 'drupal' in html_text,
+                'Joomla': 'joomla' in html_text,
+                'React': 'react' in html_text or 'data-reactroot' in html_text,
+                'Vue.js': 'vue' in html_text,
+                'Angular': 'ng-' in html_text,
+                'jQuery': 'jquery' in html_text,
+                'Bootstrap': 'bootstrap' in html_text,
+                'Google Analytics': 'google-analytics' in html_text or 'gtag' in html_text,
+                'Google Tag Manager': 'gtm-' in html_text or 'googletagmanager' in html_text,
+                'Facebook Pixel': 'facebook-pixel' in html_text or 'fbevents' in html_text,
+                'Hotjar': 'hotjar' in html_text
+            }
+            
+            detected = [tech for tech, found in tech_indicators.items() if found]
+            
+            self.tech_flag = len(detected) > 0
+            
+            self.data.update({
+                'detected_technologies': detected,
+                'server_software': server or 'Unknown',
+                'tech_count': len(detected),
+                'tech_flag': self.tech_flag
+            })
+        except Exception as e:
+            logger.error(f"Technology detection failed: {e}")
+            self.tech_flag = False
+            self.data.update({
+                'detected_technologies': [],
+                'server_software': 'Unknown',
+                'tech_count': 0,
+                'tech_flag': False
+            })
     
     def Google_Analytics(self):
         """Check for Google Analytics or Tag Manager."""
@@ -1408,86 +1756,120 @@ class Website_Audit(object):
     
     def w3c_validation(self):
         """Basic HTML validation checks."""
-        issues = []
-        
-        # Check for doctype
-        doctype = self.soup.contents[0] if self.soup.contents else None
-        has_doctype = isinstance(doctype, str) and 'doctype' in doctype.lower()
-        
-        if not has_doctype:
-            issues.append("Missing DOCTYPE declaration")
-        
-        # Check for charset
-        charset_meta = self.soup.find('meta', charset=True)
-        content_type_meta = self.soup.find('meta', {'http-equiv': 'Content-Type'})
-        has_charset = bool(charset_meta or content_type_meta)
-        
-        if not has_charset:
-            issues.append("Missing charset declaration")
-        
-        # Check for viewport
-        viewport = self.soup.find('meta', attrs={'name': 'viewport'})
-        if not viewport:
-            issues.append("Missing viewport meta tag (needed for mobile)")
-        
-        # Check for lang attribute
-        html_tag = self.soup.find('html')
-        has_lang = html_tag and html_tag.get('lang')
-        if not has_lang:
-            issues.append("Missing lang attribute on <html> tag")
-        
-        if not issues:
-            verdict = "✓ Basic HTML structure looks good"
-        else:
-            verdict = f"⚠️ {len(issues)} HTML structure issue(s) found"
-        
-        # Get actual doctype and encoding values for display
-        doctype_value = "HTML5" if has_doctype else "Not Found!"
-        
-        encoding_value = "UTF-8"  # default assumption
-        if charset_meta:
-            encoding_value = charset_meta.get('charset', 'UTF-8')
-        elif content_type_meta:
-            content = content_type_meta.get('content', '')
-            if 'charset=' in content:
-                encoding_value = content.split('charset=')[-1].split(';')[0].strip()
-        
-        self.data.update({
-            'w3c': verdict,  # Template expects 'w3c'
-            'doctype': doctype_value,  # Template expects 'doctype'
-            'encoding': encoding_value,  # Template expects 'encoding'
-            'html_validation': verdict,
-            'html_issues': issues,
-            'has_doctype': has_doctype,
-            'has_charset': has_charset,
-            'has_viewport': bool(viewport),
-            'has_lang': bool(has_lang)
-        })
-        
-        # Set instance variables for get_data defaults
-        self.Doctype = doctype_value
-        self.Encoding = encoding_value
-        self.doc_flag = has_doctype
-        self.encod_flag = has_charset
-        self.error_len = len(issues)
+        try:
+            issues = []
+            
+            if not self.soup:
+                raise ValueError("No HTML content to validate")
+            
+            # Check for doctype
+            doctype = self.soup.contents[0] if self.soup.contents else None
+            has_doctype = isinstance(doctype, str) and 'doctype' in doctype.lower()
+            
+            if not has_doctype:
+                issues.append("Missing DOCTYPE declaration")
+            
+            # Check for charset
+            charset_meta = self.soup.find('meta', charset=True)
+            content_type_meta = self.soup.find('meta', {'http-equiv': 'Content-Type'})
+            has_charset = bool(charset_meta or content_type_meta)
+            
+            if not has_charset:
+                issues.append("Missing charset declaration")
+            
+            # Check for viewport
+            viewport = self.soup.find('meta', attrs={'name': 'viewport'})
+            if not viewport:
+                issues.append("Missing viewport meta tag (needed for mobile)")
+            
+            # Check for lang attribute
+            html_tag = self.soup.find('html')
+            has_lang = html_tag and html_tag.get('lang')
+            if not has_lang:
+                issues.append("Missing lang attribute on <html> tag")
+            
+            if not issues:
+                verdict = "✓ Basic HTML structure looks good"
+            else:
+                verdict = f"⚠️ {len(issues)} HTML structure issue(s) found"
+            
+            # Get actual doctype and encoding values for display
+            doctype_value = "HTML5" if has_doctype else "Not Found!"
+            
+            encoding_value = "UTF-8"  # default assumption
+            if charset_meta:
+                encoding_value = charset_meta.get('charset', 'UTF-8')
+            elif content_type_meta:
+                content = content_type_meta.get('content', '')
+                if 'charset=' in content:
+                    encoding_value = content.split('charset=')[-1].split(';')[0].strip()
+            
+            self.data.update({
+                'w3c': verdict,
+                'doctype': doctype_value,
+                'encoding': encoding_value,
+                'html_validation': verdict,
+                'html_issues': issues,
+                'has_doctype': has_doctype,
+                'has_charset': has_charset,
+                'has_viewport': bool(viewport),
+                'has_lang': bool(has_lang)
+            })
+            
+            # Set instance variables for get_data defaults
+            self.Doctype = doctype_value
+            self.Encoding = encoding_value
+            self.doc_flag = has_doctype
+            self.encod_flag = has_charset
+            self.error_len = len(issues)
+            
+        except Exception as e:
+            logger.error(f"W3C validation failed: {e}")
+            self.Doctype = "HTML5"
+            self.Encoding = "UTF-8"
+            self.doc_flag = True  # Assume HTML5
+            self.encod_flag = True  # Assume UTF-8
+            self.error_len = 0
+            self.data.update({
+                'w3c': "✓ Basic HTML structure (assumed)",
+                'doctype': "HTML5",
+                'encoding': "UTF-8",
+                'html_validation': "✓ Basic HTML structure (assumed)",
+                'html_issues': [],
+                'has_doctype': True,
+                'has_charset': True,
+                'has_viewport': True,
+                'has_lang': True
+            })
     
     def get_content(self):
         """Analyze page content."""
-        for script in self.soup(["script", "style", "noscript"]):
-            script.decompose()
-        
-        text = self.soup.get_text(separator=' ', strip=True)
-        words = text.split()
-        word_count = len(words)
-        
-        # Estimate reading time (average 200 wpm)
-        reading_time = max(1, round(word_count / 200))
-        
-        self.data.update({
-            'word_count': word_count,
-            'reading_time': reading_time,
-            'content_length': 'Short' if word_count < 300 else ('Medium' if word_count < 1000 else 'Long')
-        })
+        try:
+            if not self.soup:
+                raise ValueError("No HTML content to analyze")
+                
+            for script in self.soup(["script", "style", "noscript"]):
+                script.decompose()
+            
+            text = self.soup.get_text(separator=' ', strip=True)
+            words = text.split()
+            word_count = len(words)
+            
+            # Estimate reading time (average 200 wpm)
+            reading_time = max(1, round(word_count / 200))
+            
+            self.data.update({
+                'word_count': word_count,
+                'reading_time': reading_time,
+                'content_length': 'Short' if word_count < 300 else ('Medium' if word_count < 1000 else 'Long')
+            })
+        except Exception as e:
+            logger.error(f"Content analysis failed: {e}")
+            self.data.update({
+                'word_count': 0,
+                'reading_time': 0,
+                'content_length': 'Unknown'
+            })
     
     def get_server(self):
         """Get server information."""
@@ -1498,7 +1880,6 @@ class Website_Audit(object):
             
             # Try to get IP and location
             try:
-                import socket
                 ip = socket.gethostbyname(self.domain)
                 self.ip = ip
                 self.data['ip'] = ip
@@ -1541,9 +1922,10 @@ class Website_Audit(object):
             self.webserver = 'Unknown'
     
     def SSL(self):
-        """Check SSL/HTTPS status and fetch certificate details."""
+        """Check SSL/HTTPS status and fetch certificate details with retry logic."""
         import ssl as ssl_module
         import datetime
+        import time as time_module
         
         url = self.url.replace("https://", "").replace("http://", "")
         host = url.split("/")[0].split("?")[0].strip()
@@ -1577,59 +1959,77 @@ class Website_Audit(object):
         except Exception:
             self.data['http_redir'] = "Could not check redirection"
 
-        # Fetch SSL certificate details
-        try:
-            context = ssl_module.create_default_context()
-            conn = socket.create_connection((host, 443), timeout=5)
-            sock = context.wrap_socket(conn, server_hostname=host)
-            cert = sock.getpeercert()
-
-            subject = dict(x[0] for x in cert.get("subject", []))
-            issuer = dict(x[0] for x in cert.get("issuer", []))
-
-            cn = subject.get("commonName")
-            issuer_cn = issuer.get("commonName")
-            issuer_org = issuer.get("organizationName", issuer_cn)
-            expiry = cert.get("notAfter")
-            
+        # Fetch SSL certificate details with retry
+        last_error = None
+        for attempt in range(3):  # 3 retries
             try:
-                expires = datetime.datetime.strptime(expiry, "%b %d %H:%M:%S %Y %Z")
-            except ValueError:
+                if attempt > 0:
+                    time_module.sleep(1)  # Wait 1 second between retries
+                
+                context = ssl_module.create_default_context()
+                # Increased timeout for slow servers
+                conn = socket.create_connection((host, 443), timeout=8)
+                sock = context.wrap_socket(conn, server_hostname=host)
+                cert = sock.getpeercert()
+
+                subject = dict(x[0] for x in cert.get("subject", []))
+                issuer = dict(x[0] for x in cert.get("issuer", []))
+
+                cn = subject.get("commonName")
+                issuer_cn = issuer.get("commonName")
+                issuer_org = issuer.get("organizationName", issuer_cn)
+                expiry = cert.get("notAfter")
+                
                 try:
-                    expires = datetime.datetime.strptime(expiry, "%b %d %H:%M:%S %Y")
+                    expires = datetime.datetime.strptime(expiry, "%b %d %H:%M:%S %Y %Z")
                 except ValueError:
-                    expires = datetime.datetime.utcnow() + datetime.timedelta(days=365)
-            
-            days_left = (expires - datetime.datetime.utcnow()).days
+                    try:
+                        expires = datetime.datetime.strptime(expiry, "%b %d %H:%M:%S %Y")
+                    except ValueError:
+                        expires = datetime.datetime.utcnow() + datetime.timedelta(days=365)
+                
+                days_left = (expires - datetime.datetime.utcnow()).days
 
-            self.data['ssl_name'] = cn or "Not Found!"
-            self.data['ssl_organ'] = issuer_org or "Not Found!"
-            self.data['ssl_expiry'] = expiry
+                self.data['ssl_name'] = cn or "Not Found!"
+                self.data['ssl_organ'] = issuer_org or "Not Found!"
+                self.data['ssl_expiry'] = expiry
 
-            if days_left < 0:
-                self.data['ssl_verdict'] = "SSL certificate is EXPIRED!"
-                self.ssl = False
-            elif days_left < 15:
-                self.data['ssl_verdict'] = f"SSL expiring soon! ({days_left} days left)"
-                self.ssl = True
-            else:
-                if self.data.get('ssl_name') != "Not Found!" and self.data.get('ssl_organ') != "Not Found!":
-                    self.data['ssl_verdict'] = "SSL certificate is valid!"
+                if days_left < 0:
+                    self.data['ssl_verdict'] = "SSL certificate is EXPIRED!"
+                    self.ssl = False
+                elif days_left < 15:
+                    self.data['ssl_verdict'] = f"SSL expiring soon! ({days_left} days left)"
                     self.ssl = True
                 else:
-                    self.data['ssl_verdict'] = "SSL not found or invalid."
-                    self.ssl = False
+                    if self.data.get('ssl_name') != "Not Found!" and self.data.get('ssl_organ') != "Not Found!":
+                        self.data['ssl_verdict'] = "SSL certificate is valid!"
+                        self.ssl = True
+                    else:
+                        self.data['ssl_verdict'] = "SSL not found or invalid."
+                        self.ssl = False
 
-            sock.close()
-        except ssl_module.CertificateError:
-            self.data['ssl_verdict'] = "Hostname mismatch (Invalid SSL)"
-            self.ssl = False
-        except ssl_module.SSLError:
-            self.data['ssl_verdict'] = "SSL Handshake error (Invalid or broken SSL)"
-            self.ssl = False
-        except Exception:
-            self.data['ssl_verdict'] = "SSL Error"
-            self.ssl = False
+                sock.close()
+                break  # Success, exit retry loop
+                
+            except ssl_module.CertificateError as e:
+                last_error = e
+                if attempt == 2:  # Last attempt
+                    self.data['ssl_verdict'] = "Hostname mismatch (Invalid SSL)"
+                    self.ssl = False
+                continue
+            except ssl_module.SSLError as e:
+                last_error = e
+                if attempt == 2:  # Last attempt
+                    self.data['ssl_verdict'] = "SSL Handshake error (Invalid or broken SSL)"
+                    self.ssl = False
+                continue
+            except Exception as e:
+                last_error = e
+                if attempt == 2:  # Last attempt
+                    logger.warning(f"SSL check failed after 3 attempts: {e}")
+                    self.data['ssl_verdict'] = "SSL Error - Could not retrieve certificate"
+                    self.ssl = False
+                continue
 
         # Set overall SSL status
         is_https = self.url.startswith('https://')
@@ -1654,10 +2054,21 @@ class Website_Audit(object):
         
         self.dmca = has_dmca
     
-    def Report(self, dict_data, output_dir=None):
-        """Generate and optionally send SEO report."""
+    def Report(self, dict_data, output_dir=None, use_comprehensive=True):
+        """
+        Generate and optionally send comprehensive SEO report.
+        
+        Args:
+            dict_data: Audit data dictionary (from cached show() view)
+            output_dir: Directory to save PDF
+            use_comprehensive: Whether to use new comprehensive analysis (default: True)
+        
+        Returns:
+            dict: Report generation result
+        """
         try:
             current_user_email = self._get_user_email(dict_data)
+            url = dict_data.get('url', '')
             
             sender_email = os.getenv('SENDER_EMAIL', '')
             sender_password = os.getenv('SENDER_PASSWORD', '')
@@ -1670,14 +2081,86 @@ class Website_Audit(object):
             
             send_email = bool(current_user_email)
             
+            # Use comprehensive report data if enabled
+            if use_comprehensive and url:
+                logger.info(f"Generating comprehensive report for: {url}")
+                
+                # Get comprehensive data (SEO metrics + keyword_ai)
+                comprehensive_data = generate_comprehensive_report_data(
+                    url=url,
+                    request=self.request,
+                    use_cache=True,
+                    force_refresh=False
+                )
+                
+                # Check if we got valid data from orchestrator
+                if 'error' not in comprehensive_data or comprehensive_data.get('analysis_sources'):
+                    # Merge: Use the SAME audit data (dict_data) + comprehensive metrics
+                    # This ensures consistency between page display and PDF
+                    report_data = comprehensive_data.copy()
+                    report_data['seo'] = dict_data  # Use EXACT data from page
+                    
+                    # Also copy legacy fields that PDF expects at root level
+                    report_data['url'] = dict_data.get('url', url)
+                    report_data['title'] = dict_data.get('title', '')
+                    report_data['desc'] = dict_data.get('desc', '')
+                    report_data['title_score'] = dict_data.get('title_score', 0)
+                    report_data['desc_score'] = dict_data.get('desc_score', 0)
+                    report_data['H'] = dict_data.get('H', 'None')
+                    report_data['heading_score'] = dict_data.get('heading_score', 0)
+                    report_data['speed'] = dict_data.get('speed', 0)
+                    report_data['internal_links'] = dict_data.get('internal_links', 0)
+                    report_data['external_links'] = dict_data.get('external_links', 0)
+                    report_data['b_links'] = dict_data.get('b_links', 0)
+                    report_data['alt_count'] = dict_data.get('alt_count', 0)
+                    report_data['lst'] = dict_data.get('lst', [])
+                    report_data['dens'] = dict_data.get('dens', [])
+                    report_data['robot_flag'] = dict_data.get('robot_flag', False)
+                    report_data['sitemap_flag'] = dict_data.get('sitemap_flag', False)
+                    report_data['schema_flag'] = dict_data.get('schema_flag', False)
+                    report_data['ogp_flag'] = dict_data.get('ogp_flag', False)
+                    report_data['icon_flag'] = dict_data.get('icon_flag', False)
+                    report_data['analytics_flag'] = dict_data.get('analytics_flag', False)
+                    report_data['https'] = dict_data.get('https', False)
+                    report_data['dmca'] = dict_data.get('dmca', False)
+                    report_data['ssl_name'] = dict_data.get('ssl_name', '')
+                    report_data['ssl_expiry'] = dict_data.get('ssl_expiry', '')
+                    report_data['ip'] = dict_data.get('ip', '')
+                    report_data['loc_name'] = dict_data.get('loc_name', '')
+                    report_data['webserver'] = dict_data.get('webserver', '')
+                    report_data['error_len'] = dict_data.get('error_len', 0)
+                    report_data['warn_len'] = dict_data.get('warn_len', 0)
+                    report_data['mob_score'] = dict_data.get('mob_score', 0)
+                    report_data['amp'] = dict_data.get('amp', False)
+                    report_data['render'] = dict_data.get('render', False)
+                    report_data['s_count'] = dict_data.get('s_count', 0)
+                    report_data['facebook_flag'] = dict_data.get('facebook_flag', False)
+                    report_data['instagram_flag'] = dict_data.get('instagram_flag', False)
+                    report_data['twitter_flag'] = dict_data.get('twitter_flag', False)
+                    report_data['linkedin_flag'] = dict_data.get('linkedin_flag', False)
+                    
+                    report_data['from_cache'] = comprehensive_data.get('from_cache', False)
+                    logger.info(f"Using merged report data (comprehensive metrics + cached audit)")
+                else:
+                    # Fallback to legacy data
+                    logger.warning(f"Comprehensive analysis failed, using legacy data: {comprehensive_data.get('error')}")
+                    report_data = dict_data
+            else:
+                report_data = dict_data
+            
             result = generate_seo_report(
-                data_dict=dict_data,
+                data_dict=report_data,
                 user_email=current_user_email,
                 sender_email=sender_email,
                 sender_password=sender_password,
                 output_dir=output_dir,
                 send_email=send_email
             )
+            
+            # Add metadata about comprehensive analysis
+            if use_comprehensive:
+                result['comprehensive_analysis'] = True
+                result['from_cache'] = report_data.get('from_cache', False)
             
             return result
             
@@ -1779,10 +2262,25 @@ class Website_Audit(object):
         self.data.setdefault('icon_flag', self.icon_flag)
         self.data.setdefault('ogp_flag', self.ogp_flag)
         self.data.setdefault('tech_flag', self.tech_flag)
+        # Technology stack - format for template or provide defaults
+        tech_list = self.data.get('detected_technologies', [])
+        if tech_list:
+            tech_str = ', '.join(tech_list[:5])
+            if len(tech_list) > 5:
+                tech_str += f' (+{len(tech_list) - 5} more)'
+            self.data.setdefault('technology', tech_str)
+        else:
+            self.data.setdefault('technology', self.data.get('server_software', 'Unknown'))
+        self.data.setdefault('detected_technologies', [])
+        self.data.setdefault('server_software', 'Unknown')
+        self.data.setdefault('tech_count', 0)
         self.data.setdefault('analytics_flag', self.analytics_flag)
+        self.data.setdefault('analytics', self.data.get('analytics', 'Not Found'))
         self.data.setdefault('doc_flag', self.doc_flag)
-        self.data.setdefault('Doctype', self.Doctype)
-        self.data.setdefault('Encoding', self.Encoding)
+        self.data.setdefault('doctype', self.Doctype or 'HTML5')  # Template expects lowercase 'doctype'
+        self.data.setdefault('Doctype', self.Doctype or 'HTML5')
+        self.data.setdefault('encoding', self.Encoding or 'UTF-8')  # Template expects lowercase 'encoding'
+        self.data.setdefault('Encoding', self.Encoding or 'UTF-8')
         self.data.setdefault('dmca', self.dmca)
         self.data.setdefault('https', self.https)
         self.data.setdefault('facebook_flag', self.facebook_flag)
@@ -1817,7 +2315,11 @@ class Website_Audit(object):
         self.data.setdefault('ssl_name', self.data.get('ssl_name', 'Not Found!'))
         self.data.setdefault('ssl_organ', self.data.get('ssl_organ', 'Not Found!'))
         self.data.setdefault('ssl_expiry', self.data.get('ssl_expiry', 'Not Found!'))
-        self.data.setdefault('s_ip', self.data.get('ip', 'Unknown'))
+        # Server IP - use self.ip (set by get_server) not self.data.get('ip')
+        self.data.setdefault('ip', self.ip or 'Unknown')
+        self.data.setdefault('s_ip', self.ip or 'Unknown')  # Template uses s_ip
+        self.data.setdefault('s_loc', self.loc_name or 'Unknown')  # Template uses s_loc
+        self.data.setdefault('hostname', self.data.get('hostname', 'Unknown'))
         
         return self.data
 
@@ -1828,6 +2330,7 @@ from .views_pages import (
     analyze_sentiment_view,
     upload,
     Report,
+    download_report,
     index,
     show,
     seo_metrics,

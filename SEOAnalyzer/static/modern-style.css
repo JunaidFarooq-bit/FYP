@@ -982,6 +982,49 @@ body {
   padding: var(--spacing-2xl) 0;
 }
 
+.report-buttons {
+  display: flex;
+  gap: var(--spacing-lg);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.report-buttons form {
+  margin: 0;
+}
+
+/* Email Button Variant */
+.btn-email {
+  background: linear-gradient(135deg, #023761 0%, #02569b 50%, #3b82f6 100%);
+  color: var(--white);
+  padding: 1rem 2rem;
+  font-size: 1.0625rem;
+  box-shadow: var(--shadow-lg);
+  border: none;
+  cursor: pointer;
+}
+
+.btn-email:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-xl);
+}
+
+/* Download Button Variant */
+.btn-download-direct {
+  background: linear-gradient(135deg, #059669 0%, #10b981 50%, #34d399 100%);
+  color: var(--white);
+  padding: 1rem 2rem;
+  font-size: 1.0625rem;
+  box-shadow: var(--shadow-lg);
+  border: none;
+  cursor: pointer;
+}
+
+.btn-download-direct:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-xl);
+}
+
 /* ========================================
    Animations
    ======================================== */

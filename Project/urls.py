@@ -23,6 +23,7 @@ urlpatterns = [
     path('show/', views.show, name="show"),
     path('upload/',views.upload,name='upload'),
     path('report/',views.Report,name='report'),
+    path('report/download/', views.download_report, name='download_report'),
     path('seo-metrics/', views.seo_metrics, name="seo_metrics"),
     path('mobiletest/',views.mobiletest,name="mobiletest"),
     path('robot/',views.robot,name="robot"),

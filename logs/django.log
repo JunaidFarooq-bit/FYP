@@ -355,3 +355,98 @@ INFO 2026-05-14 16:11:36,233 link_checker Checking 33 unique links out of 53 tot
 WARNING 2026-05-14 16:11:38,165 views Async performance checks failed: 'Website_Audit' object has no attribute 'measure_website_speed'
 INFO 2026-05-14 16:19:02,752 link_checker Checking 33 unique links out of 53 total links...
 WARNING 2026-05-14 16:19:11,395 views Async performance checks failed: 'Website_Audit' object has no attribute 'measure_website_speed'
+INFO 2026-05-14 16:23:54,433 link_checker Checking 33 unique links out of 53 total links...
+INFO 2026-05-14 16:29:36,363 link_checker Checking 33 unique links out of 53 total links...
+INFO 2026-05-14 16:34:42,631 link_checker Checking 33 unique links out of 53 total links...
+INFO 2026-05-14 16:50:47,407 link_checker Checking 33 unique links out of 53 total links...
+INFO 2026-05-14 17:01:58,466 link_checker Checking 33 unique links out of 53 total links...
+INFO 2026-05-16 00:36:37,753 link_checker Checking 35 unique links out of 55 total links...
+INFO 2026-05-16 00:37:42,855 views_pages Generating downloadable PDF report for: https://codup.co/
+INFO 2026-05-16 00:37:57,291 link_checker Checking 35 unique links out of 55 total links...
+INFO 2026-05-16 00:38:27,321 report_orchestrator ============================================================
+INFO 2026-05-16 00:38:27,377 report_orchestrator [ORCHESTRATOR] Generating comprehensive report for: https://codup.co/
+INFO 2026-05-16 00:38:27,377 report_orchestrator ============================================================
+INFO 2026-05-16 00:38:27,377 report_orchestrator [CACHE MISS] Report for https://codup.co/
+INFO 2026-05-16 00:38:27,377 report_orchestrator [ORCHESTRATOR] Running all 3 analyzers...
+INFO 2026-05-16 00:38:27,377 report_orchestrator [SEOAnalyzer] Starting audit for: https://codup.co/
+INFO 2026-05-16 00:38:45,299 link_checker Checking 35 unique links out of 55 total links...
+INFO 2026-05-16 00:39:15,641 report_orchestrator [SEOAnalyzer] Audit complete: 214 metrics collected
+INFO 2026-05-16 00:39:15,646 report_orchestrator [keyword_ai] Starting pipeline for: https://codup.co/
+INFO 2026-05-16 00:39:43,414 pinecone_service Pinecone client initialized for index: keyword-ai-vectors
+INFO 2026-05-16 00:39:46,732 pipeline_v2 RAG: Retrieved 3 similar analyses for context
+INFO 2026-05-16 00:40:04,516 report_orchestrator [keyword_ai] Pipeline complete: 0 keywords
+INFO 2026-05-16 00:40:04,516 report_orchestrator [SEO Metrics] Fetching Moz metrics for: https://codup.co/
+INFO 2026-05-16 00:40:05,814 report_orchestrator [SEO Metrics] DA=30, PA=45
+INFO 2026-05-16 00:40:05,822 report_orchestrator [MERGE] Data merged: 33 SEO metrics, 0 keywords, DA=30
+INFO 2026-05-16 00:40:05,823 report_orchestrator [CACHE SET] Report for https://codup.co/ (TTL: 86400s)
+INFO 2026-05-16 00:40:05,823 report_orchestrator [ORCHESTRATOR] Report generation complete
+INFO 2026-05-16 00:40:05,823 report_orchestrator ============================================================
+INFO 2026-05-16 00:40:05,823 modern_report Starting report generation for: https://codup.co/
+INFO 2026-05-16 00:40:06,315 modern_report Report generation completed: Report generated successfully: reports\WEB_LIFT_Report_20260516.pdf
+INFO 2026-05-16 00:40:06,362 views_pages PDF downloaded: WEB_LIFT_Report_codup_co_20260516.pdf
+INFO 2026-05-16 00:49:15,063 link_checker Checking 35 unique links out of 55 total links...
+WARNING 2026-05-16 00:49:57,378 views PageSpeed API error: 500 Server Error: Internal Server Error for url: https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=https://codup.co/&strategy=mobile&key=AIzaSyCmrjwbpisRxVODW7wou3OKZsrnN7GtrBg
+INFO 2026-05-16 00:49:57,385 views_pages ============================================================
+INFO 2026-05-16 00:49:57,385 views_pages AUDIT CACHED - URL: https://codup.co/
+INFO 2026-05-16 00:49:57,386 views_pages AUDIT CACHED - Key: audit_results_27a11358f9ab2151ec3f9f267d5e4479
+INFO 2026-05-16 00:49:57,387 views_pages AUDIT DATA - Title: 'Software Development and Digital Transformation Co...', Score: 78
+INFO 2026-05-16 00:49:57,387 views_pages AUDIT DATA - Speed: 0.5s, Links: 42/9
+INFO 2026-05-16 00:49:57,388 views_pages AUDIT DATA - Flags: robots=True, sitemap=True, schema=True
+INFO 2026-05-16 00:49:57,389 views_pages ============================================================
+INFO 2026-05-16 00:50:07,796 views_pages Generating downloadable PDF report for: https://codup.co/
+INFO 2026-05-16 00:50:07,797 views_pages Using cached audit data for PDF generation
+INFO 2026-05-16 00:50:07,799 report_orchestrator ============================================================
+INFO 2026-05-16 00:50:07,799 report_orchestrator [ORCHESTRATOR] Generating comprehensive report for: https://codup.co/
+INFO 2026-05-16 00:50:07,800 report_orchestrator ============================================================
+INFO 2026-05-16 00:50:07,802 report_orchestrator [CACHE MISS] Report for https://codup.co/
+INFO 2026-05-16 00:50:07,802 report_orchestrator [ORCHESTRATOR] Running all 3 analyzers...
+INFO 2026-05-16 00:50:07,803 report_orchestrator [SEOAnalyzer] Starting audit for: https://codup.co/
+INFO 2026-05-16 00:50:29,391 link_checker Checking 35 unique links out of 55 total links...
+INFO 2026-05-16 00:50:59,734 report_orchestrator [SEOAnalyzer] Audit complete: 214 metrics collected
+INFO 2026-05-16 00:50:59,744 report_orchestrator [keyword_ai] Starting pipeline for: https://codup.co/
+INFO 2026-05-16 00:51:39,282 pinecone_service Pinecone client initialized for index: keyword-ai-vectors
+INFO 2026-05-16 00:51:42,063 pipeline_v2 RAG: Retrieved 3 similar analyses for context
+INFO 2026-05-16 00:51:56,803 report_orchestrator [keyword_ai] Pipeline complete: 0 keywords
+INFO 2026-05-16 00:51:56,803 report_orchestrator [SEO Metrics] Fetching Moz metrics for: https://codup.co/
+INFO 2026-05-16 00:51:58,146 report_orchestrator [SEO Metrics] DA=30, PA=45
+INFO 2026-05-16 00:51:58,149 report_orchestrator [MERGE] Data merged: 33 SEO metrics, 0 keywords, DA=30
+INFO 2026-05-16 00:51:58,149 report_orchestrator [CACHE SET] Report for https://codup.co/ (TTL: 86400s)
+INFO 2026-05-16 00:51:58,149 report_orchestrator [ORCHESTRATOR] Report generation complete
+INFO 2026-05-16 00:51:58,149 report_orchestrator ============================================================
+INFO 2026-05-16 00:51:58,151 views_pages PDF Data Verification - Title: 'Software Development and Digital Transformation Co...', Score: 78
+INFO 2026-05-16 00:51:58,151 views_pages PDF Data Verification - Speed: 0.5s, Links: 42/9
+INFO 2026-05-16 00:51:58,151 views_pages PDF Data Verification - Flags: robots=True, sitemap=True, schema=True
+INFO 2026-05-16 00:51:58,153 modern_report Starting report generation for: https://codup.co/
+INFO 2026-05-16 00:51:58,243 modern_report Report generation completed: Report generated successfully: reports\WEB_LIFT_Report_20260516.pdf
+INFO 2026-05-16 00:51:58,365 views_pages PDF downloaded: WEB_LIFT_Report_codup_co_20260516.pdf (cached_audit=True)
+INFO 2026-05-16 01:09:32,607 link_checker Checking 550 unique links out of 632 total links...
+WARNING 2026-05-16 01:09:43,309 views SSL check failed after 3 attempts: name 'socket' is not defined
+INFO 2026-05-16 01:10:44,487 views_pages ============================================================
+INFO 2026-05-16 01:10:44,570 views_pages AUDIT CACHED - URL: http://dvago.pk
+INFO 2026-05-16 01:10:44,961 views_pages AUDIT CACHED - Key: audit_results_2f3dafa569874f95f974445164a457ac
+INFO 2026-05-16 01:10:45,013 views_pages AUDIT DATA - Title: 'Premier Online Pharmacy & Online Medical Store in ...', Score: 74
+INFO 2026-05-16 01:10:45,082 views_pages AUDIT DATA - Speed: 0.94s, Links: 628/4
+INFO 2026-05-16 01:11:58,991 link_checker Checking 35 unique links out of 55 total links...
+INFO 2026-05-16 01:12:27,763 views_pages ============================================================
+INFO 2026-05-16 01:12:27,763 views_pages AUDIT CACHED - URL: https://codup.co/
+INFO 2026-05-16 01:12:27,763 views_pages AUDIT CACHED - Key: audit_results_27a11358f9ab2151ec3f9f267d5e4479
+INFO 2026-05-16 01:12:27,763 views_pages AUDIT DATA - Title: 'Software Development and Digital Transformation Co...', Score: 78
+INFO 2026-05-16 01:12:27,763 views_pages AUDIT DATA - Speed: 0.55s, Links: 42/9
+INFO 2026-05-16 01:12:27,763 views_pages AUDIT DATA - Flags: robots=True, sitemap=True, schema=True
+INFO 2026-05-16 01:12:27,763 views_pages ============================================================
+INFO 2026-05-16 01:15:54,069 link_checker Checking 35 unique links out of 55 total links...
+INFO 2026-05-16 01:16:23,213 views_pages ============================================================
+INFO 2026-05-16 01:16:23,214 views_pages AUDIT CACHED - URL: https://codup.co/
+INFO 2026-05-16 01:16:23,215 views_pages AUDIT CACHED - Key: audit_results_27a11358f9ab2151ec3f9f267d5e4479
+INFO 2026-05-16 01:16:23,216 views_pages AUDIT DATA - Title: 'Software Development and Digital Transformation Co...', Score: 78
+INFO 2026-05-16 01:16:23,216 views_pages AUDIT DATA - Speed: 0.56s, Links: 42/9
+INFO 2026-05-16 01:16:23,216 views_pages AUDIT DATA - Flags: robots=True, sitemap=True, schema=True
+INFO 2026-05-16 01:16:23,216 views_pages ============================================================
+INFO 2026-05-16 01:24:38,979 link_checker Checking 550 unique links out of 632 total links...
+INFO 2026-05-16 01:25:41,447 views_pages ============================================================
+INFO 2026-05-16 01:25:41,448 views_pages AUDIT CACHED - URL: http://dvago.pk
+INFO 2026-05-16 01:25:41,449 views_pages AUDIT CACHED - Key: audit_results_2f3dafa569874f95f974445164a457ac
+INFO 2026-05-16 01:25:41,450 views_pages AUDIT DATA - Title: 'Premier Online Pharmacy & Online Medical Store in ...', Score: 74
+INFO 2026-05-16 01:25:41,455 views_pages AUDIT DATA - Speed: 1.03s, Links: 628/4
+INFO 2026-05-16 01:25:41,456 views_pages AUDIT DATA - Flags: robots=True, sitemap=True, schema=False
+INFO 2026-05-16 01:25:41,456 views_pages ============================================================
