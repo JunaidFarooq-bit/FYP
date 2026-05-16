@@ -1,0 +1,226 @@
+{% comment %}
+  Enhanced KPI Cards Component with Chart.js Sparklines
+  Interactive metric cards with live charts
+{% endcomment %}
+
+<div class="kpi-row">
+  <!-- TTFB KPI with Sparkline -->
+  <div class="kpi-card {% if ttfb <= 0.8 %}success{% elif ttfb <= 1.8 %}warning{% else %}danger{% endif %}" data-metric="ttfb">
+    <div class="kpi-label">
+      <i class="fas fa-bolt"></i> Page Speed (TTFB)
+    </div>
+    <div class="kpi-value">{{ ttfb|default:"--" }}s</div>
+    <div class="kpi-sparkline-container">
+      <canvas id="ttfbSparkline" class="kpi-sparkline-canvas"></canvas>
+    </div>
+    <span class="kpi-status {% if ttfb <= 0.8 %}success{% elif ttfb <= 1.8 %}warning{% else %}danger{% endif %}">
+      {% if ttfb <= 0.8 %}
+        <i class="fas fa-check-circle"></i> Fast
+      {% elif ttfb <= 1.8 %}
+        <i class="fas fa-exclamation-circle"></i> Acceptable
+      {% else %}
+        <i class="fas fa-times-circle"></i> Slow
+      {% endif %}
+    </span>
+    <div class="kpi-detail" style="display: none;">
+      <small>Time to First Byte measures server response time</small>
+    </div>
+  </div>
+
+  <!-- Links Health KPI with Mini Bar Chart -->
+  <div class="kpi-card {% if b_links == 0 %}success{% elif b_links <= 5 %}warning{% else %}danger{% endif %}" data-metric="links">
+    <div class="kpi-label">
+      <i class="fas fa-link"></i> Link Health
+    </div>
+    <div class="kpi-value">{{ working_links|default:"--" }}/{{ total_links|default:"--" }}</div>
+    <div class="kpi-chart-container mini-bar">
+      <div class="mini-bar-track">
+        <div class="mini-bar-fill working" style="width: {% widthratio working_links total_links 100 %}%;"></div>
+        <div class="mini-bar-fill broken" style="width: {% widthratio b_links total_links 100 %}%;"></div>
+      </div>
+      <div class="mini-bar-labels">
+        <span class="working-label"><i class="fas fa-check"></i> {{ working_links|default:0 }}</span>
+        <span class="broken-label"><i class="fas fa-times"></i> {{ b_links|default:0 }}</span>
+      </div>
+    </div>
+    <span class="kpi-status {% if b_links == 0 %}success{% elif b_links <= 5 %}warning{% else %}danger{% endif %}">
+      {% if b_links == 0 %}
+        <i class="fas fa-check-circle"></i> All Working
+      {% elif b_links <= 5 %}
+        <i class="fas fa-exclamation-circle"></i> {{ b_links }} Broken
+      {% else %}
+        <i class="fas fa-times-circle"></i> {{ b_links }} Broken
+      {% endif %}
+    </span>
+  </div>
+
+  <!-- Image Optimization KPI with Circular Progress -->
+  <div class="kpi-card {% if image_optimization >= 80 %}success{% elif image_optimization >= 50 %}warning{% else %}danger{% endif %}" data-metric="images">
+    <div class="kpi-label">
+      <i class="fas fa-image"></i> Image Optimization
+    </div>
+    <div class="kpi-with-chart">
+      <div class="kpi-value-large">{{ image_optimization|default:"--" }}%</div>
+      <div class="mini-ring-container">
+        <svg class="mini-ring" viewBox="0 0 50 50">
+          <circle class="mini-ring-bg" cx="25" cy="25" r="20"></circle>
+          <circle 
+            class="mini-ring-fill {% if image_optimization >= 80 %}success{% elif image_optimization >= 50 %}warning{% else %}danger{% endif %}"
+            cx="25" 
+            cy="25" 
+            r="20"
+            stroke-dasharray="125.6"
+            stroke-dashoffset="125.6"
+            data-optimization="{{ image_optimization|default:0 }}"
+          ></circle>
+        </svg>
+      </div>
+    </div>
+    <span class="kpi-status {% if image_optimization >= 80 %}success{% elif image_optimization >= 50 %}warning{% else %}danger{% endif %}">
+      {% if image_optimization >= 80 %}
+        <i class="fas fa-check-circle"></i> Optimized
+      {% elif image_optimization >= 50 %}
+        <i class="fas fa-exclamation-circle"></i> Needs Work
+      {% else %}
+        <i class="fas fa-times-circle"></i> Critical
+      {% endif %}
+    </span>
+  </div>
+
+  <!-- Heading Structure KPI with Visual Indicators -->
+  <div class="kpi-card {% if h1_count == 1 and h2_count >= 3 %}success{% elif h1_count == 1 %}warning{% else %}danger{% endif %}" data-metric="headings">
+    <div class="kpi-label">
+      <i class="fas fa-heading"></i> Heading Structure
+    </div>
+    <div class="kpi-value">H1: {{ h1_count }} | H2: {{ h2_count }}</div>
+    <div class="heading-visual">
+      <div class="h-indicator h1-indicator {% if h1_count == 1 %}valid{% elif h1_count == 0 %}missing{% else %}error{% endif %}">
+        <span class="h-tag">H1</span>
+        <span class="h-count">{{ h1_count }}</span>
+      </div>
+      <div class="h-indicator h2-indicator {% if h2_count >= 3 %}valid{% elif h2_count > 0 %}warning{% else %}missing{% endif %}">
+        <span class="h-tag">H2</span>
+        <span class="h-count">{{ h2_count }}</span>
+      </div>
+      <div class="h-indicator h3-indicator {% if h3_count >= 2 %}valid{% elif h3_count > 0 %}warning{% else %}neutral{% endif %}">
+        <span class="h-tag">H3</span>
+        <span class="h-count">{{ h3_count|default:0 }}</span>
+      </div>
+    </div>
+    <span class="kpi-status {% if h1_count == 1 and h2_count >= 3 %}success{% elif h1_count == 1 %}warning{% else %}danger{% endif %}">
+      {% if h1_count == 1 and h2_count >= 3 %}
+        <i class="fas fa-check-circle"></i> Excellent
+      {% elif h1_count == 1 %}
+        <i class="fas fa-exclamation-circle"></i> Needs H2s
+      {% else %}
+        <i class="fas fa-times-circle"></i> Fix H1
+      {% endif %}
+    </span>
+  </div>
+
+  <!-- Content Volume KPI with Gauge -->
+  <div class="kpi-card {% if total_words >= 500 %}success{% elif total_words >= 300 %}warning{% else %}info{% endif %}" data-metric="content">
+    <div class="kpi-label">
+      <i class="fas fa-file-word"></i> Content Volume
+    </div>
+    <div class="kpi-value">{{ total_words|default:"--" }} words</div>
+    <div class="content-gauge">
+      <div class="gauge-track">
+        <div class="gauge-fill" style="width: {% widthratio total_words 1000 100 %}%; max-width: 100%;"></div>
+      </div>
+      <div class="gauge-labels">
+        <span {% if total_words < 300 %}class="active"{% endif %}>Thin</span>
+        <span {% if total_words >= 300 and total_words < 500 %}class="active"{% endif %}>Short</span>
+        <span {% if total_words >= 500 and total_words < 1000 %}class="active"{% endif %}>Good</span>
+        <span {% if total_words >= 1000 %}class="active"{% endif %}>Long</span>
+      </div>
+    </div>
+    <span class="kpi-status {% if total_words >= 500 %}success{% elif total_words >= 300 %}warning{% else %}info{% endif %}">
+      {% if total_words >= 1000 %}
+        <i class="fas fa-check-circle"></i> Long Form
+      {% elif total_words >= 500 %}
+        <i class="fas fa-check-circle"></i> Good Length
+      {% elif total_words >= 300 %}
+        <i class="fas fa-exclamation-circle"></i> Could Expand
+      {% else %}
+        <i class="fas fa-info-circle"></i> Add Content
+      {% endif %}
+    </span>
+  </div>
+
+  <!-- Grammar Score KPI with Score Badge -->
+  <div class="kpi-card {% if grammar_score >= 90 %}success{% elif grammar_score >= 75 %}warning{% else %}danger{% endif %}" data-metric="grammar">
+    <div class="kpi-label">
+      <i class="fas fa-spell-check"></i> Writing Quality
+    </div>
+    <div class="kpi-with-badge">
+      <div class="grammar-score-badge {% if grammar_score >= 90 %}success{% elif grammar_score >= 75 %}warning{% else %}danger{% endif %}">
+        {{ grammar_score|default:"--" }}
+      </div>
+      <div class="grammar-breakdown">
+        <div class="grammar-item">
+          <span class="g-label">Spelling</span>
+          <span class="g-status {% if spelling_errors %}has-issues{% else %}clean{% endif %}">
+            {% if spelling_errors %}<i class="fas fa-times"></i>{% else %}<i class="fas fa-check"></i>{% endif %}
+          </span>
+        </div>
+        <div class="grammar-item">
+          <span class="g-label">Grammar</span>
+          <span class="g-status {% if grammar_issues %}has-issues{% else %}clean{% endif %}">
+            {% if grammar_issues %}<i class="fas fa-times"></i>{% else %}<i class="fas fa-check"></i>{% endif %}
+          </span>
+        </div>
+      </div>
+    </div>
+    <span class="kpi-status {% if grammar_score >= 90 %}success{% elif grammar_score >= 75 %}warning{% else %}danger{% endif %}">
+      {% if grammar_score >= 90 %}
+        <i class="fas fa-check-circle"></i> Excellent
+      {% elif grammar_score >= 75 %}
+        <i class="fas fa-exclamation-circle"></i> Good
+      {% else %}
+        <i class="fas fa-times-circle"></i> Issues Found
+      {% endif %}
+    </span>
+  </div>
+</div>
+
+<script>
+  // KPI Card Interactions
+  document.addEventListener('DOMContentLoaded', function() {
+    // Add click handlers for KPI cards to show details
+    const kpiCards = document.querySelectorAll('.kpi-card');
+    kpiCards.forEach(card => {
+      card.addEventListener('click', function() {
+        const detail = this.querySelector('.kpi-detail');
+        if (detail) {
+          detail.style.display = detail.style.display === 'none' ? 'block' : 'none';
+        }
+      });
+    });
+
+    // FIX: Mini rings — compute correct offset: circumference - (value/100 * circumference)
+    const miniRings = document.querySelectorAll('.mini-ring-fill[data-optimization]');
+    miniRings.forEach(ring => {
+      const value = parseFloat(ring.dataset.optimization) || 0;
+      const circumference = 125.6;
+      const offset = circumference - (value / 100) * circumference;
+      // Start at full (empty ring), animate to correct offset
+      ring.style.strokeDashoffset = circumference;
+      setTimeout(() => {
+        ring.style.transition = 'stroke-dashoffset 1s ease-out';
+        ring.style.strokeDashoffset = offset;
+      }, 300);
+    });
+
+    // Animate gauge fills
+    const gauges = document.querySelectorAll('.gauge-fill');
+    gauges.forEach(gauge => {
+      const finalWidth = gauge.style.width;
+      gauge.style.width = '0%';
+      setTimeout(() => {
+        gauge.style.transition = 'width 1s ease-out';
+        gauge.style.width = finalWidth;
+      }, 400);
+    });
+  });
+</script>

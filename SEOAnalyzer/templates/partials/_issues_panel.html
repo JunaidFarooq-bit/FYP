@@ -1,0 +1,266 @@
+{% comment %}
+  Interactive Issues Panel Component
+  Filterable, sortable priority actions with detailed breakdown
+{% endcomment %}
+
+<div class="issues-panel-container" id="issuesPanel">
+  <!-- Filter Bar -->
+  <div class="issues-filter-bar">
+    <div class="filter-group">
+      <button class="filter-btn active" data-filter="all" onclick="filterIssues('all')">
+        <i class="fas fa-list"></i> All
+        <span class="filter-count">{{ priority_issues|length|default:0 }}</span>
+      </button>
+      <button class="filter-btn critical" data-filter="critical" onclick="filterIssues('critical')">
+        <i class="fas fa-exclamation-circle"></i> Critical
+        <span class="filter-count">{{ critical_count|default:0 }}</span>
+      </button>
+      <button class="filter-btn warning" data-filter="warning" onclick="filterIssues('warning')">
+        <i class="fas fa-exclamation-triangle"></i> Warning
+        <span class="filter-count">{{ warning_count|default:0 }}</span>
+      </button>
+      <button class="filter-btn info" data-filter="info" onclick="filterIssues('info')">
+        <i class="fas fa-info-circle"></i> Suggestions
+        <span class="filter-count">{{ info_count|default:0 }}</span>
+      </button>
+    </div>
+    <div class="sort-group">
+      <select class="sort-select" onchange="sortIssues(this.value)">
+        <option value="priority">Sort by Priority</option>
+        <option value="category">Sort by Category</option>
+        <option value="impact">Sort by Impact</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Progress Summary -->
+  <div class="issues-progress">
+    <div class="progress-header">
+      <span class="progress-title">SEO Health Score</span>
+      <span class="progress-value" id="healthScoreValue">{{ avg_score|default:75 }}/100</span>
+    </div>
+    <div class="progress-bar-container">
+      <div class="progress-bar-multi">
+        <div class="progress-segment fixed" style="width: {{ avg_score|default:75 }}%;"></div>
+        <div class="progress-segment remaining" style="flex: 1;"></div>
+      </div>
+      <div class="progress-markers">
+        <span class="marker {% if avg_score >= 50 %}passed{% endif %}" style="left: 50%;">50</span>
+        <span class="marker {% if avg_score >= 70 %}passed{% endif %}" style="left: 70%;">70</span>
+        <span class="marker {% if avg_score >= 90 %}passed{% endif %}" style="left: 90%;">90</span>
+      </div>
+    </div>
+    <p class="progress-hint">
+      {% if avg_score >= 90 %}
+        <i class="fas fa-trophy text-success"></i> Excellent! Your site is well-optimized.
+      {% elif avg_score >= 70 %}
+        <i class="fas fa-thumbs-up text-info"></i> Good job! Fix the warnings to improve further.
+      {% elif avg_score >= 50 %}
+        <i class="fas fa-exclamation-circle text-warning"></i> Needs work. Address critical issues first.
+      {% else %}
+        <i class="fas fa-exclamation-triangle text-danger"></i> Critical! Multiple urgent issues need fixing.
+      {% endif %}
+    </p>
+  </div>
+
+  <!-- Issues List -->
+  <div class="issues-list" id="issuesList">
+    {% if priority_issues %}
+      {% for issue in priority_issues %}
+      <div class="issue-card {{ issue.priority }}" data-priority="{{ issue.priority }}" data-category="{{ issue.category }}" data-impact="{{ issue.impact }}">
+        <div class="issue-header" onclick="toggleIssueDetail(this)">
+          <div class="issue-priority-indicator {{ issue.priority }}">
+            <i class="fas {% if issue.priority == 'critical' %}fa-exclamation-circle{% elif issue.priority == 'warning' %}fa-exclamation-triangle{% else %}fa-info-circle{% endif %}"></i>
+          </div>
+          <div class="issue-title-area">
+            <h4 class="issue-title">{{ issue.title }}</h4>
+            <div class="issue-meta">
+              <span class="issue-category"><i class="fas fa-tag"></i> {{ issue.category }}</span>
+              <span class="issue-impact"><i class="fas fa-bolt"></i> {{ issue.impact }}</span>
+            </div>
+          </div>
+          <div class="issue-actions">
+            <button class="issue-btn expand-btn">
+              <i class="fas fa-chevron-down"></i>
+            </button>
+          </div>
+        </div>
+        
+        <div class="issue-detail" style="display: none;">
+          <div class="issue-description">
+            <p>{{ issue.description|default:"This issue affects your SEO performance and should be addressed to improve your rankings." }}</p>
+          </div>
+          
+          {% if issue.recommendations %}
+          <div class="issue-recommendations">
+            <h5><i class="fas fa-lightbulb"></i> How to Fix</h5>
+            <ul>
+              {% for rec in issue.recommendations %}
+              <li>{{ rec }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% endif %}
+          
+          <div class="issue-footer">
+            <a href="#{{ issue.anchor|default:'' }}" class="btn-goto">
+              <i class="fas fa-arrow-right"></i> Go to Section
+            </a>
+            <button class="btn-mark-done" onclick="markIssueDone(this)">
+              <i class="fas fa-check"></i> Mark as Fixed
+            </button>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="issues-empty">
+        <div class="empty-icon">
+          <i class="fas fa-check-circle"></i>
+        </div>
+        <h4>No Issues Found!</h4>
+        <p>Your website is well-optimized. Keep up the great work!</p>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Bulk Actions -->
+  {% if priority_issues %}
+  <div class="issues-bulk-actions">
+    <button class="btn-export" onclick="exportIssuesList()">
+      <i class="fas fa-download"></i> Export List
+    </button>
+    <button class="btn-email-issues" onclick="emailIssuesList()">
+      <i class="fas fa-envelope"></i> Email Tasks
+    </button>
+  </div>
+  {% endif %}
+</div>
+
+<script>
+  // Filter issues by priority
+  function filterIssues(filterType) {
+    const allIssues = document.querySelectorAll('.issue-card');
+    const filterBtns = document.querySelectorAll('.filter-btn');
+    
+    // Update button states
+    filterBtns.forEach(btn => {
+      btn.classList.remove('active');
+      if (btn.dataset.filter === filterType) {
+        btn.classList.add('active');
+      }
+    });
+    
+    // Show/hide issues
+    allIssues.forEach(issue => {
+      if (filterType === 'all' || issue.dataset.priority === filterType) {
+        issue.style.display = 'block';
+        issue.classList.add('animate-in');
+      } else {
+        issue.style.display = 'none';
+        issue.classList.remove('animate-in');
+      }
+    });
+  }
+
+  // Sort issues
+  function sortIssues(sortBy) {
+    const issuesList = document.getElementById('issuesList');
+    const issues = Array.from(issuesList.querySelectorAll('.issue-card'));
+    
+    const priorityOrder = { critical: 0, warning: 1, info: 2 };
+    
+    issues.sort((a, b) => {
+      if (sortBy === 'priority') {
+        return priorityOrder[a.dataset.priority] - priorityOrder[b.dataset.priority];
+      } else if (sortBy === 'category') {
+        return a.dataset.category.localeCompare(b.dataset.category);
+      } else if (sortBy === 'impact') {
+        return a.dataset.impact.localeCompare(b.dataset.impact);
+      }
+      return 0;
+    });
+    
+    issues.forEach(issue => issuesList.appendChild(issue));
+  }
+
+  // Toggle issue detail
+  function toggleIssueDetail(header) {
+    const card = header.parentElement;
+    const detail = card.querySelector('.issue-detail');
+    const icon = header.querySelector('.expand-btn i');
+    
+    if (detail.style.display === 'none') {
+      detail.style.display = 'block';
+      icon.classList.replace('fa-chevron-down', 'fa-chevron-up');
+      card.classList.add('expanded');
+    } else {
+      detail.style.display = 'none';
+      icon.classList.replace('fa-chevron-up', 'fa-chevron-down');
+      card.classList.remove('expanded');
+    }
+  }
+
+  // Mark issue as done
+  function markIssueDone(btn) {
+    const card = btn.closest('.issue-card');
+    card.classList.add('resolved');
+    
+    setTimeout(() => {
+      card.style.opacity = '0.5';
+      btn.innerHTML = '<i class="fas fa-check-circle"></i> Fixed';
+      btn.disabled = true;
+    }, 200);
+  }
+
+  // Export issues list
+  function exportIssuesList() {
+    const issues = document.querySelectorAll('.issue-card');
+    let csv = 'Priority,Category,Title,Impact\n';
+    
+    issues.forEach(issue => {
+      if (issue.style.display !== 'none') {
+        const priority = issue.dataset.priority;
+        const category = issue.dataset.category;
+        const title = issue.querySelector('.issue-title').textContent;
+        const impact = issue.dataset.impact;
+        csv += `"${priority}","${category}","${title}","${impact}"\n`;
+      }
+    });
+    
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'seo-issues-list.csv';
+    a.click();
+  }
+
+  // Email issues list
+  function emailIssuesList() {
+    const issues = document.querySelectorAll('.issue-card');
+    let body = 'SEO Priority Issues:\n\n';
+    
+    issues.forEach((issue, index) => {
+      if (issue.style.display !== 'none') {
+        const title = issue.querySelector('.issue-title').textContent;
+        const priority = issue.dataset.priority.toUpperCase();
+        body += `${index + 1}. [${priority}] ${title}\n`;
+      }
+    });
+    
+    window.location.href = `mailto:?subject=SEO Issues List&body=${encodeURIComponent(body)}`;
+  }
+
+  // Initialize
+  document.addEventListener('DOMContentLoaded', function() {
+    // FIX: Don't stagger via setTimeout — cards start hidden (opacity:0 + translateY)
+    // and the long delay left them invisible. Use CSS animation-delay instead
+    // so they're always visible (no JS dependency for basic render).
+    const issues = document.querySelectorAll('.issue-card');
+    issues.forEach((issue, index) => {
+      issue.style.animationDelay = `${index * 60}ms`;
+      issue.classList.add('animate-in');
+    });
+  });
+</script>

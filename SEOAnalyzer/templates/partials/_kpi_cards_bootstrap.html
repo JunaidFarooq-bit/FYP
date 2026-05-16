@@ -1,0 +1,128 @@
+{% comment %}
+  KPI Cards - Bootstrap Grid Version
+  Clean, elegant cards using Bootstrap 4 grid
+{% endcomment %}
+
+<!-- Page Speed -->
+<div class="col-lg-2 col-md-4 col-6 mb-3">
+  <div class="kpi-card {% if ttfb <= 0.8 %}success{% elif ttfb <= 1.8 %}warning{% else %}danger{% endif %}">
+    <div class="kpi-label">
+      <i class="fas fa-bolt"></i> Page Speed
+    </div>
+    <div class="kpi-value">{{ ttfb|default:"--" }}s</div>
+    <span class="kpi-status {% if ttfb <= 0.8 %}success{% elif ttfb <= 1.8 %}warning{% else %}danger{% endif %}">
+      {% if ttfb <= 0.8 %}<i class="fas fa-check-circle"></i> Fast{% elif ttfb <= 1.8 %}<i class="fas fa-exclamation-circle"></i> OK{% else %}<i class="fas fa-times-circle"></i> Slow{% endif %}
+    </span>
+    <div class="kpi-detail">Time to First Byte - server response time</div>
+  </div>
+</div>
+
+<!-- Link Health -->
+<div class="col-lg-2 col-md-4 col-6 mb-3">
+  <div class="kpi-card {% if b_links == 0 %}success{% elif b_links <= 5 %}warning{% else %}danger{% endif %}">
+    <div class="kpi-label">
+      <i class="fas fa-link"></i> Link Health
+    </div>
+    <div class="kpi-value">{{ working_links|default:"--" }}/{{ total_links|default:"--" }}</div>
+    <div class="mini-bar-track">
+      <div class="mini-bar-fill working" style="width: {% if total_links > 0 %}{% widthratio working_links total_links 100 %}{% else %}0{% endif %}%;"></div>
+      <div class="mini-bar-fill broken" style="width: {% if total_links > 0 %}{% widthratio b_links total_links 100 %}{% else %}0{% endif %}%;"></div>
+    </div>
+    <span class="kpi-status {% if b_links == 0 %}success{% elif b_links <= 5 %}warning{% else %}danger{% endif %}">
+      {% if b_links == 0 %}<i class="fas fa-check-circle"></i> All Good{% else %}{{ b_links }} Broken{% endif %}
+    </span>
+    <div class="kpi-detail">{{ b_links }} broken out of {{ total_links }} total links</div>
+  </div>
+</div>
+
+<!-- Image Optimization -->
+<div class="col-lg-2 col-md-4 col-6 mb-3">
+  <div class="kpi-card {% if image_optimization >= 80 %}success{% elif image_optimization >= 50 %}warning{% else %}danger{% endif %}">
+    <div class="kpi-label">
+      <i class="fas fa-image"></i> Images
+    </div>
+    <div class="kpi-value">{{ image_optimization|default:"--" }}%</div>
+    <span class="kpi-status {% if image_optimization >= 80 %}success{% elif image_optimization >= 50 %}warning{% else %}danger{% endif %}">
+      {% if image_optimization >= 80 %}<i class="fas fa-check-circle"></i> Optimized{% elif image_optimization >= 50 %}<i class="fas fa-exclamation-circle"></i> OK{% else %}<i class="fas fa-times-circle"></i> Poor{% endif %}
+    </span>
+    <div class="kpi-detail">Image compression & optimization score</div>
+  </div>
+</div>
+
+<!-- Heading Structure -->
+<div class="col-lg-2 col-md-4 col-6 mb-3">
+  <div class="kpi-card {% if h1_count == 1 and h2_count >= 3 %}success{% elif h1_count == 1 %}warning{% else %}danger{% endif %}">
+    <div class="kpi-label">
+      <i class="fas fa-heading"></i> Headings
+    </div>
+    <div class="kpi-value">H1:{{ h1_count }} H2:{{ h2_count }}</div>
+    <div class="heading-visual">
+      <span class="h-indicator {% if h1_count == 1 %}valid{% elif h1_count == 0 %}missing{% else %}warning{% endif %}">
+        <span class="h-tag">H1</span><span class="h-count">{{ h1_count }}</span>
+      </span>
+      <span class="h-indicator {% if h2_count >= 3 %}valid{% elif h2_count > 0 %}warning{% else %}missing{% endif %}">
+        <span class="h-tag">H2</span><span class="h-count">{{ h2_count }}</span>
+      </span>
+    </div>
+    <span class="kpi-status {% if h1_count == 1 and h2_count >= 3 %}success{% elif h1_count == 1 %}warning{% else %}danger{% endif %}">
+      {% if h1_count == 1 and h2_count >= 3 %}<i class="fas fa-check-circle"></i> Perfect{% elif h1_count == 1 %}<i class="fas fa-exclamation-circle"></i> Needs H2s{% else %}<i class="fas fa-times-circle"></i> Fix H1{% endif %}
+    </span>
+    <div class="kpi-detail">H1: {{ h1_count }}, H2: {{ h2_count }}, H3: {{ h3_count }}</div>
+  </div>
+</div>
+
+<!-- Content Volume -->
+<div class="col-lg-2 col-md-4 col-6 mb-3">
+  <div class="kpi-card {% if total_words >= 500 %}success{% elif total_words >= 300 %}warning{% else %}info{% endif %}">
+    <div class="kpi-label">
+      <i class="fas fa-file-word"></i> Content
+    </div>
+    <div class="kpi-value">{{ total_words|default:"--" }}</div>
+    <div class="content-gauge">
+      <div class="gauge-track">
+        <div class="gauge-fill" style="width: {% if total_words > 1000 %}100{% else %}{% widthratio total_words 1000 100 %}{% endif %}%;"></div>
+      </div>
+      <div class="gauge-labels">
+        <span {% if total_words < 300 %}class="active"{% endif %}>Thin</span>
+        <span {% if total_words >= 500 and total_words < 1000 %}class="active"{% endif %}>Good</span>
+        <span {% if total_words >= 1000 %}class="active"{% endif %}>Long</span>
+      </div>
+    </div>
+    <span class="kpi-status {% if total_words >= 500 %}success{% elif total_words >= 300 %}warning{% else %}info{% endif %}">
+      {% if total_words >= 1000 %}<i class="fas fa-check-circle"></i> Long Form{% elif total_words >= 500 %}<i class="fas fa-check-circle"></i> Good{% elif total_words >= 300 %}<i class="fas fa-exclamation-circle"></i> Short{% else %}<i class="fas fa-info-circle"></i> Thin{% endif %}
+    </span>
+    <div class="kpi-detail">{{ total_words }} words total</div>
+  </div>
+</div>
+
+<!-- Grammar Score -->
+<div class="col-lg-2 col-md-4 col-6 mb-3">
+  <div class="kpi-card {% if grammar_score >= 90 %}success{% elif grammar_score >= 75 %}warning{% else %}danger{% endif %}">
+    <div class="kpi-label">
+      <i class="fas fa-spell-check"></i> Grammar
+    </div>
+    <div class="d-flex align-items-center mt-2">
+      <div class="grammar-score-badge {% if grammar_score >= 90 %}success{% elif grammar_score >= 75 %}warning{% else %}danger{% endif %}">
+        {{ grammar_score|default:"--" }}
+      </div>
+      <div class="ml-2" style="flex: 1;">
+        <div class="d-flex justify-content-between" style="font-size: 0.6875rem;">
+          <span style="color: #64748b;">Spelling</span>
+          <span class="{% if spelling_errors %}text-danger{% else %}text-success{% endif %}">
+            {% if spelling_errors %}<i class="fas fa-times"></i>{% else %}<i class="fas fa-check"></i>{% endif %}
+          </span>
+        </div>
+        <div class="d-flex justify-content-between" style="font-size: 0.6875rem;">
+          <span style="color: #64748b;">Grammar</span>
+          <span class="{% if grammar_issues %}text-danger{% else %}text-success{% endif %}">
+            {% if grammar_issues %}<i class="fas fa-times"></i>{% else %}<i class="fas fa-check"></i>{% endif %}
+          </span>
+        </div>
+      </div>
+    </div>
+    <span class="kpi-status {% if grammar_score >= 90 %}success{% elif grammar_score >= 75 %}warning{% else %}danger{% endif %}" style="margin-top: 0.5rem;">
+      {% if grammar_score >= 90 %}<i class="fas fa-check-circle"></i> Excellent{% elif grammar_score >= 75 %}<i class="fas fa-exclamation-circle"></i> Good{% else %}<i class="fas fa-times-circle"></i> Issues{% endif %}
+    </span>
+    <div class="kpi-detail">Writing quality score</div>
+  </div>
+</div>

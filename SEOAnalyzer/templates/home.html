@@ -36,6 +36,10 @@
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{% static 'fyp.css'%}" />
     <link rel="stylesheet" href="{% static 'modern-style.css'%}" />
+    <link rel="stylesheet" href="{% static 'dashboard-integrated.css'%}" />
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   </head>
 
   <body>
@@ -175,6 +179,130 @@
       {% endfor %} {% endif %}
 
       <div class="container-fluid content-wrapper">
+        
+        <!-- ========================================
+             DASHBOARD HEADER - Clean Score Overview
+             ======================================== -->
+        <div class="row mb-4">
+          <div class="col-12">
+            <div class="analysis-card featured-card" style="background: linear-gradient(135deg, #023761 0%, #02569b 100%); color: white;">
+              <div class="card-body">
+                <div class="row align-items-center">
+                  <div class="col-md-8">
+                    <small style="opacity: 0.8; text-transform: uppercase; letter-spacing: 0.05em;">Analysis Results for</small>
+                    <h2 style="font-weight: 600; margin: 0.25rem 0; word-break: break-word;">{{ domain|default:url|truncatechars:50 }}</h2>
+                    <div style="opacity: 0.8; font-size: 0.875rem;">
+                      <i class="far fa-calendar mr-2"></i>{{ analysis_date|default:"Today" }}
+                      <i class="far fa-clock ml-3 mr-2"></i>{{ analysis_time|default:"Now" }}
+                    </div>
+                  </div>
+                  <div class="col-md-4 text-center mt-3 mt-md-0">
+                    <div style="background: white; border-radius: 12px; padding: 1rem; display: inline-block;">
+                      <div class="score-ring-container" style="width: 80px; height: 80px;">
+                        <svg class="score-ring" viewBox="0 0 140 140">
+                          <circle class="score-ring-bg" cx="70" cy="70" r="60"></circle>
+                          <circle 
+                            class="score-ring-fill {{ score_class|default:'good' }}" 
+                            cx="70" 
+                            cy="70" 
+                            r="60"
+                            data-score="{{ avg_score|default:75 }}"
+                            stroke-dasharray="377"
+                            stroke-dashoffset="377"
+                            id="mainScoreRing"
+                          ></circle>
+                        </svg>
+                        <div class="score-ring-value">
+                          <span class="value" style="font-size: 1.5rem;">{{ avg_score|default:75 }}</span>
+                          <span class="label">/100</span>
+                        </div>
+                      </div>
+                      <div class="score-verdict {{ score_class|default:'good' }}" style="margin-top: 0.5rem; font-size: 0.75rem; padding: 0.25rem 0.75rem; border-radius: 20px; display: inline-block;">
+                        {{ overall_verdict|default:"Good" }}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- ========================================
+             KPI CARDS - Bootstrap Grid
+             ======================================== -->
+        <div class="row mb-4">
+          {% include 'partials/_kpi_cards_bootstrap.html' %}
+        </div>
+        
+        <!-- ========================================
+             RADAR CHART - Score Breakdown
+             ======================================== -->
+        <div class="row mb-4">
+          <div class="col-12">
+            <div class="analysis-card">
+              <div class="card-header" data-toggle="collapse" data-target="#collapseRadar" style="cursor: pointer; background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
+                <div class="d-flex justify-content-between align-items-center">
+                  <h3 class="mb-0" style="font-size: 1.125rem; font-weight: 600; color: #1e293b;">
+                    <i class="fas fa-chart-radar mr-2" style="color: #02569b;"></i>SEO Score Breakdown
+                  </h3>
+                  <i class="fas fa-chevron-down" style="color: #94a3b8; transition: transform 0.3s;"></i>
+                </div>
+              </div>
+              <div id="collapseRadar" class="collapse show">
+                <div class="card-body">
+                  <div class="row">
+                    <div class="col-lg-8">
+                      <div style="height: 350px; position: relative;">
+                        <canvas id="scoreRadarChart"></canvas>
+                      </div>
+                    </div>
+                    <div class="col-lg-4">
+                      <div style="background: #f8fafc; border-radius: 8px; padding: 1rem;">
+                        <div class="d-flex align-items-center mb-3">
+                          <div style="width: 12px; height: 12px; background: #02569b; border-radius: 2px; margin-right: 0.75rem;"></div>
+                          <div>
+                            <div style="font-weight: 600; color: #374151; font-size: 0.875rem;">On-Page SEO</div>
+                            <small style="color: #64748b;">{{ onPage_score|default:75 }}/100</small>
+                          </div>
+                        </div>
+                        <div class="d-flex align-items-center mb-3">
+                          <div style="width: 12px; height: 12px; background: #3b82f6; border-radius: 2px; margin-right: 0.75rem;"></div>
+                          <div>
+                            <div style="font-weight: 600; color: #374151; font-size: 0.875rem;">Content Quality</div>
+                            <small style="color: #64748b;">{{ content_score|default:80 }}/100</small>
+                          </div>
+                        </div>
+                        <div class="d-flex align-items-center mb-3">
+                          <div style="width: 12px; height: 12px; background: #60a5fa; border-radius: 2px; margin-right: 0.75rem;"></div>
+                          <div>
+                            <div style="font-weight: 600; color: #374151; font-size: 0.875rem;">Technical Health</div>
+                            <small style="color: #64748b;">{{ technical_score|default:70 }}/100</small>
+                          </div>
+                        </div>
+                        <div class="d-flex align-items-center mb-3">
+                          <div style="width: 12px; height: 12px; background: #93c5fd; border-radius: 2px; margin-right: 0.75rem;"></div>
+                          <div>
+                            <div style="font-weight: 600; color: #374151; font-size: 0.875rem;">Authority</div>
+                            <small style="color: #64748b;">{{ authority_score|default:65 }}/100</small>
+                          </div>
+                        </div>
+                        <div class="d-flex align-items-center">
+                          <div style="width: 12px; height: 12px; background: #bfdbfe; border-radius: 2px; margin-right: 0.75rem;"></div>
+                          <div>
+                            <div style="font-weight: 600; color: #374151; font-size: 0.875rem;">Accessibility</div>
+                            <small style="color: #64748b;">{{ accessibility_score|default:72 }}/100</small>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Content Analysis Section -->
         <!-- ========================================
      CONTENT ANALYSIS SECTION - 2026 SEO OPTIMIZED
@@ -457,7 +585,7 @@
           {% endif %}
         </div>
       </article>
-
+      
       <!-- ========================================
            GOOGLE PREVIEW SCORE - Full Width Card
            ======================================== -->
@@ -584,6 +712,7 @@
     </div>
   </div>
 </section>
+
 <div class="analysis-card full-width">
   <div class="card-header">
     <h3>Spelling & Grammar Analysis</h3>
@@ -2116,7 +2245,6 @@
                 <i class="fas fa-heartbeat"></i> Core Web Vitals
               </h3>
               {% endcomment %}
-              <div class="analysis-grid"></div>
 
               <div class="analysis-grid">
                 <div class="analysis-card featured-card">
@@ -2400,6 +2528,50 @@
           </div>
         </section>
 
+        <!-- ========================================
+             PRIORITY ACTIONS - Simplified
+             ======================================== -->
+        <section class="analysis-section mb-4">
+          <div class="section-header" data-toggle="collapse" data-target="#collapseIssues">
+            <div class="section-title">
+              <i class="fas fa-tasks section-icon"></i>
+              <h2>Priority Actions</h2>
+            </div>
+            <i class="fas fa-chevron-down collapse-icon"></i>
+          </div>
+          <div id="collapseIssues" class="collapse show section-content">
+            <div class="analysis-grid">
+              <article class="analysis-card full-width">
+                <div class="card-body">
+                  {% if priority_issues %}
+                    <div class="issues-summary mb-3">
+                      <span class="badge badge-danger mr-2">{{ critical_count|default:0 }} Critical</span>
+                      <span class="badge badge-warning mr-2">{{ warning_count|default:0 }} Warnings</span>
+                      <span class="badge badge-info">{{ info_count|default:0 }} Suggestions</span>
+                    </div>
+                    <div class="list-group">
+                      {% for issue in priority_issues|slice:":5" %}
+                        <a href="#{{ issue.anchor|default:'' }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center {% if issue.priority == 'critical' %}list-group-item-danger{% elif issue.priority == 'warning' %}list-group-item-warning{% else %}list-group-item-info{% endif %}">
+                          <div>
+                            <h5 class="mb-1" style="font-size: 0.9375rem; font-weight: 600;">{{ issue.title }}</h5>
+                            <small>{{ issue.category }} - {{ issue.impact }}</small>
+                          </div>
+                          <i class="fas fa-chevron-right"></i>
+                        </a>
+                      {% endfor %}
+                    </div>
+                  {% else %}
+                    <div class="alert alert-success">
+                      <i class="fas fa-check-circle"></i> 
+                      Great job! No critical issues found. Your website is well-optimized.
+                    </div>
+                  {% endif %}
+                </div>
+              </article>
+            </div>
+          </div>
+        </section>
+
         <!-- Report Actions -->
         <div class="report-action">
           <div class="report-buttons">
@@ -2616,6 +2788,48 @@ function getCookie(name) {
   return cookieValue;
 }
     </script>
+    
+    <!-- Dashboard Charts -->
+    <script src="{% static 'dashboard-charts.js' %}"></script>
+    <script>
+      // Initialize Dashboard
+      document.addEventListener('DOMContentLoaded', function() {
+        // Parse chart data safely
+        let chartScores;
+        try {
+          chartScores = JSON.parse('{{ chart_scores|escapejs }}');
+        } catch(e) {
+          chartScores = {"onPage": 75, "content": 80, "technical": 70, "authority": 65, "accessibility": 72};
+        }
+        
+        // Initialize Radar Chart
+        if (document.getElementById('scoreRadarChart') && typeof DashboardCharts !== 'undefined') {
+          DashboardCharts.initScoreRadarChart('scoreRadarChart', chartScores);
+        }
+        
+        // Animate score ring
+        const scoreRing = document.getElementById('mainScoreRing');
+        if (scoreRing) {
+          const score = parseInt(scoreRing.dataset.score) || 75;
+          const circumference = 377;
+          const offset = circumference - (score / 100) * circumference;
+          
+          setTimeout(() => {
+            scoreRing.style.strokeDashoffset = offset;
+          }, 300);
+        }
+        
+        // Animate gauge fills
+        document.querySelectorAll('.gauge-fill').forEach(function(gauge) {
+          const width = gauge.style.width;
+          gauge.style.width = '0%';
+          setTimeout(function() {
+            gauge.style.width = width;
+          }, 500);
+        });
+      });
+    </script>
+    
     <style>
 .badge-lg {
   font-size: 1.1rem;

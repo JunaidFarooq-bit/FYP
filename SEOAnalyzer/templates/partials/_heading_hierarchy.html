@@ -1,0 +1,202 @@
+{% comment %}
+  Interactive Heading Hierarchy Component
+  Expandable/collapsible tree view of H1-H6 structure
+{% endcomment %}
+
+<div class="heading-hierarchy-panel" id="headingHierarchy">
+  <div class="hierarchy-toolbar">
+    <button class="hierarchy-btn" onclick="expandAllHeadings()">
+      <i class="fas fa-expand-alt"></i> Expand All
+    </button>
+    <button class="hierarchy-btn" onclick="collapseAllHeadings()">
+      <i class="fas fa-compress-alt"></i> Collapse All
+    </button>
+    <span class="hierarchy-summary">
+      {{ h1_count|default:0 }} H1 | {{ h2_count|default:0 }} H2 | {{ h3_count|default:0 }} H3 | {{ h4_count|default:0 }} H4
+    </span>
+  </div>
+
+  <div class="hierarchy-tree" id="hierarchyTree">
+    <!-- H1 Level -->
+    {% if heading %}
+    <div class="hierarchy-node h1-node {% if h1_count == 1 %}valid{% else %}invalid{% endif %}" data-level="1">
+      <div class="node-header" onclick="toggleNode(this)">
+        <span class="toggle-icon"><i class="fas fa-chevron-down"></i></span>
+        <span class="node-badge h1-badge">H1</span>
+        <span class="node-text" title="{{ heading }}">{{ heading|truncatechars:50 }}</span>
+        <span class="node-status">
+          {% if h1_count == 1 %}
+            <i class="fas fa-check-circle text-success"></i>
+          {% elif h1_count == 0 %}
+            <i class="fas fa-times-circle text-danger"></i>
+          {% else %}
+            <i class="fas fa-exclamation-circle text-warning"></i> x{{ h1_count }}
+          {% endif %}
+        </span>
+      </div>
+      
+      <!-- H2 Children Container -->
+      <div class="node-children" style="display: block;">
+        {% for h2 in h2_items|default:'' %}
+        <div class="hierarchy-node h2-node" data-level="2">
+          <div class="node-header" onclick="toggleNode(this)">
+            <span class="toggle-icon"><i class="fas fa-chevron-right"></i></span>
+            <span class="node-badge h2-badge">H2</span>
+            <span class="node-text">{{ h2.text|default:"Section" }}</span>
+          </div>
+          
+          <!-- H3 Children Container -->
+          <div class="node-children" style="display: none;">
+            {% for h3 in h2.h3_children|default:'' %}
+            <div class="hierarchy-node h3-node" data-level="3">
+              <div class="node-header" onclick="toggleNode(this)">
+                <span class="toggle-icon"><i class="fas fa-chevron-right"></i></span>
+                <span class="node-badge h3-badge">H3</span>
+                <span class="node-text">{{ h3.text|default:"Subsection" }}</span>
+              </div>
+              
+              <!-- H4 Children Container -->
+              <div class="node-children" style="display: none;">
+                {% for h4 in h3.h4_children|default:'' %}
+                <div class="hierarchy-node h4-node" data-level="4">
+                  <div class="node-header">
+                    <span class="node-badge h4-badge">H4</span>
+                        <span class="node-text">{{ h4.text|default:"Detail" }}</span>
+                      </div>
+                    </div>
+                    {% endfor %}
+                  </div>
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+            {% empty %}
+            <div class="empty-children">
+              <i class="fas fa-info-circle"></i> No H2 sections found. Consider adding subheadings to improve structure.
+                    </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% else %}
+        <div class="hierarchy-node h1-node invalid">
+          <div class="node-header">
+            <span class="node-badge h1-badge">H1</span>
+            <span class="node-text missing">No H1 heading found</span>
+            <span class="node-status"><i class="fas fa-times-circle text-danger"></i></span>
+          </div>
+          <div class="node-children">
+            <div class="empty-children error">
+              <i class="fas fa-exclamation-triangle"></i> <strong>Critical:</strong> Every page should have exactly one H1 tag.
+            </div>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+
+  <!-- Hierarchy Analysis Summary -->
+  <div class="hierarchy-analysis">
+    <h5><i class="fas fa-chart-bar"></i> Structure Analysis</h5>
+    <div class="analysis-grid">
+      <div class="analysis-item {% if h1_count == 1 %}success{% else %}danger{% endif %}">
+        <span class="a-label">H1 Count</span>
+        <span class="a-value">{{ h1_count|default:0 }}</span>
+        <span class="a-verdict">{% if h1_count == 1 %}✓ Perfect{% else %}✗ Fix Needed{% endif %}</span>
+      </div>
+      <div class="analysis-item {% if h2_count >= 3 %}success{% elif h2_count > 0 %}warning{% else %}danger{% endif %}">
+        <span class="a-label">H2 Sections</span>
+        <span class="a-value">{{ h2_count|default:0 }}</span>
+        <span class="a-verdict">{% if h2_count >= 3 %}✓ Good{% elif h2_count > 0 %}⚠ Add More{% else %}✗ Missing{% endif %}</span>
+      </div>
+      <div class="analysis-item {% if h3_count >= 2 %}success{% elif h3_count > 0 %}neutral{% else %}neutral{% endif %}">
+        <span class="a-label">H3 Subsections</span>
+        <span class="a-value">{{ h3_count|default:0 }}</span>
+        <span class="a-verdict">{% if h3_count >= 2 %}✓ Detailed{% elif h3_count > 0 %}⚠ Could Expand{% else %}○ Optional{% endif %}</span>
+      </div>
+      <div class="analysis-item {% if h4_count > 0 %}info{% else %}neutral{% endif %}">
+        <span class="a-label">H4 Details</span>
+        <span class="a-value">{{ h4_count|default:0 }}</span>
+        <span class="a-verdict">{% if h4_count > 0 %}+ Present{% else %}○ Optional{% endif %}</span>
+      </div>
+    </div>
+    
+    {% if h1_count == 1 and h2_count >= 3 %}
+    <div class="structure-score success">
+      <i class="fas fa-trophy"></i> Excellent heading structure! This improves SEO and accessibility.
+    </div>
+    {% elif h1_count == 1 %}
+    <div class="structure-score warning">
+      <i class="fas fa-lightbulb"></i> Good start! Add more H2 sections to improve content organization.
+    </div>
+    {% else %}
+    <div class="structure-score danger">
+      <i class="fas fa-exclamation-triangle"></i> Fix heading issues first. H1 is critical for SEO.
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+  // Toggle node expand/collapse
+  function toggleNode(header) {
+    const node = header.parentElement;
+    const children = node.querySelector(':scope > .node-children');
+    const icon = header.querySelector('.toggle-icon i');
+    
+    if (children) {
+      if (children.style.display === 'none') {
+        children.style.display = 'block';
+        if (icon) icon.classList.replace('fa-chevron-right', 'fa-chevron-down');
+        node.classList.add('expanded');
+      } else {
+        children.style.display = 'none';
+        if (icon) icon.classList.replace('fa-chevron-down', 'fa-chevron-right');
+        node.classList.remove('expanded');
+      }
+    }
+  }
+
+  // Expand all nodes
+  function expandAllHeadings() {
+    const allChildren = document.querySelectorAll('#hierarchyTree .node-children');
+    const allIcons = document.querySelectorAll('#hierarchyTree .toggle-icon i');
+    const allNodes = document.querySelectorAll('#hierarchyTree .hierarchy-node');
+    
+    allChildren.forEach(child => child.style.display = 'block');
+    allIcons.forEach(icon => {
+      icon.classList.remove('fa-chevron-right');
+      icon.classList.add('fa-chevron-down');
+    });
+    allNodes.forEach(node => node.classList.add('expanded'));
+  }
+
+  // Collapse all nodes (except H1)
+  function collapseAllHeadings() {
+    const allChildren = document.querySelectorAll('#hierarchyTree .node-children');
+    const allIcons = document.querySelectorAll('#hierarchyTree .toggle-icon i');
+    const allNodes = document.querySelectorAll('#hierarchyTree .hierarchy-node');
+    
+    allChildren.forEach((child, index) => {
+      // Keep H1 expanded (first node)
+      if (index > 0) {
+        child.style.display = 'none';
+      }
+    });
+    allIcons.forEach((icon, index) => {
+      if (index > 0) {
+        icon.classList.remove('fa-chevron-down');
+        icon.classList.add('fa-chevron-right');
+      }
+    });
+    allNodes.forEach((node, index) => {
+      if (index > 0) {
+        node.classList.remove('expanded');
+      }
+    });
+  }
+
+  // Initialize on load
+  document.addEventListener('DOMContentLoaded', function() {
+    // Start with H1 expanded, others collapsed
+    collapseAllHeadings();
+  });
+</script>

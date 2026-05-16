@@ -1,0 +1,160 @@
+{% comment %}
+  KPI Cards Component
+  Quick metrics display for dashboard
+{% endcomment %}
+
+<div class="kpi-row">
+  <!-- TTFB KPI -->
+  <div class="kpi-card {% if ttfb <= 0.8 %}success{% elif ttfb <= 1.8 %}warning{% else %}danger{% endif %}">
+    <div class="kpi-label">Page Speed (TTFB)</div>
+    <div class="kpi-value">{{ ttfb|default:"--" }}s</div>
+    <div class="kpi-sparkline">
+      {% if ttfb %}
+        <svg viewBox="0 0 100 30" style="width: 100%; height: 100%;">
+          <polyline
+            fill="none"
+            stroke="{% if ttfb <= 0.8 %}#10b981{% elif ttfb <= 1.8 %}#f59e0b{% else %}#ef4444{% endif %}"
+            stroke-width="2"
+            points="0,25 20,20 40,22 60,15 80,18 100,{% if ttfb <= 0.8 %}8{% elif ttfb <= 1.8 %}15{% else %}25{% endif %}"
+          />
+        </svg>
+      {% endif %}
+    </div>
+    <span class="kpi-status {% if ttfb <= 0.8 %}success{% elif ttfb <= 1.8 %}warning{% else %}danger{% endif %}">
+      {% if ttfb <= 0.8 %}
+        <i class="fas fa-check-circle"></i> Fast
+      {% elif ttfb <= 1.8 %}
+        <i class="fas fa-exclamation-circle"></i> Acceptable
+      {% else %}
+        <i class="fas fa-times-circle"></i> Slow
+      {% endif %}
+    </span>
+  </div>
+
+  <!-- Links Health KPI -->
+  <div class="kpi-card {% if b_links == 0 %}success{% elif b_links <= 5 %}warning{% else %}danger{% endif %}">
+    <div class="kpi-label">Link Health</div>
+    <div class="kpi-value">{{ working_links|default:"--" }}/{{ total_links|default:"--" }}</div>
+    <div class="kpi-sparkline">
+      {% if total_links %}
+        <svg viewBox="0 0 100 30" style="width: 100%; height: 100%;">
+          <rect x="0" y="5" width="70" height="20" fill="#10b981" rx="2"/>
+          <rect x="75" y="10" width="25" height="15" fill="{% if b_links == 0 %}#10b981{% else %}#ef4444{% endif %}" rx="2"/>
+        </svg>
+      {% endif %}
+    </div>
+    <span class="kpi-status {% if b_links == 0 %}success{% elif b_links <= 5 %}warning{% else %}danger{% endif %}">
+      {% if b_links == 0 %}
+        <i class="fas fa-check-circle"></i> All Working
+      {% elif b_links <= 5 %}
+        <i class="fas fa-exclamation-circle"></i> {{ b_links }} Broken
+      {% else %}
+        <i class="fas fa-times-circle"></i> {{ b_links }} Broken
+      {% endif %}
+    </span>
+  </div>
+
+  <!-- Image Optimization KPI -->
+  <div class="kpi-card {% if image_optimization >= 80 %}success{% elif image_optimization >= 50 %}warning{% else %}danger{% endif %}">
+    <div class="kpi-label">Image Optimization</div>
+    <div class="kpi-value">{{ image_optimization|default:"--" }}%</div>
+    <div class="kpi-sparkline">
+      {% if image_optimization is not None %}
+        <svg viewBox="0 0 100 30" style="width: 100%; height: 100%;">
+          <rect x="0" y="10" width="100" height="10" fill="#e2e8f0" rx="5"/>
+          <rect 
+            x="0" 
+            y="10" 
+            width="{{ image_optimization }}" 
+            height="10" 
+            fill="{% if image_optimization >= 80 %}#10b981{% elif image_optimization >= 50 %}#f59e0b{% else %}#ef4444{% endif %}" 
+            rx="5"
+          />
+        </svg>
+      {% endif %}
+    </div>
+    <span class="kpi-status {% if image_optimization >= 80 %}success{% elif image_optimization >= 50 %}warning{% else %}danger{% endif %}">
+      {% if image_optimization >= 80 %}
+        <i class="fas fa-check-circle"></i> Optimized
+      {% elif image_optimization >= 50 %}
+        <i class="fas fa-exclamation-circle"></i> Needs Work
+      {% else %}
+        <i class="fas fa-times-circle"></i> Critical
+      {% endif %}
+    </span>
+  </div>
+
+  <!-- Heading Structure KPI -->
+  <div class="kpi-card {% if h1_count == 1 and h2_count >= 3 %}success{% elif h1_count == 1 %}warning{% else %}danger{% endif %}">
+    <div class="kpi-label">Heading Structure</div>
+    <div class="kpi-value">{{ h1_count }} H1 / {{ h2_count }} H2</div>
+    <div class="kpi-sparkline">
+      <svg viewBox="0 0 100 30" style="width: 100%; height: 100%;">
+        <text x="10" y="20" font-size="12" fill="{% if h1_count == 1 %}#10b981{% else %}#ef4444{% endif %}" font-weight="bold">H1</text>
+        <text x="35" y="20" font-size="10" fill="{% if h2_count >= 3 %}#10b981{% elif h2_count > 0 %}#f59e0b{% else %}#ef4444{% endif %}">H2({{ h2_count }})</text>
+        <text x="65" y="20" font-size="8" fill="#64748b">H3({{ h3_count|default:0 }})</text>
+      </svg>
+    </div>
+    <span class="kpi-status {% if h1_count == 1 and h2_count >= 3 %}success{% elif h1_count == 1 %}warning{% else %}danger{% endif %}">
+      {% if h1_count == 1 and h2_count >= 3 %}
+        <i class="fas fa-check-circle"></i> Excellent
+      {% elif h1_count == 1 %}
+        <i class="fas fa-exclamation-circle"></i> Needs H2s
+      {% else %}
+        <i class="fas fa-times-circle"></i> Fix H1
+      {% endif %}
+    </span>
+  </div>
+
+  <!-- Content Volume KPI -->
+  <div class="kpi-card {% if total_words >= 500 %}success{% elif total_words >= 300 %}warning{% else %}info{% endif %}">
+    <div class="kpi-label">Content Volume</div>
+    <div class="kpi-value">{{ total_words|default:"--" }}</div>
+    <div class="kpi-sparkline">
+      {% if total_words %}
+        <svg viewBox="0 0 100 30" style="width: 100%; height: 100%;">
+          <text x="50" y="20" font-size="10" text-anchor="middle" fill="#64748b">
+            {% if total_words >= 1000 %}Long Form{% elif total_words >= 500 %}Standard{% else %}Short{% endif %}
+          </text>
+        </svg>
+      {% endif %}
+    </div>
+    <span class="kpi-status {% if total_words >= 500 %}success{% elif total_words >= 300 %}warning{% else %}info{% endif %}">
+      {% if total_words >= 1000 %}
+        <i class="fas fa-check-circle"></i> Long Form
+      {% elif total_words >= 500 %}
+        <i class="fas fa-check-circle"></i> Good Length
+      {% elif total_words >= 300 %}
+        <i class="fas fa-exclamation-circle"></i> Could Expand
+      {% else %}
+        <i class="fas fa-info-circle"></i> Thin Content
+      {% endif %}
+    </span>
+  </div>
+
+  <!-- Grammar Score KPI -->
+  <div class="kpi-card {% if grammar_score >= 90 %}success{% elif grammar_score >= 75 %}warning{% else %}danger{% endif %}">
+    <div class="kpi-label">Writing Quality</div>
+    <div class="kpi-value">{{ grammar_score|default:"--" }}</div>
+    <div class="kpi-sparkline">
+      {% if grammar_score %}
+        <svg viewBox="0 0 100 30" style="width: 100%; height: 100%;">
+          <circle cx="20" cy="15" r="8" fill="{% if grammar_score >= 90 %}#10b981{% elif grammar_score >= 75 %}#f59e0b{% else %}#ef4444{% endif %}"/>
+          <text x="20" y="19" font-size="8" text-anchor="middle" fill="white" font-weight="bold">{{ grammar_score }}</text>
+          <text x="45" y="19" font-size="10" fill="#64748b">
+            {% if grammar_score >= 90 %}Excellent{% elif grammar_score >= 75 %}Good{% else %}Needs Work{% endif %}
+          </text>
+        </svg>
+      {% endif %}
+    </div>
+    <span class="kpi-status {% if grammar_score >= 90 %}success{% elif grammar_score >= 75 %}warning{% else %}danger{% endif %}">
+      {% if grammar_score >= 90 %}
+        <i class="fas fa-check-circle"></i> Excellent
+      {% elif grammar_score >= 75 %}
+        <i class="fas fa-exclamation-circle"></i> Good
+      {% else %}
+        <i class="fas fa-times-circle"></i> Issues Found
+      {% endif %}
+    </span>
+  </div>
+</div>

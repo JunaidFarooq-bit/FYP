@@ -1,0 +1,471 @@
+<!doctype html>
+<html lang="en">
+  {% load static %}
+  <head>
+    <title>WEB LIFT - SEO Dashboard</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <link rel="icon" type="image/ico" href="{% static 'favicon-1.ico'%}" />
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" />
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" />
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{% static 'fyp.css'%}" />
+    <link rel="stylesheet" href="{% static 'modern-style.css'%}" />
+    <link rel="stylesheet" href="{% static 'dashboard.css'%}" />
+    <link rel="stylesheet" href="{% static 'dashboard-responsive.css'%}" />
+  </head>
+
+  <body>
+    <!-- Loader -->
+    <div id="loader">
+      <div class="loader-animation">
+        <div class="loader-ring"></div>
+        <div class="loader-ring"></div>
+        <div class="loader-ring"></div>
+        <span class="loader-text">Analyzing...</span>
+      </div>
+    </div>
+
+    <!-- Navigation -->
+    <header>
+      <nav id="sidebarMenu" class="sidebar collapse d-lg-block" aria-label="Main navigation">
+        <div class="sidebar-header">
+          <div class="sidebar-logo">
+            <img src="{% static 'logo.png'%}" alt="WEB LIFT Logo" />
+            <h5>WEB LIFT</h5>
+          </div>
+        </div>
+        {% include 'partials/_sidebar.html' with active_page='dashboard' %}
+      </nav>
+
+      <nav id="main-navbar" class="navbar navbar-expand-lg fixed-top" role="navigation">
+        <div class="navbar-container">
+          <button class="navbar-toggler" id="navbar-toggle" type="button" onclick="navbar()">
+            <i class="fas fa-bars"></i>
+          </button>
+
+          <form name="myForm" id="myForm" action="/show/" method="post" class="navbar-search">
+            {% csrf_token %}
+            <div class="search-wrapper">
+              <div class="search-input-group">
+                <i class="fas fa-search search-icon"></i>
+                <input placeholder="Enter website URL to analyze..." name="fname" type="search" id="id_url" class="search-input" value="{{url|default:''}}" />
+              </div>
+              <div class="navbar-actions">
+                <button id="analyzeBtn" class="btn btn-primary" type="submit">
+                  <i class="fas fa-search-plus"></i>
+                  <span>Analyze</span>
+                </button>
+                <a class="btn btn-primary" href="{% url 'Home' %}">
+                  <i class="fas fa-redo"></i>
+                  <span>New URL</span>
+                </a>
+                <a class="btn btn-primary" href="{% url 'logout' %}">
+                  <i class="fas fa-sign-out-alt"></i>
+                  <span>Logout</span>
+                </a>
+              </div>
+            </div>
+          </form>
+        </div>
+      </nav>
+    </header>
+
+    <!-- Main Dashboard Content -->
+    <main class="main-content">
+      <div class="dashboard-container">
+        <div class="dashboard-grid">
+          
+          <!-- Header Section -->
+          <section class="dashboard-header-wrapper">
+            {% include 'partials/_dashboard_header.html' %}
+          </section>
+
+          <!-- KPI Cards Row -->
+          <section class="dashboard-kpi">
+            {% include 'partials/_kpi_cards_enhanced.html' %}
+          </section>
+
+          <!-- Radar Chart - Score Breakdown -->
+          <section class="dashboard-radar dashboard-card">
+            <div class="card-header-bar">
+              <h2><i class="fas fa-chart-radar"></i> SEO Score Breakdown</h2>
+            </div>
+            <div class="card-body-content">
+              <div class="chart-container">
+                <canvas id="scoreRadarChart"></canvas>
+              </div>
+              <div class="chart-legend">
+                <div class="legend-item">
+                  <div class="legend-color" style="background: #023761;"></div>
+                  <span>Your Score</span>
+                </div>
+                <div class="legend-item">
+                  <div class="legend-color" style="background: #e2e8f0;"></div>
+                  <span>Industry Average (75)</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Content Analysis Panel -->
+          <section class="dashboard-content dashboard-card">
+            <div class="card-header-bar">
+              <h2><i class="fas fa-file-alt"></i> Content Analysis</h2>
+              <span class="card-score-badge">{{ content_score|default:"88" }}</span>
+            </div>
+            <div class="card-body-content">
+              <div class="content-panel">
+                
+                <!-- Title Card -->
+                <div class="content-mini-card {% if title_score >= 80 %}success{% elif title_score >= 60 %}warning{% else %}danger{% endif %}">
+                  <h4><i class="fas fa-heading"></i> Meta Title</h4>
+                  <p class="content-text">{{ title|default:"No title found" }}</p>
+                  <div class="content-meta">
+                    <span class="content-meta-item">
+                      <i class="fas fa-ruler-horizontal"></i> {{ title_length|default:0 }} chars
+                    </span>
+                    <span class="content-meta-item">
+                      <i class="fas fa-star"></i> Score: {{ title_score|default:0 }}/100
+                    </span>
+                  </div>
+                  {% if title_eeat_signals %}
+                  <div class="content-signals">
+                    {% for signal in title_eeat_signals %}
+                      {% if forloop.counter <= 3 %}
+                        <span class="signal-badge">{{ signal }}</span>
+                      {% endif %}
+                    {% endfor %}
+                  </div>
+                  {% endif %}
+                </div>
+
+                <!-- Description Card -->
+                <div class="content-mini-card {% if desc_score >= 80 %}success{% elif desc_score >= 60 %}warning{% else %}danger{% endif %}">
+                  <h4><i class="fas fa-align-left"></i> Meta Description</h4>
+                  <p class="content-text">{{ description|default:"No description found" }}</p>
+                  <div class="content-meta">
+                    <span class="content-meta-item">
+                      <i class="fas fa-ruler-horizontal"></i> {{ desc_length|default:0 }} chars
+                    </span>
+                    <span class="content-meta-item">
+                      <i class="fas fa-star"></i> Score: {{ desc_score|default:0 }}/100
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Interactive Heading Hierarchy -->
+                {% include 'partials/_heading_hierarchy.html' %}
+
+              </div>
+            </div>
+          </section>
+
+          <!-- Technical Health Matrix -->
+          <section class="dashboard-tech dashboard-card">
+            <div class="card-header-bar">
+              <h2><i class="fas fa-server"></i> Technical Health</h2>
+            </div>
+            <div class="card-body-content">
+              <div class="tech-matrix">
+                
+                <!-- Robots.txt -->
+                <div class="tech-item {% if robot_flag %}success{% else %}warning{% endif %}">
+                  <div class="tech-icon">
+                    <i class="fas fa-robot"></i>
+                  </div>
+                  <div class="tech-label">Robots.txt</div>
+                  <span class="tech-status">{% if robot_flag %}Present{% else %}Missing{% endif %}</span>
+                </div>
+
+                <!-- Sitemap -->
+                <div class="tech-item {% if sitemap_flag %}success{% else %}warning{% endif %}">
+                  <div class="tech-icon">
+                    <i class="fas fa-sitemap"></i>
+                  </div>
+                  <div class="tech-label">XML Sitemap</div>
+                  <span class="tech-status">{% if sitemap_flag %}Found{% else %}Missing{% endif %}</span>
+                </div>
+
+                <!-- Schema -->
+                <div class="tech-item {% if schema_flag %}success{% else %}neutral{% endif %}">
+                  <div class="tech-icon">
+                    <i class="fas fa-code"></i>
+                  </div>
+                  <div class="tech-label">Schema Markup</div>
+                  <span class="tech-status">{% if schema_flag %}Present{% else %}Not Found{% endif %}</span>
+                </div>
+
+                <!-- Open Graph -->
+                <div class="tech-item {% if ogp_flag %}success{% else %}neutral{% endif %}">
+                  <div class="tech-icon">
+                    <i class="fas fa-share-alt"></i>
+                  </div>
+                  <div class="tech-label">Open Graph</div>
+                  <span class="tech-status">{% if ogp_flag %}Present{% else %}Not Found{% endif %}</span>
+                </div>
+
+                <!-- SSL/HTTPS -->
+                <div class="tech-item {% if ssl %}success{% else %}danger{% endif %}">
+                  <div class="tech-icon">
+                    <i class="fas fa-lock"></i>
+                  </div>
+                  <div class="tech-label">SSL/HTTPS</div>
+                  <span class="tech-status">{% if ssl %}Secure{% else %}Not Secure{% endif %}</span>
+                </div>
+
+                <!-- Favicon -->
+                <div class="tech-item {% if icon_flag %}success{% else %}warning{% endif %}">
+                  <div class="tech-icon">
+                    <i class="fas fa-image"></i>
+                  </div>
+                  <div class="tech-label">Favicon</div>
+                  <span class="tech-status">{% if icon_flag %}Present{% else %}Missing{% endif %}</span>
+                </div>
+
+                <!-- Status Code -->
+                <div class="tech-item {% if status_code == 200 %}success{% elif status_code >= 400 %}danger{% else %}warning{% endif %}">
+                  <div class="tech-icon">
+                    <i class="fas fa-check-circle"></i>
+                  </div>
+                  <div class="tech-label">HTTP Status</div>
+                  <span class="tech-status">{{ status|default:"Unknown" }}</span>
+                </div>
+
+                <!-- Mobile Ready -->
+                <div class="tech-item {% if mobile_optimized %}success{% else %}warning{% endif %}">
+                  <div class="tech-icon">
+                    <i class="fas fa-mobile-alt"></i>
+                  </div>
+                  <div class="tech-label">Mobile Ready</div>
+                  <span class="tech-status">{% if mobile_optimized %}Optimized{% else %}Needs Work{% endif %}</span>
+                </div>
+
+              </div>
+            </div>
+          </section>
+
+          <!-- Keyword Density Bar Chart -->
+          <section class="dashboard-keywords dashboard-card">
+            <div class="card-header-bar">
+              <h2><i class="fas fa-key"></i> Top Keywords</h2>
+            </div>
+            <div class="card-body-content">
+              <div class="chart-container small">
+                <canvas id="keywordChart"></canvas>
+              </div>
+              <div class="chart-legend">
+                <div class="legend-item">
+                  <div class="legend-color" style="background: #10b981;"></div>
+                  <span>Optimal (1-2%)</span>
+                </div>
+                <div class="legend-item">
+                  <div class="legend-color" style="background: #f59e0b;"></div>
+                  <span>Warning (0.5-1% or 2-3%)</span>
+                </div>
+                <div class="legend-item">
+                  <div class="legend-color" style="background: #ef4444;"></div>
+                  <span>Overused (&gt;3%)</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Interactive Issues & Actions Panel -->
+          <section class="dashboard-issues dashboard-card">
+            {% include 'partials/_issues_panel.html' %}
+          </section>
+
+        </div>
+      </div>
+
+      <!-- Floating Action Buttons -->
+      <div class="fab-container">
+        <button class="fab-main" onclick="exportDashboard()" data-tooltip="Export Dashboard (Ctrl+E)" data-tooltip-position="left">
+          <i class="fas fa-download"></i>
+        </button>
+        <button class="fab-secondary" onclick="document.getElementById('id_url').focus()" data-tooltip="Search (Ctrl+F)" data-tooltip-position="left">
+          <i class="fas fa-search"></i>
+        </button>
+        <button class="fab-secondary" onclick="togglePrintView()" data-tooltip="Print View (Ctrl+P)" data-tooltip-position="left">
+          <i class="fas fa-print"></i>
+        </button>
+      </div>
+
+      <!-- Keyboard Shortcuts Help -->
+      <div class="shortcuts-help" id="shortcutsHelp" style="display: none;">
+        <div class="shortcuts-overlay" onclick="toggleShortcutsHelp()"></div>
+        <div class="shortcuts-modal">
+          <h4><i class="fas fa-keyboard"></i> Keyboard Shortcuts</h4>
+          <div class="shortcuts-list">
+            <div class="shortcut-item">
+              <kbd>Ctrl</kbd> + <kbd>E</kbd>
+              <span>Export Dashboard</span>
+            </div>
+            <div class="shortcut-item">
+              <kbd>Ctrl</kbd> + <kbd>P</kbd>
+              <span>Print View</span>
+            </div>
+            <div class="shortcut-item">
+              <kbd>Ctrl</kbd> + <kbd>F</kbd>
+              <span>Focus Search</span>
+            </div>
+            <div class="shortcut-item">
+              <kbd>1</kbd> - <kbd>6</kbd>
+              <span>Navigate Sections</span>
+            </div>
+            <div class="shortcut-item">
+              <kbd>R</kbd>
+              <span>Re-analyze</span>
+            </div>
+            <div class="shortcut-item">
+              <kbd>Esc</kbd>
+              <span>Close/Cancel</span>
+            </div>
+          </div>
+          <button class="shortcuts-close" onclick="toggleShortcutsHelp()">Close</button>
+        </div>
+      </div>
+
+      <!-- Help Toggle Button -->
+      <button class="help-toggle" onclick="toggleShortcutsHelp()" data-tooltip="Keyboard Shortcuts (?)">
+        <i class="fas fa-question"></i>
+      </button>
+    </main>
+
+    <!-- Dashboard Charts Script -->
+    <script src="{% static 'dashboard-charts.js' %}"></script>
+    <script src="{% static 'dashboard-polish.js' %}"></script>
+    <script>
+      // Initialize all charts when DOM is ready
+      document.addEventListener('DOMContentLoaded', function() {
+        // FIX: safe JSON parse with try/catch — the || trick doesn't work inside a string literal
+        let chartScores;
+        try {
+          chartScores = JSON.parse('{{ chart_scores|escapejs|default:"{}" }}');
+          if (!chartScores || typeof chartScores !== 'object') throw new Error('empty');
+        } catch(e) {
+          chartScores = { onPage: 75, content: 80, technical: 70, authority: 65, accessibility: 72 };
+        }
+
+        // FIX: safe keyword data parse
+        let keywordData = [];
+        try {
+          keywordData = {{ chart_keywords|safe|default:"[]" }};
+          if (!Array.isArray(keywordData)) keywordData = [];
+        } catch(e) {
+          keywordData = [];
+        }
+
+        // Initialize Score Radar Chart
+        if (document.getElementById('scoreRadarChart')) {
+          DashboardCharts.initScoreRadarChart('scoreRadarChart', chartScores);
+        }
+
+        // Initialize Keyword Density Chart
+        if (document.getElementById('keywordChart') && keywordData.length > 0) {
+          DashboardCharts.initKeywordChart('keywordChart', keywordData);
+        }
+
+        // FIX: Single score ring animation (removed duplicate from _dashboard_header.html)
+        const scoreRing = document.querySelector('.score-ring-fill');
+        const scoreContainer = document.querySelector('.header-score');
+
+        if (scoreRing) {
+          const score = parseInt(scoreRing.dataset.score) || 75;
+          const circumference = 2 * Math.PI * 60; // r=60
+          const offset = circumference - (score / 100) * circumference;
+
+          // FIX: null-guard scoreContainer before calling classList
+          if (scoreContainer) {
+            if (score >= 90) {
+              scoreContainer.classList.add('score-excellent');
+            } else if (score >= 70) {
+              scoreContainer.classList.add('score-good');
+            } else if (score >= 50) {
+              scoreContainer.classList.add('score-warning');
+            } else {
+              scoreContainer.classList.add('score-critical');
+            }
+          }
+
+          setTimeout(() => {
+            scoreRing.style.strokeDashoffset = offset;
+          }, 300);
+        }
+
+        // Animate keyword bars
+        const keywordBars = document.querySelectorAll('.keyword-bar-fill');
+        keywordBars.forEach((bar, index) => {
+          const width = bar.style.width;
+          bar.style.width = '0%';
+          setTimeout(() => {
+            bar.style.width = width;
+          }, 500 + (index * 100));
+        });
+
+        // FIX: Scroll-in IntersectionObserver for dashboard sections
+        // (replaces the broken .dashboard-card opacity:0 pattern)
+        const animatables = document.querySelectorAll(
+          '.dashboard-radar, .dashboard-content, .dashboard-tech, .dashboard-keywords, .dashboard-issues'
+        );
+        if ('IntersectionObserver' in window) {
+          const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+              if (entry.isIntersecting) {
+                entry.target.classList.add('animate-in-view');
+                observer.unobserve(entry.target);
+              }
+            });
+          }, { threshold: 0.05 });
+          animatables.forEach(el => observer.observe(el));
+        } else {
+          // Fallback: just show everything immediately
+          animatables.forEach(el => el.classList.add('animate-in-view'));
+        }
+      });
+
+      // Report actions
+      function downloadReport() {
+        alert('PDF download feature coming in Phase 4');
+      }
+
+      function emailReport() {
+        alert('Email report feature coming in Phase 4');
+      }
+    </script>
+
+    <!-- Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+
+    <!-- Loader and Navbar Toggle -->
+    <script>
+      function navbar() {
+        document.getElementById('sidebarMenu').classList.toggle('show');
+      }
+      
+      // Hide loader when page loads
+      window.addEventListener('load', function() {
+        const loader = document.getElementById('loader');
+        if (loader) {
+          loader.style.display = 'none';
+        }
+      });
+    </script>
+  </body>
+</html>

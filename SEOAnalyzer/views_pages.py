@@ -385,7 +385,14 @@ def show(request):
         logger.info(f"AUDIT DATA - Flags: robots={audit_data.get('robot_flag')}, sitemap={audit_data.get('sitemap_flag')}, schema={audit_data.get('schema_flag')}")
         logger.info(f"=" * 60)
         
-        return render(request, 'home.html', audit_data)
+        # Prepare dashboard data for integration with home.html
+        dashboard_data = _prepare_dashboard_data(audit_data)
+        
+        # Merge with original audit data
+        full_context = {**audit_data, **dashboard_data}
+        
+        return render(request, 'home.html', full_context)
+        
     except requests.exceptions.Timeout as e:
         messages.error(request, 'Connection timed out! Website is taking too much time.')
         return render(request, 'index.html')
@@ -395,6 +402,338 @@ def show(request):
     except Exception as e:
         messages.error(request, f'An error occurred: {str(e)}')
         return render(request, 'index.html')
+
+
+def _prepare_dashboard_data(audit_data):
+    """
+    Prepare audit data for dashboard template.
+    Adds chart data, priority issues, and formatted metrics.
+    """
+    import json
+    from datetime import datetime
+    from django.utils.safestring import mark_safe
+    
+    data = audit_data.copy()
+    
+    # Add analysis timestamp
+    data['analysis_time'] = datetime.now().strftime('%b %d, %Y at %I:%M %p')
+    
+    # Calculate score ring offset (for SVG stroke animation)
+    score = data.get('avg_score', 75)
+    circumference = 2 * 3.14159 * 60  # r=60
+    data['score_ring_offset'] = circumference - (score / 100) * circumference
+    
+    # Prepare chart scores for radar chart
+    chart_scores = {
+        'onPage': _calc_onpage_score(data),
+        'content': _calc_content_score(data),
+        'technical': _calc_technical_score(data),
+        'authority': _calc_authority_score(data),
+        'accessibility': _calc_accessibility_score(data)
+    }
+    data['chart_scores'] = json.dumps(chart_scores)
+    
+    # Calculate individual component scores
+    data['content_score'] = round((chart_scores['onPage'] + chart_scores['content']) / 2)
+    
+    # Prepare priority issues list
+    data['priority_issues'] = _build_priority_issues(data)
+    data['critical_count'] = sum(1 for i in data['priority_issues'] if i['priority'] == 'critical')
+    data['warning_count'] = sum(1 for i in data['priority_issues'] if i['priority'] == 'warning')
+    data['info_count'] = sum(1 for i in data['priority_issues'] if i['priority'] == 'info')
+    
+    # Ensure required fields have defaults
+    data['working_links'] = data.get('total_links', 0) - data.get('b_links', 0)
+    data['link_health_score'] = data.get('link_health_score', 100 - (data.get('b_links', 0) * 5))
+    
+    # Prepare keyword data for chart (extract numeric density values)
+    density_dict = data.get('density_dict', {})
+    chart_keywords = []
+    for keyword, kw_data in list(density_dict.items())[:10]:
+        density_str = kw_data.get('density', '0%')
+        try:
+            density_val = float(density_str.replace('%', ''))
+        except (ValueError, TypeError):
+            density_val = 0.0
+        
+        usage = kw_data.get('usage', '')
+        if 'Optimal' in usage or 'Good' in usage:
+            status = 'optimal'
+        elif 'High' in usage or 'Overused' in usage:
+            status = 'danger'
+        else:
+            status = 'warning'
+        
+        chart_keywords.append({
+            'word': keyword,
+            'density': density_val,
+            'status': status
+        })
+    data['chart_keywords'] = mark_safe(json.dumps(chart_keywords))
+    
+    # Prepare E-E-A-T data for chart
+    eeat = data.get('eeat_breakdown', {})
+    eeat_data = {
+        'title_eeat': eeat.get('title_eeat', 75),
+        'desc_eeat': eeat.get('description_eeat', 80),
+        'heading_eeat': eeat.get('heading_eeat', 70)
+    }
+    data['eeat_data'] = mark_safe(json.dumps(eeat_data))
+    
+    # Prepare performance data for chart
+    data['performance'] = {
+        'ttfb': data.get('ttfb', 0.8),
+        'renderTime': data.get('ttfb', 0.8) * 1.5,  # estimated
+        'loadTime': data.get('speed', 2.5) if data.get('speed') else 2.5
+    }
+    
+    return data
+
+
+def _calc_onpage_score(data):
+    """Calculate on-page SEO score from individual components."""
+    title_score = data.get('title_score', 0)
+    desc_score = data.get('desc_score', 0)
+    heading_score = data.get('heading_score', 0)
+    return round((title_score + desc_score + heading_score) / 3)
+
+
+def _calc_content_score(data):
+    """Calculate content quality score."""
+    grammar_score = data.get('grammar_score', 0)
+    readability = data.get('readability_score', 0)
+    eeat_avg = data.get('eeat_breakdown', {}).get('average_eeat', 70)
+    return round((grammar_score + readability + eeat_avg) / 3)
+
+
+def _calc_technical_score(data):
+    """Calculate technical SEO score."""
+    scores = []
+    
+    # TTFB score
+    ttfb = data.get('ttfb', 1.0)
+    if ttfb <= 0.8:
+        scores.append(95)
+    elif ttfb <= 1.5:
+        scores.append(80)
+    elif ttfb <= 2.5:
+        scores.append(60)
+    else:
+        scores.append(40)
+    
+    # Mobile optimization
+    if data.get('mobile_optimized', False):
+        scores.append(90)
+    else:
+        scores.append(60)
+    
+    # Technical flags
+    flag_score = 0
+    if data.get('robot_flag'):
+        flag_score += 20
+    if data.get('sitemap_flag'):
+        flag_score += 20
+    if data.get('schema_flag'):
+        flag_score += 20
+    if data.get('ssl'):
+        flag_score += 20
+    if data.get('icon_flag'):
+        flag_score += 20
+    scores.append(flag_score)
+    
+    return round(sum(scores) / len(scores)) if scores else 70
+
+
+def _calc_authority_score(data):
+    """Calculate authority/social score."""
+    scores = []
+    
+    # Schema markup
+    if data.get('schema_flag'):
+        scores.append(90)
+    else:
+        scores.append(50)
+    
+    # Open Graph
+    if data.get('ogp_flag'):
+        scores.append(85)
+    else:
+        scores.append(50)
+    
+    # Social links
+    social_count = sum([
+        data.get('facebook_flag', False),
+        data.get('twitter_flag', False),
+        data.get('linkedin_flag', False),
+        data.get('instagram_flag', False)
+    ])
+    scores.append(min(100, social_count * 25))
+    
+    return round(sum(scores) / len(scores)) if scores else 60
+
+
+def _calc_accessibility_score(data):
+    """Calculate accessibility score."""
+    scores = []
+    
+    # Image alt text
+    img_opt = data.get('image_optimization', 0)
+    scores.append(img_opt)
+    
+    # Heading structure
+    h1_count = data.get('h1_count', 0)
+    if h1_count == 1:
+        scores.append(100)
+    elif h1_count == 0:
+        scores.append(0)
+    else:
+        scores.append(50)
+    
+    # Mobile viewport
+    if data.get('mobile_optimized', False):
+        scores.append(90)
+    else:
+        scores.append(60)
+    
+    return round(sum(scores) / len(scores)) if scores else 70
+
+
+def _build_priority_issues(data):
+    """Build prioritized list of issues for dashboard."""
+    issues = []
+    
+    # Critical issues
+    if data.get('h1_count', 0) == 0:
+        issues.append({
+            'priority': 'critical',
+            'title': 'Missing H1 Heading',
+            'category': 'Structure',
+            'impact': 'High SEO Impact',
+            'anchor': 'heading-section'
+        })
+    elif data.get('h1_count', 0) > 1:
+        issues.append({
+            'priority': 'critical',
+            'title': f"Multiple H1 Tags ({data['h1_count']})",
+            'category': 'Structure',
+            'impact': 'High SEO Impact',
+            'anchor': 'heading-section'
+        })
+    
+    if not data.get('title'):
+        issues.append({
+            'priority': 'critical',
+            'title': 'Missing Page Title',
+            'category': 'Meta Tags',
+            'impact': 'Critical SEO Issue',
+            'anchor': 'title-section'
+        })
+    
+    if not data.get('description'):
+        issues.append({
+            'priority': 'critical',
+            'title': 'Missing Meta Description',
+            'category': 'Meta Tags',
+            'impact': 'High SEO Impact',
+            'anchor': 'description-section'
+        })
+    
+    if not data.get('ssl', False):
+        issues.append({
+            'priority': 'critical',
+            'title': 'No SSL/HTTPS Security',
+            'category': 'Security',
+            'impact': 'Critical - Google Penalizes',
+            'anchor': 'ssl-section'
+        })
+    
+    # Warning issues
+    broken = data.get('b_links', 0)
+    if broken > 0:
+        issues.append({
+            'priority': 'warning',
+            'title': f"{broken} Broken Link{'s' if broken > 1 else ''}",
+            'category': 'Links',
+            'impact': 'User Experience',
+            'anchor': 'links-section'
+        })
+    
+    if data.get('title_score', 100) < 70:
+        issues.append({
+            'priority': 'warning',
+            'title': 'Title Needs Optimization',
+            'category': 'Content',
+            'impact': 'Click-Through Rate',
+            'anchor': 'title-section'
+        })
+    
+    if data.get('desc_score', 100) < 70:
+        issues.append({
+            'priority': 'warning',
+            'title': 'Description Needs Optimization',
+            'category': 'Content',
+            'impact': 'Click-Through Rate',
+            'anchor': 'description-section'
+        })
+    
+    missing_alt = data.get('alt_check', 0)
+    if missing_alt > 0:
+        issues.append({
+            'priority': 'warning',
+            'title': f"{missing_alt} Image{'s' if missing_alt > 1 else ''} Missing Alt Text",
+            'category': 'Accessibility',
+            'impact': 'SEO & Accessibility',
+            'anchor': 'images-section'
+        })
+    
+    if not data.get('robot_flag', False):
+        issues.append({
+            'priority': 'warning',
+            'title': 'Missing robots.txt',
+            'category': 'Technical',
+            'impact': 'Crawling Issues',
+            'anchor': 'robots-section'
+        })
+    
+    if not data.get('sitemap_flag', False):
+        issues.append({
+            'priority': 'warning',
+            'title': 'Missing XML Sitemap',
+            'category': 'Technical',
+            'impact': 'Indexing Issues',
+            'anchor': 'sitemap-section'
+        })
+    
+    # Info/Suggestion issues
+    if not data.get('schema_flag', False):
+        issues.append({
+            'priority': 'info',
+            'title': 'Add Schema Markup',
+            'category': 'Rich Results',
+            'impact': 'Enhanced SERP Display',
+            'anchor': 'schema-section'
+        })
+    
+    if not data.get('ogp_flag', False):
+        issues.append({
+            'priority': 'info',
+            'title': 'Add Open Graph Tags',
+            'category': 'Social Sharing',
+            'impact': 'Better Social Previews',
+            'anchor': 'og-section'
+        })
+    
+    ttfb = data.get('ttfb', 0)
+    if ttfb > 1.5:
+        issues.append({
+            'priority': 'info',
+            'title': f'Server Response Slow ({ttfb}s)',
+            'category': 'Performance',
+            'impact': 'User Experience',
+            'anchor': 'speed-section'
+        })
+    
+    return issues
 
 
 @login_required(login_url='login')

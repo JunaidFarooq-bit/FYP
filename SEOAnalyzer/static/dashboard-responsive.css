@@ -1,0 +1,520 @@
+/* ========================================
+   Dashboard Responsive Optimizations
+   Phase 4: Tablet & Mobile Breakpoints
+   ======================================== */
+
+/* ========================================
+   Tablet Optimizations (768px - 1199px)
+   ======================================== */
+
+@media (max-width: 1199px) and (min-width: 768px) {
+  .dashboard-grid {
+    gap: var(--gap-md);
+  }
+
+  /* Adjust KPI cards for tablet */
+  .kpi-row {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  /* Make radar and content side by side */
+  .dashboard-radar,
+  .dashboard-content {
+    grid-column: span 6;
+  }
+
+  /* Full width sections */
+  .dashboard-tech,
+  .dashboard-keywords,
+  .dashboard-issues {
+    grid-column: span 12;
+  }
+
+  /* Heading hierarchy — max-height already set globally in dashboard.css */
+
+  /* Issues panel two-column on tablet */
+  .issues-list {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--gap-md);
+  }
+}
+
+/* ========================================
+   Mobile Optimizations (767px and below)
+   ======================================== */
+
+@media (max-width: 767px) {
+  /* Container adjustments */
+  .dashboard-container {
+    padding: var(--gap-sm);
+  }
+
+  .dashboard-grid {
+    gap: var(--gap-md);
+  }
+
+  /* Header - Stack vertically */
+  .dashboard-header {
+    flex-direction: column;
+    text-align: center;
+    padding: var(--gap-lg);
+  }
+
+  .header-domain-info h1 {
+    font-size: 1.5rem;
+  }
+
+  .header-meta {
+    flex-direction: column;
+    gap: var(--gap-xs);
+  }
+
+  .score-ring-container {
+    width: 120px;
+    height: 120px;
+  }
+
+  /* KPI Cards - 2 columns on mobile */
+  .kpi-row {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--gap-sm);
+  }
+
+  .kpi-card {
+    padding: var(--gap-sm);
+  }
+
+  .kpi-value {
+    font-size: 1.25rem;
+  }
+
+  .kpi-label {
+    font-size: 0.6875rem;
+  }
+
+  /* Hide sparklines on mobile to save space */
+  .kpi-sparkline-container,
+  .kpi-chart-container {
+    display: none;
+  }
+
+  /* Simplify KPI cards */
+  .kpi-with-chart,
+  .kpi-with-badge {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--gap-xs);
+  }
+
+  .mini-ring-container {
+    width: 40px;
+    height: 40px;
+  }
+
+  .grammar-score-badge {
+    width: 50px;
+    height: 50px;
+    font-size: 1.25rem;
+  }
+
+  /* Heading visual - smaller on mobile */
+  .heading-visual {
+    flex-wrap: wrap;
+  }
+
+  .h-indicator {
+    font-size: 0.625rem;
+    padding: 0.2rem 0.4rem;
+  }
+
+  /* Charts - smaller height */
+  .chart-container {
+    height: 220px;
+    min-height: 180px;
+  }
+
+  .chart-container.small {
+    height: 180px;
+    min-height: 150px;
+  }
+
+  /* Content panels - stack */
+  .content-panel {
+    gap: var(--gap-sm);
+  }
+
+  .content-mini-card {
+    padding: var(--gap-sm);
+  }
+
+  /* Hierarchy tree - compact */
+  .hierarchy-toolbar {
+    flex-wrap: wrap;
+    gap: var(--gap-xs);
+  }
+
+  .hierarchy-btn {
+    padding: 0.375rem 0.5rem;
+    font-size: 0.75rem;
+  }
+
+  .hierarchy-summary {
+    width: 100%;
+    margin-left: 0;
+    margin-top: var(--gap-xs);
+    text-align: center;
+  }
+
+  .node-children {
+    margin-left: 0.75rem;
+    padding-left: 0.5rem;
+  }
+
+  .node-header {
+    padding: 0.5rem;
+  }
+
+  .node-text {
+    font-size: 0.8125rem;
+  }
+
+  .analysis-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* Tech matrix - 2 columns */
+  .tech-matrix {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .tech-item {
+    padding: var(--gap-sm);
+  }
+
+  .tech-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 1rem;
+  }
+
+  /* Issues panel - single column */
+  .issues-filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filter-group {
+    justify-content: center;
+  }
+
+  .sort-group {
+    display: flex;
+    justify-content: center;
+  }
+
+  .issues-list {
+    max-height: none;
+  }
+
+  .issue-header {
+    flex-wrap: wrap;
+    gap: var(--gap-sm);
+  }
+
+  .issue-priority-indicator {
+    width: 32px;
+    height: 32px;
+    font-size: 0.875rem;
+  }
+
+  .issue-footer {
+    flex-direction: column;
+  }
+
+  .btn-goto,
+  .btn-mark-done {
+    justify-content: center;
+  }
+
+  /* Keyword bars - more compact */
+  .keyword-bar-item {
+    grid-template-columns: 80px 1fr 45px;
+    gap: var(--gap-sm);
+  }
+
+  .keyword-bar-label {
+    font-size: 0.75rem;
+  }
+
+  /* Bulk actions - stack */
+  .issues-bulk-actions {
+    flex-direction: column;
+  }
+
+  .btn-export,
+  .btn-email-issues {
+    justify-content: center;
+  }
+
+  /* Radar chart legend - vertical */
+  .chart-legend {
+    flex-direction: column;
+    align-items: center;
+    gap: var(--gap-xs);
+  }
+}
+
+/* ========================================
+   Small Mobile (480px and below)
+   ======================================== */
+
+@media (max-width: 480px) {
+  /* Single column KPI cards */
+  .kpi-row {
+    grid-template-columns: 1fr;
+  }
+
+  .kpi-card {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+
+  .kpi-label {
+    width: 100%;
+    margin-bottom: var(--gap-xs);
+  }
+
+  .kpi-value {
+    font-size: 1.5rem;
+  }
+
+  /* Tech matrix - single column */
+  .tech-matrix {
+    grid-template-columns: 1fr;
+  }
+
+  .tech-item {
+    flex-direction: row;
+    text-align: left;
+    gap: var(--gap-sm);
+  }
+
+  .tech-icon {
+    margin-bottom: 0;
+  }
+
+  /* Analysis grid - single column */
+  .analysis-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .analysis-item {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    text-align: left;
+  }
+
+  .a-label {
+    font-size: 0.75rem;
+  }
+
+  .a-value {
+    font-size: 1rem;
+    margin: 0;
+  }
+
+  .a-verdict {
+    font-size: 0.6875rem;
+  }
+
+  /* Filter buttons - scrollable */
+  .filter-group {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: var(--gap-xs);
+  }
+
+  .filter-btn {
+    white-space: nowrap;
+  }
+
+  /* Issue cards - minimal */
+  .issue-title {
+    font-size: 0.875rem;
+  }
+
+  .issue-meta {
+    flex-direction: column;
+    gap: 0.125rem;
+  }
+}
+
+/* ========================================
+   Touch Device Optimizations
+   ======================================== */
+
+@media (hover: none) and (pointer: coarse) {
+  /* Remove hover effects on touch devices */
+  .kpi-card:hover,
+  .issue-card:hover,
+  .tech-item:hover,
+  .hierarchy-node .node-header:hover {
+    transform: none;
+  }
+
+  /* Increase touch targets */
+  .filter-btn,
+  .hierarchy-btn,
+  .issue-btn,
+  .btn-goto,
+  .btn-mark-done {
+    min-height: 44px;
+  }
+
+  /* Add active states for touch feedback */
+  .kpi-card:active,
+  .issue-card:active,
+  .filter-btn:active,
+  .hierarchy-btn:active {
+    transform: scale(0.98);
+    transition: transform 0.1s ease;
+  }
+}
+
+/* ========================================
+   Print Stylesheet
+   ======================================== */
+
+@media print {
+  /* Hide non-essential elements */
+  #sidebarMenu,
+  #main-navbar,
+  .hierarchy-toolbar,
+  .issues-filter-bar,
+  .issues-bulk-actions,
+  .issue-btn,
+  .btn-goto,
+  .btn-mark-done,
+  .export-menu-overlay,
+  .chart-loader {
+    display: none !important;
+  }
+
+  /* Ensure white background */
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  /* Make all cards visible and expanded */
+  .dashboard-card,
+  .issue-card {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    box-shadow: none !important;
+    border: 1px solid #ddd !important;
+  }
+
+  /* Expand all issue details */
+  .issue-detail {
+    display: block !important;
+  }
+
+  /* Ensure charts are visible */
+  canvas {
+    max-height: 300px !important;
+  }
+
+  /* Remove animations */
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  /* Layout adjustments */
+  .dashboard-grid {
+    display: block;
+  }
+
+  .dashboard-card {
+    margin-bottom: 20px;
+  }
+
+  /* Print header */
+  .dashboard-header {
+    background: white !important;
+    color: black !important;
+    border: 2px solid #333;
+  }
+
+  /* Ensure text is readable */
+  body {
+    font-size: 12pt;
+    line-height: 1.4;
+  }
+
+  h1, h2, h3, h4 {
+    page-break-after: avoid;
+  }
+}
+
+/* ========================================
+   High DPI / Retina Optimizations
+   ======================================== */
+
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  /* Sharper borders on high DPI */
+  .kpi-card,
+  .dashboard-card,
+  .issue-card,
+  .tech-item {
+    border-width: 0.5px;
+  }
+
+  /* Crisper text */
+  body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* ========================================
+   Reduced Motion Preference
+   ======================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .chart-loader,
+  .enhanced-tooltip {
+    display: none !important;
+  }
+}
+
+/* ========================================
+   Dark Mode Support (Future)
+   ======================================== */
+
+@media (prefers-color-scheme: dark) {
+  /* Uncomment when dark mode is ready
+  :root {
+    --dashboard-bg: #0f172a;
+    --card-bg: #1e293b;
+    --gray-800: #f1f5f9;
+    --gray-700: #e2e8f0;
+  }
+  */
+}
