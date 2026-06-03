@@ -1,0 +1,69 @@
+@startuml WebLift_Activity_Diagram
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam handwritten false
+
+title WebLift - SEO Audit Activity Diagram
+
+|User|
+start
+:Enter Website URL;
+:Submit Audit Request;
+:Validate URL Format;
+
+if (Valid URL?) then (no)
+    :View Error;
+    stop
+else (yes)
+    :Check User Subscription;
+    
+    if (Has Audit Credits?) then (no)
+        :View Subscription Plans;
+        stop
+    else (yes)
+        :Deduct Audit Credit;
+        :Fetch Webpage Content;
+        
+        if (Fetch Successful?) then (no)
+            :View Connection Error;
+            stop
+        else (yes)
+            :Parse HTML Content;
+            
+            fork
+                :Technical Analysis;
+            fork again
+                :Content Analysis;
+            fork again
+                :Link Analysis;
+            fork again
+                :E-E-A-T Analysis;
+            fork again
+                :Sentiment Analysis;
+            end fork
+            
+            :Aggregate Results;
+            :Calculate SEO Score;
+            :Generate Recommendations;
+            :Cache Audit Results;
+            
+            :View Audit Dashboard;
+            
+            if (Premium User?) then (yes)
+                if (Download PDF?) then (yes)
+                    :Download PDF;
+                else (no)
+                    if (Email Report?) then (yes)
+                        :Receive Email;
+                    else (no)
+                    endif
+                endif
+            else (no)
+            endif
+            
+            stop
+        endif
+    endif
+endif
+
+@enduml

@@ -152,15 +152,8 @@
                   <span>New URL</span>
                 </a>
 
-                <a
-                  class="btn btn-primary"
-                  href="{% url 'logout' %}"
-                  class="btn btn-outline logout-btn"
-                  id="logout"
-                >
-                  <i class="fas fa-sign-out-alt"></i>
-                  <span>Logout</span>
-                </a>
+                <!-- Profile Dropdown -->
+                {% include 'partials/_profile_dropdown.html' %}
               </div>
             </div>
           </form>
@@ -171,24 +164,24 @@
     <!-- Main Content Area -->
     <main class="main-content">
       <!-- Alert Messages -->
-      {% if messages %} {% for message in messages %}
-      <div class="alert-modern alert-{{ message.tags }}" id="msg" role="alert">
-        <div class="alert-content">
-          <i
-            class="fas {% if message.tags == 'success' %}fa-check-circle{% else %}fa-exclamation-circle{% endif %}"
-          ></i>
-          <span>{{ message }}</span>
+      {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-modern alert-{{ message.tags }}" id="msg" role="alert">
+          <div class="alert-content">
+            <i class="fas {% if message.tags == 'success' %}fa-check-circle{% else %}fa-exclamation-circle{% endif %}"></i>
+            <span>{{ message }}</span>
+          </div>
+          <button class="alert-close" onclick="this.parentElement.remove()">
+            <i class="fas fa-times"></i>
+          </button>
         </div>
-        <button class="alert-close" onclick="this.parentElement.remove()">
-          <i class="fas fa-times"></i>
-        </button>
-      </div>
-      {% endfor %} {% endif %}
+        {% endfor %}
+      {% endif %}
 
-      <div class="container-fluid content-wrapper">
+      <div class="container-fluid content-wrapper px-2 px-md-3">
         <!-- Content Analysis Section -->
         <section class="analysis-section">
-          <div class="section-header" data-target="#collapseOne">
+          <div class="section-header" data-toggle="collapse" data-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
             <div class="section-title">
               <i class="fas fa-file-alt section-icon"></i>
               <h2>Content Analysis</h2>
@@ -359,7 +352,7 @@
 
         <!-- Structured Analysis Section -->
         <section class="analysis-section">
-          <div class="section-header" data-target="#collapseTwo">
+          <div class="section-header" data-toggle="collapse" data-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
             <div class="section-title">
               <i class="fas fa-sitemap section-icon"></i>
               <h2>Structured Data Analysis</h2>
@@ -480,7 +473,7 @@
 
         <!-- Technology Analysis Section -->
         <section class="analysis-section">
-          <div class="section-header" data-target="#collapseThree">
+          <div class="section-header" data-toggle="collapse" data-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
             <div class="section-title">
               <i class="fas fa-cogs section-icon"></i>
               <h2>Technology Stack</h2>
@@ -604,7 +597,7 @@
 
         <!-- Security Analysis Section -->
         <section class="analysis-section">
-          <div class="section-header" data-target="#collapseFour">
+          <div class="section-header" data-toggle="collapse" data-target="#collapseFour" aria-expanded="false" aria-controls="collapseFour">
             <div class="section-title">
               <i class="fas fa-shield-alt section-icon"></i>
               <h2>Security Analysis</h2>
@@ -701,7 +694,7 @@
 
         <!-- Social Analysis Section -->
         <section class="analysis-section">
-          <div class="section-header" data-target="#collapseFive">
+          <div class="section-header" data-toggle="collapse" data-target="#collapseFive" aria-expanded="false" aria-controls="collapseFive">
             <div class="section-title">
               <i class="fas fa-share-alt-square section-icon"></i>
               <h2>Social Media Presence</h2>
@@ -829,7 +822,7 @@
 
         <!-- Performance Analysis Section -->
         <section class="analysis-section">
-          <div class="section-header" data-target="#collapseSix">
+          <div class="section-header" data-toggle="collapse" data-target="#collapseSix" aria-expanded="false" aria-controls="collapseSix">
             <div class="section-title">
               <i class="fas fa-tachometer-alt section-icon"></i>
               <h2>Performance Metrics</h2>
@@ -958,10 +951,12 @@
 
         <!-- Download Report Button -->
         <div class="report-action">
-          <a href="{% url 'report' %}" class="btn btn-download disabled">
-            <i class="fas fa-file-pdf"></i>
-            <span>Download PDF Report</span>
-          </a>
+          <div class="report-buttons">
+            <a href="{% url 'report' %}" class="btn btn-download btn-download-direct">
+              <i class="fas fa-file-pdf"></i>
+              <span>Download PDF Report</span>
+            </a>
+          </div>
         </div>
       </div>
     </main>
@@ -1012,11 +1007,12 @@
         
         // Only on mobile (when sidebar has show class)
         if (sidebar.classList.contains("show")) {
-          // If click is outside sidebar and not on the toggle button
           if (!sidebar.contains(event.target) && !toggler.contains(event.target)) {
             closeSidebar();
           }
         }
+
+        // Profile dropdown outside-click is handled by _profile_dropdown.html partial
       });
 
       // Toggle Details Function
@@ -1092,5 +1088,6 @@
         observer.observe(card);
       });
     </script>
+  {% include 'partials/_upgrade_modal.html' %}
   </body>
 </html>

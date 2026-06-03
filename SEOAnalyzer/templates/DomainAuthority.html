@@ -310,15 +310,7 @@
           <!-- Navbar actions (no search on tool pages) -->
           <div style="flex: 1"></div>
           <div class="navbar-actions" style="margin-left: auto">
-            <a
-              class="btn btn-primary"
-              href="{% url 'logout' %}"
-              class="btn btn-outline logout-btn"
-              id="logout"
-            >
-              <i class="fas fa-sign-out-alt"></i>
-              <span>Logout</span>
-            </a>
+            {% include 'partials/_profile_dropdown.html' %}
           </div>
         </div>
       </nav>
@@ -592,5 +584,6 @@
         requestAnimationFrame(step);
       }
     </script>
+  {% include 'partials/_upgrade_modal.html' %}
   </body>
 </html>

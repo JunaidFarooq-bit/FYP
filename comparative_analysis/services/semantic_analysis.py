@@ -424,7 +424,7 @@ Look for:
                     return False
             
             return True
-        except:
+        except (ValueError, IndexError, KeyError):
             return False
     
     def _calculate_keyword_density(self, text, keyword):
@@ -446,7 +446,7 @@ Look for:
             density = (keyword_count / total_words) * 100
             
             return round(density, 2)
-        except:
+        except (ValueError, TypeError, ZeroDivisionError):
             return 0.0
     
     def _fallback_keyword_detection(self, title, h1):
@@ -465,9 +465,9 @@ Look for:
                 # Get most common word
                 counter = Counter(filtered)
                 return counter.most_common(1)[0][0]
-            
+
             return 'unknown'
-        except:
+        except (IndexError, ValueError, AttributeError):
             return 'unknown'
     
     def _get_fallback_result(self, extracted_data):

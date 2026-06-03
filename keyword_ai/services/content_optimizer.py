@@ -16,6 +16,61 @@ from typing import List, Dict, Optional, Tuple
 from openai import OpenAI
 from django.conf import settings
 
+
+def _get_smart_content_slice(content_text: str, num_paragraphs: int = 10, max_chars: int = 2000) -> str:
+    """
+    Intelligently slice content for LLM prompts.
+    (Duplicate of llm_expander.get_smart_content_slice for local use)
+    """
+    if not content_text:
+        return ""
+    
+    # Split into paragraphs
+    raw_paragraphs = re.split(r'\n\n+|\n', content_text)
+    
+    # Clean and score paragraphs
+    scored_paragraphs = []
+    for para in raw_paragraphs:
+        para = para.strip()
+        if len(para) < 30:
+            continue
+        
+        char_count = len(para)
+        word_count = len(para.split())
+        
+        # Character density
+        alnum_chars = sum(1 for c in para if c.isalnum() or c.isspace())
+        density = alnum_chars / max(char_count, 1)
+        
+        # Punctuation penalty
+        punct_count = sum(1 for c in para if c in '!@#$%^&*()_+-=[]{}|;:,.<>?')
+        punct_ratio = punct_count / max(char_count, 1)
+        
+        # Composite score
+        score = (word_count * 0.6) + (density * 100) - (punct_ratio * 50)
+        scored_paragraphs.append((para, score, char_count))
+    
+    if not scored_paragraphs:
+        return content_text[:max_chars].strip()
+    
+    # Sort by score descending
+    scored_paragraphs.sort(key=lambda x: x[1], reverse=True)
+    
+    # Take top N paragraphs
+    selected = []
+    total_chars = 0
+    
+    for para, score, char_count in scored_paragraphs[:num_paragraphs]:
+        if total_chars + char_count > max_chars:
+            remaining = max_chars - total_chars
+            if remaining > 100:
+                selected.append(para[:remaining])
+            break
+        selected.append(para)
+        total_chars += char_count
+    
+    return "\n\n".join(selected).strip()
+
 _client = None
 
 
@@ -71,15 +126,21 @@ def analyze_content_optimization(
     headings = extract_headings(content_text)
     content_summary = content_text[:2500] if len(content_text) > 2500 else content_text
     
+    from ..utils.year_injector import build_year_context
+    _year_ctx = build_year_context()
+
     prompt = f"""You are a senior SEO content strategist. Analyze this content and provide specific optimization recommendations.
 
 CONTENT TYPE: {content_type}
 PAGE TOPIC: {page_topic or "Not specified"}
+CURRENT YEAR: {_year_ctx['current_year']}
 
 CURRENT TITLE: {current_title or "Not provided"}
 CURRENT META DESCRIPTION: {current_meta_desc or "Not provided"}
 
 TARGET KEYWORDS: {', '.join(target_keywords[:10])}
+
+IMPORTANT: When suggesting title/meta examples that reference a year, ALWAYS use {_year_ctx['current_year']} (never older years).
 
 EXISTING HEADINGS:
 {chr(10).join(f"H{h['level']}: {h['text']}" for h in headings[:15])}
@@ -184,7 +245,15 @@ Respond ONLY with valid JSON:
         result = json.loads(raw_text)
         result["analysis_type"] = "ai_content_optimization"
         result["content_type"] = content_type
-        
+
+        # Inject current year into all title/meta/heading recommendations so
+        # output examples never carry stale references like "Guide 2024".
+        try:
+            from ..utils.year_injector import inject_in_dict
+            result = inject_in_dict(result, refresh_outdated=True)
+        except Exception:
+            pass
+
         return result
         
     except (json.JSONDecodeError, Exception) as e:
@@ -321,7 +390,8 @@ def analyze_readability_improvements(
     sentences = re.split(r'[.!?]+', content_text)
     avg_sentence_length = len(content_text.split()) / max(len(sentences), 1)
     
-    content_sample = content_text[:2000]
+    # Smart content slicing: get richest paragraphs
+    content_sample = _get_smart_content_slice(content_text, num_paragraphs=10, max_chars=2000)
     
     prompt = f"""Analyze this content for readability and provide specific improvements.
 

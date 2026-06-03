@@ -11,6 +11,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" />
@@ -26,9 +27,10 @@
     <link rel="stylesheet" href="{% static 'modern-style.css'%}" />
     <link rel="stylesheet" href="{% static 'dashboard.css'%}" />
     <link rel="stylesheet" href="{% static 'dashboard-responsive.css'%}" />
+    <link rel="stylesheet" href="{% static 'stitch-theme.css'%}" />
   </head>
 
-  <body>
+  <body class="stitch-shell">
     <!-- Loader -->
     <div id="loader">
       <div class="loader-animation">
@@ -52,52 +54,163 @@
       </nav>
 
       <nav id="main-navbar" class="navbar navbar-expand-lg fixed-top" role="navigation">
-        <div class="navbar-container">
+        <div class="navbar-container stitch-navbar">
           <button class="navbar-toggler" id="navbar-toggle" type="button" onclick="navbar()">
             <i class="fas fa-bars"></i>
           </button>
 
-          <form name="myForm" id="myForm" action="/show/" method="post" class="navbar-search">
-            {% csrf_token %}
-            <div class="search-wrapper">
-              <div class="search-input-group">
-                <i class="fas fa-search search-icon"></i>
-                <input placeholder="Enter website URL to analyze..." name="fname" type="search" id="id_url" class="search-input" value="{{url|default:''}}" />
-              </div>
-              <div class="navbar-actions">
-                <button id="analyzeBtn" class="btn btn-primary" type="submit">
-                  <i class="fas fa-search-plus"></i>
-                  <span>Analyze</span>
-                </button>
-                <a class="btn btn-primary" href="{% url 'Home' %}">
-                  <i class="fas fa-redo"></i>
-                  <span>New URL</span>
-                </a>
-                <a class="btn btn-primary" href="{% url 'logout' %}">
-                  <i class="fas fa-sign-out-alt"></i>
-                  <span>Logout</span>
-                </a>
-              </div>
-            </div>
-          </form>
+          <div class="navbar-page-context">
+            <span class="eyebrow-pill">Website Audit</span>
+            <h4>Professional Health Dashboard</h4>
+          </div>
+
+          <div class="navbar-actions">
+            <a class="btn btn-outline" href="{% url 'Home' %}">
+              <i class="fas fa-redo"></i>
+              <span>New Scan</span>
+            </a>
+            {% include 'partials/_profile_dropdown.html' %}
+          </div>
         </div>
       </nav>
     </header>
 
     <!-- Main Dashboard Content -->
-    <main class="main-content">
-      <div class="dashboard-container">
-        <div class="dashboard-grid">
-          
-          <!-- Header Section -->
-          <section class="dashboard-header-wrapper">
-            {% include 'partials/_dashboard_header.html' %}
-          </section>
+    <main class="main-content stitch-main">
+      <div class="dashboard-container stitch-page">
 
-          <!-- KPI Cards Row -->
-          <section class="dashboard-kpi">
-            {% include 'partials/_kpi_cards_enhanced.html' %}
-          </section>
+        <section class="audit-hero">
+          <div class="audit-hero-copy">
+            <span class="eyebrow-pill">Live audit</span>
+            <h1>Professional Website Audit Dashboard</h1>
+            <p>Track technical health, content quality, and growth signals for <strong>{{ url|default:"your site" }}</strong> with a studio-grade layout inspired by the Stitch references.</p>
+          </div>
+          <form name="myForm" id="myForm" action="/show/" method="post" class="audit-url-form">
+            {% csrf_token %}
+            <label for="id_url">Enter URL for analysis</label>
+            <div class="audit-form-fields">
+              <div class="input-pill">
+                <i class="fas fa-search"></i>
+                <input placeholder="https://example.com" name="fname" type="search" id="id_url" value="{{url|default:''}}" required />
+              </div>
+              <button id="analyzeBtn" class="btn btn-primary" type="submit">
+                <i class="fas fa-rocket"></i>
+                <span>Analyze</span>
+              </button>
+            </div>
+            <div class="form-hint">
+              <span>Last analyzed: {{ analysis_time|default:"Just now" }}</span>
+              <a href="{% url 'comparative_analysis:input_form' %}">Run comparative analysis</a>
+            </div>
+          </form>
+        </section>
+
+        <section class="audit-health-grid">
+          <div class="dashboard-header-wrapper stitch-score-wrapper">
+            {% include 'partials/_dashboard_header.html' %}
+          </div>
+          <div class="audit-metric-grid">
+            <article class="metric-card speed {% if ttfb and ttfb <= 0.8 %}metric-good{% elif ttfb and ttfb <= 1.8 %}metric-warn{% elif ttfb %}metric-risk{% else %}metric-neutral{% endif %}">
+              <div class="metric-icon"><i class="fas fa-bolt"></i></div>
+              <div class="metric-label">Speed</div>
+              <div class="metric-value">{{ ttfb|default:"--" }}<small>s TTFB</small></div>
+              <div class="metric-status">
+                {% if not ttfb %}Awaiting crawl{% elif ttfb <= 0.8 %}Excellent{% elif ttfb <= 1.8 %}Needs boost{% else %}Slow server{% endif %}
+              </div>
+            </article>
+
+            <article class="metric-card links {% if b_links == 0 %}metric-good{% elif b_links <= 5 %}metric-warn{% else %}metric-risk{% endif %}">
+              <div class="metric-icon"><i class="fas fa-link"></i></div>
+              <div class="metric-label">Links</div>
+              <div class="metric-value">{{ working_links|default:0 }}/{{ total_links|default:0 }}</div>
+              <div class="metric-status">
+                {% if total_links %}
+                  {% if b_links == 0 %}All healthy{% elif b_links <= 5 %}{{ b_links }} broken links{% else %}{{ b_links }} broken links{% endif %}
+                {% else %}
+                  Missing data
+                {% endif %}
+              </div>
+            </article>
+
+            <article class="metric-card imagery {% if image_optimization >= 80 %}metric-good{% elif image_optimization >= 50 %}metric-warn{% else %}metric-risk{% endif %}">
+              <div class="metric-icon"><i class="fas fa-image"></i></div>
+              <div class="metric-label">Images</div>
+              <div class="metric-value">{{ image_optimization|default:"--" }}<small>% optimized</small></div>
+              <div class="metric-status">
+                {% if image_optimization >= 80 %}Optimized{% elif image_optimization >= 50 %}Compression needed{% else %}Heavy assets{% endif %}
+              </div>
+            </article>
+
+            <article class="metric-card content {% if content_score >= 80 %}metric-good{% elif content_score >= 60 %}metric-warn{% else %}metric-risk{% endif %}">
+              <div class="metric-icon"><i class="fas fa-pen-nib"></i></div>
+              <div class="metric-label">Content</div>
+              <div class="metric-value">{{ content_score|default:0 }}/100</div>
+              <div class="metric-status">
+                {% if total_words %}{{ total_words }} words{% else %}No copy detected{% endif %}
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section class="content-diagnostics">
+          <header>
+            <div>
+              <span class="eyebrow-pill">Content Analysis</span>
+              <h2>Content signals that sway rankings</h2>
+            </div>
+            <p class="section-hint">Scores pulled from AI heuristics + rules-based analyzers.</p>
+          </header>
+          <div class="diagnostic-grid">
+            <article class="diagnostic-card {% if title_score >= 80 %}state-good{% elif title_score >= 60 %}state-warn{% else %}state-risk{% endif %}">
+              <div class="card-icon"><i class="fas fa-heading"></i></div>
+              <div class="card-content">
+                <h3>Title Tag</h3>
+                <p>{{ title|default:"No title found" }}</p>
+                <div class="card-meta">{{ title_length|default:0 }} chars • Score {{ title_score|default:0 }}/100</div>
+                {% if title_eeat_signals %}
+                <div class="card-chips">
+                  {% for signal in title_eeat_signals %}
+                    {% if forloop.counter <= 3 %}<span>{{ signal }}</span>{% endif %}
+                  {% endfor %}
+                </div>
+                {% endif %}
+              </div>
+            </article>
+
+            <article class="diagnostic-card {% if desc_score >= 80 %}state-good{% elif desc_score >= 60 %}state-warn{% else %}state-risk{% endif %}">
+              <div class="card-icon"><i class="fas fa-align-left"></i></div>
+              <div class="card-content">
+                <h3>Meta Description</h3>
+                <p>{{ description|default:"No description found" }}</p>
+                <div class="card-meta">{{ desc_length|default:0 }} chars • Score {{ desc_score|default:0 }}/100</div>
+              </div>
+            </article>
+
+            <article class="diagnostic-card {% if h1_count == 1 and h2_count >= 3 %}state-good{% elif h1_count == 1 %}state-warn{% else %}state-risk{% endif %}">
+              <div class="card-icon"><i class="fas fa-project-diagram"></i></div>
+              <div class="card-content">
+                <h3>Heading Structure</h3>
+                <ul class="heading-metrics">
+                  <li>H1: {{ h1_count|default:0 }}</li>
+                  <li>H2: {{ h2_count|default:0 }}</li>
+                  <li>H3: {{ h3_count|default:0 }}</li>
+                </ul>
+                <div class="card-meta">{{ h1_count|default:0 }} primary topics detected</div>
+              </div>
+            </article>
+
+            <article class="diagnostic-card {% if grammar_score >= 90 %}state-good{% elif grammar_score >= 75 %}state-warn{% else %}state-risk{% endif %}">
+              <div class="card-icon"><i class="fas fa-star"></i></div>
+              <div class="card-content">
+                <h3>Content Quality</h3>
+                <p>Grammar score {{ grammar_score|default:"--" }} • {{ total_words|default:0 }} words crawled</p>
+                <div class="card-meta">Spelling {% if spelling_errors %}<span class="badge risk">Issues</span>{% else %}<span class="badge good">Clean</span>{% endif %} · Grammar {% if grammar_issues %}<span class="badge risk">Issues</span>{% else %}<span class="badge good">Clean</span>{% endif %}</div>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <div class="dashboard-grid audit-deep-dive">
 
           <!-- Radar Chart - Score Breakdown -->
           <section class="dashboard-radar dashboard-card">
@@ -467,5 +580,6 @@
         }
       });
     </script>
+  {% include 'partials/_upgrade_modal.html' %}
   </body>
 </html>

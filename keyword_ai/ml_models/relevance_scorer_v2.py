@@ -15,8 +15,10 @@ import numpy as np
 from typing import List, Dict, Tuple
 from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.preprocessing import StandardScaler
-from sentence_transformers import SentenceTransformer
 import re
+
+from keyword_ai.services.embeddings import get_model as get_shared_embedding_model
+from keyword_ai.utils.intent_detection import get_intent_features
 
 logger = logging.getLogger(__name__)
 
@@ -28,15 +30,11 @@ SCALER_PATH = os.path.join(MODEL_DIR, "relevance_scaler_v2.pkl")
 # Lazy-loaded models
 _relevance_model = None
 _scaler = None
-_embedding_model = None
 
 
 def get_embedding_model():
-    """Lazy load sentence transformer model."""
-    global _embedding_model
-    if _embedding_model is None:
-        _embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
-    return _embedding_model
+    """Return the shared sentence transformer singleton."""
+    return get_shared_embedding_model()
 
 
 def get_relevance_model():
@@ -143,38 +141,54 @@ class KeywordFeatureExtractor:
     
     def _classify_intent(self, keyword: str) -> List[float]:
         """
-        Classify search intent: Informational, Transactional, Navigational.
-        Returns 3 binary features.
+        Classify search intent: Informational, Transactional/Commercial, Navigational.
+        Returns 3 binary features via the shared intent detection utility.
         """
-        keyword_lower = keyword.lower()
-        
-        # Informational indicators
-        info_words = ['what', 'how', 'why', 'when', 'where', 'who', 'which', 'guide', 'tutorial', 'learn', 'understand', 'explain', 'meaning', 'definition', 'vs', 'difference between']
-        is_informational = any(w in keyword_lower for w in info_words)
-        
-        # Transactional indicators
-        trans_words = ['buy', 'price', 'discount', 'deal', 'coupon', 'sale', 'purchase', 'order', 'shop', 'best', 'cheap', 'affordable', 'review', 'compare', 'vs']
-        is_transactional = any(w in keyword_lower for w in trans_words)
-        
-        # Navigational indicators
-        nav_words = ['login', 'signin', 'signup', 'download', 'official', 'website', 'app']
-        is_navigational = any(w in keyword_lower for w in nav_words)
-        
-        # Commercial investigation (subset of transactional)
-        commercial_words = ['best', 'top', 'compare', 'review', 'vs', 'alternative', 'alternative to']
-        is_commercial = any(w in keyword_lower for w in commercial_words)
-        
-        # Return 3 features: [informational, transactional, navigational]
-        # Note: A keyword can have multiple intents (e.g., "best how to guide" is both)
-        return [
-            float(is_informational),
-            float(is_transactional or is_commercial),
-            float(is_navigational)
-        ]
+        return get_intent_features(keyword)
     
     def extract_batch(self, keywords: List[str]) -> np.ndarray:
-        """Extract features for multiple keywords."""
-        features_list = [self.extract_features(kw) for kw in keywords]
+        """Extract features for multiple keywords using batched encoding."""
+        if not keywords:
+            return np.array([])
+
+        # Batch-encode all keywords in one forward pass (instead of per-keyword)
+        keyword_embeddings = self.embedding_model.encode(
+            keywords, convert_to_numpy=True, show_progress_bar=False
+        )
+
+        features_list = []
+        for i, keyword in enumerate(keywords):
+            features = []
+
+            # 1. Content cosine similarity
+            if self.content_embedding is not None:
+                features.append(self._cosine_similarity(
+                    keyword_embeddings[i], self.content_embedding
+                ))
+            else:
+                features.append(0.5)
+
+            # 2-8: cheap textual features
+            features.append(min(len(keyword) / 100, 1.0))
+            word_count = len(keyword.split())
+            features.append(min(word_count / 10, 1.0))
+            features.append(float(bool(re.search(r'\d', keyword))))
+            features.append(float(bool(re.search(r'[^\w\s\-]', keyword))))
+            question_words = ['what', 'how', 'why', 'when', 'where', 'who', 'which', 'can', 'does', 'is', 'are']
+            features.append(float(any(keyword.lower().startswith(qw) for qw in question_words) or keyword.endswith('?')))
+            power_words = ['best', 'top', 'ultimate', 'complete', 'guide', 'tutorial', 'review', 'free', 'pro', 'expert']
+            features.append(float(any(pw in keyword.lower() for pw in power_words)))
+            words = keyword.split()
+            if words:
+                features.append(sum(1 for w in words if w and w[0].isupper()) / len(words))
+            else:
+                features.append(0.0)
+
+            # 9-11: intent
+            features.extend(self._classify_intent(keyword))
+
+            features_list.append(features)
+
         return np.array(features_list)
 
 
@@ -324,8 +338,9 @@ def score_keywords_v2(
             ml_scores = model.predict(features_scaled)
             # Ensure scores are in 0-100 range
             ml_scores = np.clip(ml_scores * 100 if ml_scores.max() <= 1 else ml_scores, 0, 100)
-        except Exception:
+        except Exception as e:
             # Fall back to heuristic if model fails
+            logger.warning(f"ML model scoring failed, falling back to heuristic: {e}")
             ml_scores = _heuristic_score(features)
     else:
         # Heuristic scoring with improved weights
@@ -334,9 +349,13 @@ def score_keywords_v2(
     # Calculate additional scores
     results = []
     
+    # Ensure ml_scores is iterable (handles scalar case when only 1 keyword)
+    if np.isscalar(ml_scores):
+        ml_scores = np.array([ml_scores])
+    
     for i, keyword in enumerate(keywords):
         # ML-based relevance score (0-100)
-        ml_score = float(ml_scores[i]) if isinstance(ml_scores, np.ndarray) else float(ml_scores)
+        ml_score = float(ml_scores[i]) if i < len(ml_scores) else 50.0
         
         # Difficulty score (0-100, lower is easier)
         difficulty = estimate_keyword_difficulty(keyword)

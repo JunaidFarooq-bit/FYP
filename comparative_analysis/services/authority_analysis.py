@@ -15,7 +15,6 @@ from typing import Dict, Optional, Any
 from urllib.parse import urlparse
 from datetime import datetime, timedelta
 from django.conf import settings
-from django.core.cache import cache
 from django.utils import timezone
 import whois
 
@@ -24,7 +23,8 @@ logger = logging.getLogger(__name__)
 
 class MozAPIClient:
     """Moz Links API Client"""
-    
+    _cache: dict = {}  # {key: (value, expiry_timestamp)}
+
     def __init__(self):
         self.access_id = getattr(settings, 'MOZ_ACCESS_ID', '') or ''
         self.secret_key = getattr(settings, 'MOZ_SECRET_KEY', '') or ''
@@ -40,11 +40,10 @@ class MozAPIClient:
             return None
         
         cache_key = f"moz_metrics_{hashlib.md5(url.encode()).hexdigest()}"
-        cached_data = cache.get(cache_key)
-        
-        if cached_data:
+        cached = MozAPIClient._cache.get(cache_key)
+        if cached and cached[1] > time.time():
             logger.debug("[MOZ] Cache HIT")
-            return cached_data
+            return cached[0]
         
         try:
             expires = str(int(time.time()) + 300)
@@ -86,7 +85,7 @@ class MozAPIClient:
                 }
                 
                 logger.info(f"[MOZ] DA={metrics['domain_authority']} PA={metrics['page_authority']}")
-                cache.set(cache_key, metrics, 60 * 60 * 24)
+                MozAPIClient._cache[cache_key] = (metrics, time.time() + 60 * 60 * 24)
                 return metrics
             else:
                 logger.warning("[MOZ] Unexpected response format")

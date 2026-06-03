@@ -493,9 +493,9 @@
             </div>
 
             {% if lighthouse_error %}
-            <div class="alert alert-warning" style="margin-bottom:1rem;">
-              <i class="fas fa-exclamation-triangle"></i>
-              <strong>Lighthouse unavailable:</strong> {{ lighthouse_error }}
+            <div class="alert alert-info" style="margin-bottom:1rem;background:#e7f3ff;border-color:#b3d9ff;color:#004085;">
+              <i class="fas fa-info-circle" style="color:#004085;"></i>
+              <strong>Performance analysis limited:</strong> {{ lighthouse_error }}
             </div>
             {% endif %}
 
@@ -732,5 +732,6 @@
         });
       }, 4000);
     </script>
+  {% include 'partials/_upgrade_modal.html' %}
   </body>
 </html>

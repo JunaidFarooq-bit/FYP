@@ -1,0 +1,368 @@
+TC_ID,Module,Category,Type,Test Case Name,Preconditions,Test Steps,Expected Result,Actual Result,Status
+TC-AUTH-001,Authentication,Login,Positive,Valid login with correct credentials,User account exists with username=testuser and password=testpass123,"1. Navigate to /
+2. Enter username: testuser
+3. Enter password: testpass123
+4. Submit form",User is authenticated and redirected to /home/,—,Pending
+TC-AUTH-002,Authentication,Login,Negative,Login with wrong password,User account exists,"1. Navigate to /
+2. Enter username: testuser
+3. Enter password: wrongpassword
+4. Submit form",User is NOT authenticated; login page re-displayed with error,—,Pending
+TC-AUTH-003,Authentication,Login,Negative,Login with non-existent username,No user with username ghostuser exists,"1. Navigate to /
+2. Enter username: ghostuser
+3. Enter password: anypassword
+4. Submit form",User is NOT authenticated; login page shown with error,—,Pending
+TC-AUTH-004,Authentication,Login,Edge,Login with empty username and password,None,"1. Navigate to /
+2. Submit form with both fields empty",User is NOT authenticated; form validation error displayed,—,Pending
+TC-AUTH-005,Authentication,Login,Edge,Login page GET returns 200,None,"1. Send GET request to /",HTTP 200 returned; login page rendered,—,Pending
+TC-AUTH-006,Authentication,Login,Edge,Case-sensitive username check,User exists as testuser (lowercase),"1. Navigate to /
+2. Enter username: TESTUSER (uppercase)
+3. Enter password: testpass123
+4. Submit",User is NOT authenticated (Django usernames are case-sensitive),—,Pending
+TC-AUTH-007,Authentication,Login,Positive,Already authenticated user accessing login page,User is logged in,"1. Send GET / with authenticated session",Response is 200 or 302 (no crash),—,Pending
+TC-AUTH-008,Authentication,Register,Positive,Successful user registration,No user with username newuser exists,"1. Navigate to /register/
+2. Fill: username=newuser email=newuser@example.com FirstName=New LastName=User password1=StrongPass123! password2=StrongPass123!
+3. Submit",User is created in DB; redirected; subscription and UsageTracker auto-created via signals,—,Pending
+TC-AUTH-009,Authentication,Register,Positive,Registration creates subscription via signal,No prior subscription for user,"1. Register a new user with valid data
+2. Query DB for Subscription and UsageTracker",Subscription record and UsageTracker both exist for the new user,—,Pending
+TC-AUTH-010,Authentication,Register,Negative,Duplicate username registration,User testuser already exists,"1. Navigate to /register/
+2. Submit form with username=testuser
+3. Submit","Registration fails; user count unchanged; IntegrityError or form error shown",—,Pending
+TC-AUTH-011,Authentication,Register,Negative,Password mismatch registration,None,"1. Navigate to /register/
+2. Enter password1=StrongPass123! and password2=DifferentPass456!
+3. Submit",Registration fails; user NOT created; form error displayed,—,Pending
+TC-AUTH-012,Authentication,Register,Negative,Empty fields registration,None,"1. Navigate to /register/
+2. Submit form with all fields empty",Registration fails; user NOT created; validation errors shown,—,Pending
+TC-AUTH-013,Authentication,Register,Edge,Register page GET returns 200,None,"1. Send GET /register/",HTTP 200; registration form rendered,—,Pending
+TC-AUTH-014,Authentication,Logout,Positive,Authenticated user logout,User is logged in,"1. Send GET /logout/ with authenticated session
+2. Follow redirects",User is logged out; redirected to login page; /home/ returns 302 subsequently,—,Pending
+TC-AUTH-015,Authentication,Logout,Edge,Unauthenticated user accesses /logout/,User is not logged in,"1. Send GET /logout/ without authentication",No crash; response 200 or 302,—,Pending
+TC-AUTH-016,Authentication,Password Reset,Positive,Forget password page accessible,None,"1. Send GET /forget-password/",HTTP 200; password reset form shown,—,Pending
+TC-AUTH-017,Authentication,Password Reset,Positive,Forget password with valid email,User with email test@example.com exists,"1. POST /forget-password/ with email=test@example.com",HTTP 200; success message shown (token set on Profile),—,Pending
+TC-AUTH-018,Authentication,Password Reset,Negative,Forget password with non-existent email,No user with that email,"1. POST /forget-password/ with email=nobody@example.com",HTTP 200; no error crash (may show generic message),—,Pending
+TC-AUTH-019,Authentication,Password Reset,Negative,Change password with invalid/fake token,No profile with that token,"1. GET /change-password/00000000-0000-0000-0000-000000000000/",Response 200/302/404; no crash,—,Pending
+TC-AUTH-020,Authentication,Password Reset,Positive,Change password with valid token,Profile.forget_password_token set to a known UUID,"1. GET /change-password/{valid-token}/",HTTP 200 or redirect; form displayed,—,Pending
+TC-AUTH-021,Authentication,Password Reset,Positive,Change password form submission updates password,Valid token on user profile,"1. POST /change-password/{token}/ with password=NewStrongPass789! and confirm_password=NewStrongPass789!",HTTP 200 or redirect; password updated in DB,—,Pending
+TC-AUTH-022,Authentication,Access Control,Positive,/home/ requires login - unauthenticated redirect,User not logged in,"1. GET /home/ without authentication",HTTP 302 redirect to login page,—,Pending
+TC-AUTH-023,Authentication,Access Control,Positive,/show/ requires login - unauthenticated redirect,User not logged in,"1. POST /show/ with URL without authentication",HTTP 302 redirect to login,—,Pending
+TC-AUTH-024,Authentication,Access Control,Positive,/report/download/ requires login,User not logged in,"1. GET /report/download/ without authentication",HTTP 302 redirect to login,—,Pending
+TC-AUTH-025,Authentication,Access Control,Positive,/subscriptions/pricing/ requires login,User not logged in,"1. GET /subscriptions/pricing/ without authentication",HTTP 302 redirect to login,—,Pending
+TC-AUTH-026,Authentication,Access Control,Positive,/subscriptions/dashboard/ requires login,User not logged in,"1. GET /subscriptions/dashboard/ without authentication",HTTP 302 redirect to login,—,Pending
+TC-SEO-001,SEOAnalyzer,Home View,Positive,Authenticated user accesses /home/,User logged in,"1. GET /home/ with authenticated session",HTTP 200; dashboard page rendered,—,Pending
+TC-SEO-002,SEOAnalyzer,Home View,Negative,Unauthenticated user accesses /home/,User not logged in,"1. GET /home/ without session",HTTP 302 redirect to login,—,Pending
+TC-SEO-003,SEOAnalyzer,Show/Audit View,Positive,Subscribed user submits valid URL for audit,User logged in with Pro subscription,"1. POST /show/ with url=https://example.com
+2. Website_Audit mocked to return SAMPLE_AUDIT_RESULT",HTTP 200; audit results rendered on dashboard,—,Pending
+TC-SEO-004,SEOAnalyzer,Show/Audit View,Negative,Unauthenticated user POSTs to /show/,None,"1. POST /show/ with url=https://example.com without auth",HTTP 302 redirect to login,—,Pending
+TC-SEO-005,SEOAnalyzer,Show/Audit View,Negative,Free user blocked after using free trial,User on free tier with free_audit_used=True and audits_used=10,"1. POST /show/ with url=https://example.com",HTTP 200 with redirect chain ending at /subscriptions/pricing/,—,Pending
+TC-SEO-006,SEOAnalyzer,Show/Audit View,Edge,Show view GET request (wrong method),User authenticated,"1. GET /show/ (not POST)",HTTP 200/302/405; no crash,—,Pending
+TC-SEO-007,SEOAnalyzer,Show/Audit View,Edge,Show with empty URL string,User authenticated with active subscription,"1. POST /show/ with url=''","HTTP 200; error message or empty result shown, no 500",—,Pending
+TC-SEO-008,SEOAnalyzer,Show/Audit View,Positive,Audit result is cached after run,User with Pro subscription,"1. Run audit on https://example.com
+2. Check cache key audit_results_{md5}",Cache key exists with SAMPLE_AUDIT_RESULT data,—,Pending
+TC-SEO-009,SEOAnalyzer,Report/PDF,Negative,Unauthenticated user accesses /report/download/,None,"1. GET /report/download/ without auth",HTTP 302 redirect to login,—,Pending
+TC-SEO-010,SEOAnalyzer,Report/PDF,Negative,Free user blocked from PDF download,User with free subscription and free_audit_used=True,"1. GET /report/download/?url=https://example.com",Redirected to /subscriptions/pricing/ with upgrade message,—,Pending
+TC-SEO-011,SEOAnalyzer,Report/PDF,Positive,Basic user can download PDF,User with active Basic subscription,"1. Cache audit result for the URL
+2. GET /report/download/?url=https://example.com with mocked report generation",HTTP 200; PDF content returned,—,Pending
+TC-SEO-012,SEOAnalyzer,SEO Tools,Positive,/seo-metrics/ accessible for authenticated user,User logged in with Pro subscription,"1. GET /seo-metrics/",HTTP 200,—,Pending
+TC-SEO-013,SEOAnalyzer,SEO Tools,Positive,/mobiletest/ accessible for authenticated user,User logged in with Pro subscription,"1. GET /mobiletest/",HTTP 200,—,Pending
+TC-SEO-014,SEOAnalyzer,SEO Tools,Positive,/robot/ accessible for authenticated user,User logged in with Pro subscription,"1. GET /robot/",HTTP 200,—,Pending
+TC-SEO-015,SEOAnalyzer,SEO Tools,Negative,/seo-metrics/ requires login,User not logged in,"1. GET /seo-metrics/ without auth",HTTP 302 redirect to login,—,Pending
+TC-SEO-016,SEOAnalyzer,SEO Tools,Negative,/mobiletest/ requires login,User not logged in,"1. GET /mobiletest/ without auth",HTTP 302 redirect to login,—,Pending
+TC-SEO-017,SEOAnalyzer,SEO Tools,Negative,/robot/ requires login,User not logged in,"1. GET /robot/ without auth",HTTP 302 redirect to login,—,Pending
+TC-SEO-018,SEOAnalyzer,SEO Tools,Negative,/keyPosition/ requires login,User not logged in,"1. GET /keyPosition/ without auth",HTTP 302 redirect to login,—,Pending
+TC-SEO-019,SEOAnalyzer,SEO Tools,Negative,/keysuggestion/ requires login,User not logged in,"1. GET /keysuggestion/ without auth",HTTP 302 redirect to login,—,Pending
+TC-SEO-020,SEOAnalyzer,SEO Tools,Negative,/keyword-ai-suggestions/ requires login,User not logged in,"1. GET /keyword-ai-suggestions/ without auth",HTTP 302 redirect to login,—,Pending
+TC-SEO-021,SEOAnalyzer,Sentiment Analysis,Positive,Sentiment analysis page accessible without login,None,"1. GET /sentimentanalysis/",HTTP 200; page rendered,—,Pending
+TC-SEO-022,SEOAnalyzer,Sentiment Analysis,Positive,Sentiment analysis POST with valid URL,None; analyze_sentiment mocked,"1. POST /sentimentanalysis/analyze/ with url=https://example.com",HTTP 200; JSON or template with sentiment result returned,—,Pending
+TC-SEO-023,SEOAnalyzer,Sentiment Analysis,Edge,Sentiment analysis POST with empty URL,None,"1. POST /sentimentanalysis/analyze/ with url=''",HTTP 200; handled gracefully; no 500,—,Pending
+TC-SVC-001,SEOAnalyzer Services,ContentAnalysisService,Positive,Analyze valid HTML returns word count,ContentAnalysisService initialized with sample_html,"1. Call service.analyze_content_quality()",Result dict contains word_count > 0,—,Pending
+TC-SVC-002,SEOAnalyzer Services,ContentAnalysisService,Positive,Analyze valid HTML returns readability score,ContentAnalysisService initialized with sample_html,"1. Call service.analyze_content_quality()",Result dict contains readability key,—,Pending
+TC-SVC-003,SEOAnalyzer Services,ContentAnalysisService,Positive,Analyze valid HTML returns quality score,ContentAnalysisService initialized with sample_html,"1. Call service.analyze_content_quality()",Result dict contains quality_score key,—,Pending
+TC-SVC-004,SEOAnalyzer Services,ContentAnalysisService,Edge,Empty HTML handled gracefully,ContentAnalysisService initialized with empty string,"1. Call service.analyze_content_quality()",Returns dict; word_count=0 or error key present; no exception,—,Pending
+TC-SVC-005,SEOAnalyzer Services,ContentAnalysisService,Edge,Minimal HTML (no content) no crash,ContentAnalysisService initialized with <html></html>,"1. Call service.analyze_content_quality()",Returns dict; no exception raised,—,Pending
+TC-SVC-006,SEOAnalyzer Services,ContentAnalysisService,Edge,Readability score in valid range,ContentAnalysisService initialized with sample_html,"1. Call analyze_content_quality()
+2. Extract flesch_reading_ease",Score is between -200 and 200,—,Pending
+TC-SVC-007,SEOAnalyzer Services,ContentAnalysisService,Positive,Heading structure extracted,ContentAnalysisService with HTML containing headings,"1. Call analyze_content_quality()",headings key present; value is dict,—,Pending
+TC-SVC-008,SEOAnalyzer Services,SEOAnalysisService,Positive,Title present in HTML detected,SEOAnalysisService with sample_html containing <title>,"1. Call service.analyze_seo_elements()","title key in result; score > 0; title string not empty",—,Pending
+TC-SVC-009,SEOAnalyzer Services,SEOAnalysisService,Negative,Missing title tag detected,SEOAnalysisService with HTML without <title>,"1. Call service.analyze_seo_elements()",title score = 0 in result,—,Pending
+TC-SVC-010,SEOAnalyzer Services,SEOAnalysisService,Positive,Meta description present detected,SEOAnalysisService with sample_html,"1. Call service.analyze_seo_elements()",meta_description key present; description value is not None,—,Pending
+TC-SVC-011,SEOAnalyzer Services,SEOAnalysisService,Negative,Missing meta description detected,SEOAnalysisService with minimal HTML,"1. Call service.analyze_seo_elements()",meta_description score = 0,—,Pending
+TC-SVC-012,SEOAnalyzer Services,SEOAnalysisService,Positive,Overall SEO score returned,SEOAnalysisService with sample_html,"1. Call service.analyze_seo_elements()",seo_score key present in result,—,Pending
+TC-SVC-013,SEOAnalyzer Services,SEOAnalysisService,Positive,Headings returned in result,SEOAnalysisService with sample_html,"1. Call service.analyze_seo_elements()",headings key present,—,Pending
+TC-SVC-014,SEOAnalyzer Services,SEOAnalysisService,Positive,Open graph tags returned,SEOAnalysisService with sample_html containing OG tags,"1. Call service.analyze_seo_elements()",open_graph key present,—,Pending
+TC-SVC-015,SEOAnalyzer Services,SEOAnalysisService,Edge,Empty HTML no crash,SEOAnalysisService with <html></html>,"1. Call service.analyze_seo_elements()",Returns dict; no exception,—,Pending
+TC-SVC-016,SEOAnalyzer Services,TechnicalAuditServiceV2,Positive,Technical audit returns required keys,TechnicalAuditServiceV2 with mocked session returning 200 for robots.txt,"1. Call service.analyze_technical_seo()",Result contains https_status / robots_txt / technical_score,—,Pending
+TC-SVC-017,SEOAnalyzer Services,TechnicalAuditServiceV2,Positive,robots.txt found returns found=True,Session mock returns 200 with robots.txt content,"1. Call service.check_robots_txt()",Result dict has found=True,—,Pending
+TC-SVC-018,SEOAnalyzer Services,TechnicalAuditServiceV2,Negative,robots.txt returns 404 - found=False,Session mock returns 404,"1. Call service.check_robots_txt()",Result dict has found=False,—,Pending
+TC-SVC-019,SEOAnalyzer Services,TechnicalAuditServiceV2,Negative,Network error handled gracefully,Session mock raises ConnectionError,"1. Call service.analyze_technical_seo()",Returns dict; no exception propagated,—,Pending
+TC-SVC-020,SEOAnalyzer Services,LinkAnalyzer,Positive,Internal link count correct,LinkAnalyzer with HTML containing internal hrefs,"1. Call analyzer.analyze()",Internal_links >= 1 in result dict,—,Pending
+TC-SVC-021,SEOAnalyzer Services,LinkAnalyzer,Positive,External link count correct,LinkAnalyzer with HTML containing external hrefs,"1. Call analyzer.analyze()",External_links >= 1 in result dict,—,Pending
+TC-SVC-022,SEOAnalyzer Services,LinkAnalyzer,Edge,No links HTML returns zero counts,LinkAnalyzer with HTML with no <a> tags,"1. Call analyzer.analyze()",Internal_links=0 and External_links=0,—,Pending
+TC-SVC-023,SEOAnalyzer Services,EEATAnalyzer,Positive,Analyze title-type content returns eeat_score,EEATAnalyzer with use_groq=False and mocked empty env,"1. Call analyzer.analyze('title' 'Expert Python Programming Guide')",Returns dict with eeat_score key,—,Pending
+TC-SVC-024,SEOAnalyzer Services,EEATAnalyzer,Positive,Analyze description-type content returns eeat_score,EEATAnalyzer with use_groq=False,"1. Call analyzer.analyze('description' 'Professional guide written by certified experts.')",Returns dict with eeat_score key,—,Pending
+TC-SVC-025,SEOAnalyzer Services,EEATAnalyzer,Edge,Short content (2 chars) returns eeat_score=0,EEATAnalyzer with use_groq=False,"1. Call analyzer.analyze('title' 'Hi')",eeat_score = 0,—,Pending
+TC-SVC-026,SEOAnalyzer Services,EEATAnalyzer,Edge,Empty content handled without crash,EEATAnalyzer with use_groq=False,"1. Call analyzer.analyze('title' '')",Returns dict; no exception,—,Pending
+TC-SVC-027,SEOAnalyzer Services,MinificationChecker,Positive,No CSS assets returns dict,CSSMinificationChecker with HTML with no CSS links,"1. Call checker.check()",Returns dict; no exception,—,Pending
+TC-SVC-028,SEOAnalyzer Services,MinificationChecker,Positive,CSS link present - minification check runs,CSSMinificationChecker with HTML containing <link rel=stylesheet>; mock HTTP for CSS file,"1. checker.session.get returns mock CSS content
+2. Call checker.check()",Returns dict with minification analysis,—,Pending
+TC-SVC-029,SEOAnalyzer Services,MinificationChecker,Positive,MinificationService check_all returns css and js keys,MinificationService with basic HTML,"1. Call service.check_all()",Returns dict with css and js keys,—,Pending
+TC-SVC-030,SEOAnalyzer Services,SentimentAnalyzer,Positive,Positive text returns sentiment key,analyze_sentiment called with positive text,"1. Call analyze_sentiment('This is excellent! Amazing product we love it.')","Returns dict with sentiment key; sentiment='positive'",—,Pending
+TC-SVC-031,SEOAnalyzer Services,SentimentAnalyzer,Positive,Negative text analyzed correctly,analyze_sentiment called with negative text,"1. Call analyze_sentiment('Terrible horrible disgusting service.')",Returns dict with sentiment key; negative result,—,Pending
+TC-SVC-032,SEOAnalyzer Services,SentimentAnalyzer,Edge,Very short text (2 chars) returns error or dict,analyze_sentiment with 'Hi',"1. Call analyze_sentiment('Hi')",Returns dict; no exception; success=False or sentiment present,—,Pending
+TC-SVC-033,SEOAnalyzer Services,SentimentAnalyzer,Edge,Empty string handled without crash,analyze_sentiment with '',"1. Call analyze_sentiment('')",Returns dict; no exception,—,Pending
+TC-SUB-001,Subscriptions,SubscriptionTier Model,Positive,Create tier with minimal fields,DB available,"1. Create SubscriptionTier with name/display_name/price_monthly",Tier saved; pk is not None,—,Pending
+TC-SUB-002,Subscriptions,SubscriptionTier Model,Positive,Tier string representation includes name and price,DB with basic tier,"1. Call str(tier)",String contains 'Basic' and '9',—,Pending
+TC-SUB-003,Subscriptions,SubscriptionTier Model,Positive,Tier features_list auto-generated,Pro tier with feature flags=True,"1. Access tier.features_list",Returns non-None list,—,Pending
+TC-SUB-004,Subscriptions,SubscriptionTier Model,Positive,Tiers ordered by price ascending,Three tiers created in non-sequential price order,"1. Query SubscriptionTier.objects.all()
+2. Extract price list",Prices are in ascending order,—,Pending
+TC-SUB-005,Subscriptions,SubscriptionTier Model,Positive,Free tier has no premium features,Free tier fixture,"1. Access has_ai_suggestions / has_competitor_analysis / has_pdf_export / has_api_access",All are False,—,Pending
+TC-SUB-006,Subscriptions,SubscriptionTier Model,Positive,Enterprise tier has unlimited audits (None),Enterprise tier fixture,"1. Access max_audits_per_month",Value is None,—,Pending
+TC-SUB-007,Subscriptions,SubscriptionTier Model,Negative,Duplicate tier name raises exception,Tier with name=unique_tier exists,"1. Create another tier with same name",Exception raised (IntegrityError),—,Pending
+TC-SUB-008,Subscriptions,SubscriptionTier Model,Positive,Free tier has 1 audit limit,Free tier fixture,"1. Access max_audits_per_month",Value = 1,—,Pending
+TC-SUB-009,Subscriptions,SubscriptionTier Model,Positive,Basic tier has 10 audit limit,Basic tier fixture,"1. Access max_audits_per_month",Value = 10,—,Pending
+TC-SUB-010,Subscriptions,SubscriptionTier Model,Positive,Pro tier has 50 audit limit,Pro tier fixture,"1. Access max_audits_per_month",Value = 50,—,Pending
+TC-SUB-011,Subscriptions,Subscription Model,Positive,Create subscription for user,User and tier exist,"1. Create Subscription(user tier status='active')",Subscription saved; pk not None; user matches,—,Pending
+TC-SUB-012,Subscriptions,Subscription Model,Positive,Subscription string includes username and tier name,Active subscription exists,"1. Call str(subscription)",String contains testuser and 'Basic',—,Pending
+TC-SUB-013,Subscriptions,Subscription Model,Positive,is_active() True for active status within period,Subscription with status='active' and period_end=30 days future,"1. Call sub.is_active()",Returns True,—,Pending
+TC-SUB-014,Subscriptions,Subscription Model,Positive,is_active() True for trialing status within period,Subscription with status='trialing' and period_end=7 days future,"1. Call sub.is_active()",Returns True,—,Pending
+TC-SUB-015,Subscriptions,Subscription Model,Negative,is_active() False when period_end is in the past,Subscription with period_end 1 second ago,"1. Call sub.is_active()",Returns False,—,Pending
+TC-SUB-016,Subscriptions,Subscription Model,Negative,is_active() False for status=canceled,Subscription with status='canceled',"1. Call sub.is_active()",Returns False,—,Pending
+TC-SUB-017,Subscriptions,Subscription Model,Negative,is_active() False for status=past_due,Subscription with status='past_due',"1. Call sub.is_active()",Returns False,—,Pending
+TC-SUB-018,Subscriptions,Subscription Model,Negative,is_active() False for status=unpaid,Subscription with status='unpaid',"1. Call sub.is_active()",Returns False,—,Pending
+TC-SUB-019,Subscriptions,Subscription Model,Negative,is_active() False for status=free_trial_used,Subscription with status='free_trial_used',"1. Call sub.is_active()",Returns False,—,Pending
+TC-SUB-020,Subscriptions,Subscription Model,Positive,can_use_feature() True for pro tier (ai_suggestions),Pro subscription active,"1. Call sub.can_use_feature('ai_suggestions')",Returns True,—,Pending
+TC-SUB-021,Subscriptions,Subscription Model,Positive,can_use_feature() True for pro tier (competitor_analysis),Pro subscription active,"1. Call sub.can_use_feature('competitor_analysis')",Returns True,—,Pending
+TC-SUB-022,Subscriptions,Subscription Model,Positive,can_use_feature() True for pro tier (pdf_export),Pro subscription active,"1. Call sub.can_use_feature('pdf_export')",Returns True,—,Pending
+TC-SUB-023,Subscriptions,Subscription Model,Negative,can_use_feature() False for free tier (ai_suggestions),Free tier with free_trial_used status,"1. Call sub.can_use_feature('ai_suggestions')",Returns False,—,Pending
+TC-SUB-024,Subscriptions,Subscription Model,Negative,can_use_feature() False for free tier (competitor_analysis),Free tier with free_trial_used status,"1. Call sub.can_use_feature('competitor_analysis')",Returns False,—,Pending
+TC-SUB-025,Subscriptions,Subscription Model,Negative,can_use_feature() False for free tier (pdf_export),Free tier with free_trial_used status,"1. Call sub.can_use_feature('pdf_export')",Returns False,—,Pending
+TC-SUB-026,Subscriptions,Subscription Model,Positive,get_max_audits() returns 10 for basic tier,Basic subscription active,"1. Call sub.get_max_audits()",Returns 10,—,Pending
+TC-SUB-027,Subscriptions,Subscription Model,Positive,get_max_audits() returns None for enterprise (unlimited),Enterprise subscription active,"1. Call sub.get_max_audits()",Returns None,—,Pending
+TC-SUB-028,Subscriptions,Subscription Model,Negative,One-to-one user constraint prevents duplicate subscription,User already has a subscription,"1. Create second Subscription for same user",Exception raised (IntegrityError),—,Pending
+TC-SUB-029,Subscriptions,Subscription Model,Positive,Cascade delete removes subscription when user deleted,User with subscription exists,"1. Delete user
+2. Query Subscription by user_id",Subscription no longer exists,—,Pending
+TC-SUB-030,Subscriptions,UsageTracker Model,Positive,New tracker created with zero counters,User exists,"1. Create UsageTracker for user",audits_used_this_month=0; keywords=0; competitor=0; pdf=0; free_audit_used=False,—,Pending
+TC-SUB-031,Subscriptions,UsageTracker Model,Positive,record_audit() increments audit counter,Tracker exists with audits_used=0,"1. Call tracker.record_audit()
+2. Refresh from DB",audits_used_this_month = 1,—,Pending
+TC-SUB-032,Subscriptions,UsageTracker Model,Positive,record_audit() called 7 times increments to 7,Tracker with audits_used=0,"1. Call tracker.record_audit() 7 times
+2. Refresh from DB",audits_used_this_month = 7,—,Pending
+TC-SUB-033,Subscriptions,UsageTracker Model,Positive,has_used_free_audit() returns False initially,New tracker with free_audit_used=False,"1. Call tracker.has_used_free_audit()",Returns False,—,Pending
+TC-SUB-034,Subscriptions,UsageTracker Model,Positive,use_free_audit() sets flag and timestamp,New tracker with free_audit_used=False,"1. Call tracker.use_free_audit()
+2. Refresh from DB","free_audit_used=True; free_audit_used_at not None",—,Pending
+TC-SUB-035,Subscriptions,UsageTracker Model,Positive,record_keywords() increments by given count,Tracker with keywords=0,"1. Call tracker.record_keywords(150)
+2. Refresh from DB",keywords_generated_this_month = 150,—,Pending
+TC-SUB-036,Subscriptions,UsageTracker Model,Positive,record_competitor_analysis() increments counter,Tracker with competitor=0,"1. Call tracker.record_competitor_analysis()
+2. Refresh from DB",competitor_analyses_this_month = 1,—,Pending
+TC-SUB-037,Subscriptions,UsageTracker Model,Positive,record_pdf_export() increments counter,Tracker with pdf=0,"1. Call tracker.record_pdf_export()
+2. Refresh from DB",pdf_exports_this_month = 1,—,Pending
+TC-SUB-038,Subscriptions,UsageTracker Model,Positive,reset_if_needed() resets counters when overdue (>30 days),Tracker with audits=10 and last_reset_date=35 days ago,"1. Call tracker.reset_if_needed()
+2. Refresh from DB",audits_used_this_month = 0,—,Pending
+TC-SUB-039,Subscriptions,UsageTracker Model,Negative,reset_if_needed() does NOT reset when not overdue,Tracker with audits=5 and last_reset_date=5 days ago,"1. Call tracker.reset_if_needed()
+2. Refresh from DB",audits_used_this_month still = 5,—,Pending
+TC-SUB-040,Subscriptions,UsageTracker Model,Positive,usage_history archived on monthly reset,Tracker with audits=15 and last_reset=35 days ago,"1. Call tracker.reset_if_needed()
+2. Refresh from DB",usage_history not None; len(usage_history) > 0,—,Pending
+TC-SUB-041,Subscriptions,UsageTracker Model,Positive,Cascade delete removes tracker when user deleted,User with tracker exists,"1. Delete user
+2. Query UsageTracker by user_id",UsageTracker no longer exists,—,Pending
+TC-SUB-042,Subscriptions,ManualPaymentSubmission,Positive,Create payment submission with default pending status,User and tier exist,"1. Create ManualPaymentSubmission with required fields",Submission created; status='pending',—,Pending
+TC-SUB-043,Subscriptions,ManualPaymentSubmission,Positive,Default status is pending on creation,New payment submission,"1. Create submission without specifying status",submission.status = 'pending',—,Pending
+TC-SUB-044,Subscriptions,ManualPaymentSubmission,Positive,Status transition to verified,Pending submission exists; admin user exists,"1. Set sub.status='verified'; sub.verified_by=admin; sub.verified_at=now()
+2. Save and refresh",status='verified'; verified_by=admin,—,Pending
+TC-SUB-045,Subscriptions,ManualPaymentSubmission,Positive,Status transition to rejected,Pending submission exists,"1. Set sub.status='rejected'; sub.verification_notes='Invalid proof'
+2. Save and refresh",status='rejected',—,Pending
+TC-SVC2-001,Subscriptions,SubscriptionService,Positive,create_default_tiers() creates exactly 4 tiers,Empty DB,"1. Call SubscriptionService.create_default_tiers()",SubscriptionTier.objects.count() = 4,—,Pending
+TC-SVC2-002,Subscriptions,SubscriptionService,Positive,create_default_tiers() is idempotent,Tiers already created,"1. Call create_default_tiers() twice",Still exactly 4 tiers; no duplicates,—,Pending
+TC-SVC2-003,Subscriptions,SubscriptionService,Positive,Created tiers have correct names,Empty DB,"1. Call create_default_tiers()
+2. List tier names",Names = {free basic pro enterprise},—,Pending
+TC-SVC2-004,Subscriptions,SubscriptionService,Positive,Free tier price = 0,Default tiers created,"1. Query SubscriptionTier.objects.get(name='free')
+2. Check price_monthly",price_monthly = 0,—,Pending
+TC-SVC2-005,Subscriptions,SubscriptionService,Positive,create_default_subscription() creates on free tier,Default tiers created; user exists,"1. Call SubscriptionService.create_default_subscription(user)",Subscription on free tier created for user,—,Pending
+TC-SVC2-006,Subscriptions,SubscriptionService,Positive,create_default_subscription() creates UsageTracker,Tiers created; user exists,"1. Call create_default_subscription(user)
+2. Check UsageTracker",UsageTracker.objects.filter(user=user).exists() = True,—,Pending
+TC-SVC2-007,Subscriptions,SubscriptionService,Positive,create_default_subscription() is idempotent,User already has default subscription,"1. Call create_default_subscription(user) twice
+2. Count subscriptions",Subscription count = 1; second call returns same object,—,Pending
+TC-SVC2-008,Subscriptions,SubscriptionService,Positive,Free trial audit allowed on first use,User with default subscription; free_audit_used=False,"1. Call can_use_feature(user 'audit')",Returns (True reason),—,Pending
+TC-SVC2-009,Subscriptions,SubscriptionService,Negative,Free trial denied after used,User with free_audit_used=True and no active subscription,"1. Call can_use_feature(user 'audit')",Returns (False reason),—,Pending
+TC-SVC2-010,Subscriptions,SubscriptionService,Positive,Active Pro subscription allows audit,User with active Pro subscription,"1. Call can_use_feature(user 'audit')",Returns (True reason),—,Pending
+TC-SVC2-011,Subscriptions,SubscriptionService,Negative,Expired/canceled subscription blocks audit,User with canceled subscription and free_audit_used=True,"1. Call can_use_feature(user 'audit')",Returns (False reason),—,Pending
+TC-SVC2-012,Subscriptions,SubscriptionService,Negative,Audit limit reached blocks user,User with basic subscription; audits_used=10 (limit=10),"1. Call can_use_feature(user 'audit' count=1)",Returns (False reason); reason contains 'limit' or 'upgrade',—,Pending
+TC-SVC2-013,Subscriptions,SubscriptionService,Edge,Enterprise tier never blocked regardless of count,User with enterprise subscription; audits_used=10000,"1. Call can_use_feature(user 'audit')",Returns (True reason),—,Pending
+TC-SVC2-014,Subscriptions,SubscriptionService,Edge,One below limit is allowed,User with basic subscription; audits_used=9 (limit=10),"1. Call can_use_feature(user 'audit')",Returns (True reason),—,Pending
+TC-SVC2-015,Subscriptions,SubscriptionService,Negative,Free tier cannot use competitor feature,User with free subscription; free_audit_used=True,"1. Call can_use_feature(user 'competitor')",Returns (False reason),—,Pending
+TC-SVC2-016,Subscriptions,SubscriptionService,Negative,Basic tier cannot use competitor feature,User with basic subscription,"1. Call can_use_feature(user 'competitor')",Returns (False reason),—,Pending
+TC-SVC2-017,Subscriptions,SubscriptionService,Positive,Pro tier can use competitor feature,User with pro subscription,"1. Call can_use_feature(user 'competitor')",Returns (True reason),—,Pending
+TC-SVC2-018,Subscriptions,SubscriptionService,Positive,Enterprise tier can use competitor feature,User with enterprise subscription,"1. Call can_use_feature(user 'competitor')",Returns (True reason),—,Pending
+TC-SVC2-019,Subscriptions,SubscriptionService,Negative,Free tier cannot export PDF,User with free subscription; free_audit_used=True,"1. Call can_use_feature(user 'pdf_export')",Returns (False reason),—,Pending
+TC-SVC2-020,Subscriptions,SubscriptionService,Positive,Basic tier can export PDF,User with active basic subscription,"1. Call can_use_feature(user 'pdf_export')",Returns (True reason),—,Pending
+TC-SVC2-021,Subscriptions,SubscriptionService,Positive,Pro tier can export PDF,User with active pro subscription,"1. Call can_use_feature(user 'pdf_export')",Returns (True reason),—,Pending
+TC-SVC2-022,Subscriptions,SubscriptionService,Positive,upgrade_subscription() to Pro tier sets correct tier,User with free subscription,"1. Call upgrade_subscription(user 'pro' 'monthly')",Subscription tier = pro; status = active,—,Pending
+TC-SVC2-023,Subscriptions,SubscriptionService,Positive,upgrade_subscription() sets future period_end,User with free subscription,"1. Call upgrade_subscription(user 'basic' 'monthly')
+2. Check current_period_end",period_end is not None and > now(),—,Pending
+TC-SVC2-024,Subscriptions,SubscriptionService,Positive,yearly billing sets period of ~365 days,User with free subscription,"1. Call upgrade_subscription(user 'pro' 'yearly')
+2. Compute period_end - period_start",Difference >= 364 days,—,Pending
+TC-SVC2-025,Subscriptions,SubscriptionService,Positive,monthly billing sets period of ~30 days,User with free subscription,"1. Call upgrade_subscription(user 'pro' 'monthly')
+2. Compute period_end - period_start",Difference between 28 and 32 days,—,Pending
+TC-SVC2-026,Subscriptions,SubscriptionService,Positive,Downgrade from enterprise to basic,User with enterprise subscription,"1. Call upgrade_subscription(user 'basic' 'monthly')",Subscription tier = basic,—,Pending
+TC-SVC2-027,Subscriptions,SubscriptionService,Positive,cancel_subscription() sets status to canceled,User with active Pro subscription,"1. Call cancel_subscription(user)
+2. Check subscription status",status = 'canceled',—,Pending
+TC-SVC2-028,Subscriptions,SubscriptionService,Positive,cancel_subscription() sets canceled_at timestamp,User with active Pro subscription,"1. Call cancel_subscription(user)
+2. Check canceled_at",canceled_at is not None,—,Pending
+TC-SVC2-029,Subscriptions,SubscriptionService,Positive,get_subscription_summary() returns required keys,User with active Pro subscription,"1. Call get_subscription_summary(user)",Dict contains tier / status / is_active / usage / features,—,Pending
+TC-SVC2-030,Subscriptions,SubscriptionService,Positive,Summary tier name is correct,User with Pro subscription,"1. Call get_subscription_summary(user)
+2. Access summary['tier']['name']",Value = 'pro',—,Pending
+TC-SVC2-031,Subscriptions,SubscriptionService,Positive,Summary is_active=True for active subscription,User with active Pro subscription,"1. Call get_subscription_summary(user)
+2. Check summary['is_active']",Value = True,—,Pending
+TC-SVC2-032,Subscriptions,SubscriptionService,Positive,Summary usage contains audits_used key,User with Pro subscription; tracker has record_audit() called,"1. Call get_subscription_summary(user)
+2. Access summary['usage']",Dict contains audits_used key,—,Pending
+TC-DEC-001,Subscriptions,Decorators,Positive,@require_subscription passes active subscription,User with active Pro subscription,"1. Apply @require_subscription to view
+2. Call view with that user",View executes; response.status_code = 200,—,Pending
+TC-DEC-002,Subscriptions,Decorators,Negative,@require_subscription redirects on no active subscription,User with free subscription; free_audit_used=True,"1. Apply @require_subscription to view
+2. Call view",Response status_code = 302 or 200 (redirect to pricing),—,Pending
+TC-DEC-003,Subscriptions,Decorators,Positive,@require_subscription passes when free trial still available,User with free subscription; free_audit_used=False,"1. Apply @require_subscription to view
+2. Call view",Response passes (200 or 302),—,Pending
+TC-DEC-004,Subscriptions,Decorators,Negative,@require_feature('pdf_export') blocks free user,User with free subscription; free_audit_used=True,"1. Apply @require_feature('pdf_export') to view
+2. Call view",Response status_code = 302 or 403,—,Pending
+TC-DEC-005,Subscriptions,Decorators,Positive,@require_feature('pdf_export') allows basic user,User with active basic subscription,"1. Apply @require_feature('pdf_export') to view
+2. Call view",Response status_code = 200,—,Pending
+TC-DEC-006,Subscriptions,Decorators,Negative,@require_feature('competitor_analysis') blocks basic user,User with active basic subscription,"1. Apply @require_feature('competitor_analysis') to view
+2. Call view",Response status_code = 302 or 403,—,Pending
+TC-DEC-007,Subscriptions,Decorators,Positive,@require_feature('competitor_analysis') allows pro user,User with active Pro subscription,"1. Apply @require_feature('competitor_analysis') to view
+2. Call view",Response status_code = 200,—,Pending
+TC-DEC-008,Subscriptions,Decorators,Positive,@require_feature('competitor_analysis') allows enterprise user,User with active enterprise subscription,"1. Apply @require_feature('competitor_analysis') to view
+2. Call view",Response status_code = 200,—,Pending
+TC-DEC-009,Subscriptions,Decorators,Positive,@track_usage('audit') increments counter on successful view,User with Pro subscription; tracker initialized,"1. Apply @track_usage('audit') to view
+2. Call view
+3. Refresh tracker from DB",audits_used_this_month >= initial_count,—,Pending
+TC-DEC-010,Subscriptions,Decorators,Negative,@track_usage('audit') blocks when limit reached,User with basic subscription; audits_used=10 (at limit),"1. Apply @track_usage('audit') to view
+2. Call view",Response blocks (302/403); view body not executed,—,Pending
+TC-DEC-011,Subscriptions,Decorators,Negative,@api_subscription_check returns 403 for AnonymousUser,Anonymous user (no session),"1. Apply @api_subscription_check to API view
+2. Call view as AnonymousUser",Response status_code = 302/401/403,—,Pending
+TC-DEC-012,Subscriptions,Decorators,Positive,@api_subscription_check passes for subscribed user,User with active Pro subscription,"1. Apply @api_subscription_check to API view
+2. Call view",Response status_code = 200,—,Pending
+TC-DEC-013,Subscriptions,Decorators,Positive,@api_subscription_check returns JSON error not HTML redirect,User with free subscription; free_audit_used=True,"1. Apply @api_subscription_check to API view
+2. Call view
+3. Parse response content","If status=403, content is valid JSON with 'error' or 'message' key",—,Pending
+TC-VIEW-001,Subscriptions,Pricing View,Negative,Pricing page redirects when not logged in,User not authenticated,"1. GET /subscriptions/pricing/",HTTP 302 redirect to login,—,Pending
+TC-VIEW-002,Subscriptions,Pricing View,Positive,Pricing page accessible when authenticated,User logged in; subscription tiers exist,"1. GET /subscriptions/pricing/",HTTP 200; page contains tier names,—,Pending
+TC-VIEW-003,Subscriptions,Pricing View,Positive,Pricing page shows all tier names,User logged in; all 4 tiers exist,"1. GET /subscriptions/pricing/
+2. Inspect content","'Basic' or 'Pro' or 'Free' appears in response HTML",—,Pending
+TC-VIEW-004,Subscriptions,Dashboard View,Negative,Dashboard redirects when not logged in,User not authenticated,"1. GET /subscriptions/dashboard/",HTTP 302,—,Pending
+TC-VIEW-005,Subscriptions,Dashboard View,Positive,Dashboard accessible with Pro subscription,User logged in with pro subscription,"1. GET /subscriptions/dashboard/",HTTP 200,—,Pending
+TC-VIEW-006,Subscriptions,Dashboard View,Positive,Dashboard shows plan name,User with Pro subscription,"1. GET /subscriptions/dashboard/
+2. Inspect content",'Pro' or 'pro' appears in page,—,Pending
+TC-VIEW-007,Subscriptions,Dashboard View,Positive,Dashboard shows usage counters,User with Pro subscription; tracker.audits_used=3,"1. GET /subscriptions/dashboard/",HTTP 200; usage data rendered,—,Pending
+TC-VIEW-008,Subscriptions,Payment Instructions,Negative,Payment instructions redirects when not logged in,User not authenticated,"1. POST /subscriptions/payment/instructions/",HTTP 302,—,Pending
+TC-VIEW-009,Subscriptions,Payment Instructions,Positive,Payment instructions shown for paid tier selection,User with free subscription selecting pro tier,"1. POST /subscriptions/payment/instructions/ with tier=pro billing_cycle=monthly",HTTP 200; bank details shown,—,Pending
+TC-VIEW-010,Subscriptions,Payment Instructions,Edge,Free tier selection activates immediately,User with free_trial_used subscription selecting free tier,"1. POST /subscriptions/payment/instructions/ with tier=free",HTTP 200; subscription set without bank transfer,—,Pending
+TC-VIEW-011,Subscriptions,Payment Submit,Negative,Submit payment redirects when not logged in,User not authenticated,"1. POST /subscriptions/payment/submit/",HTTP 302,—,Pending
+TC-VIEW-012,Subscriptions,Payment Submit,Positive,Valid payment proof submission accepted,User with pro subscription; all required fields supplied,"1. POST /subscriptions/payment/submit/ with tier billing_cycle amount sender_name transaction_reference payment_date",HTTP 200; ManualPaymentSubmission created with pending status,—,Pending
+TC-VIEW-013,Subscriptions,Payment Submit,Negative,Missing required fields returns error,User with pro subscription; tier only supplied,"1. POST /subscriptions/payment/submit/ with only tier",HTTP 200 with form error; no ManualPaymentSubmission created,—,Pending
+TC-VIEW-014,Subscriptions,Cancel,Negative,Cancel subscription redirects when not logged in,User not authenticated,"1. POST /subscriptions/cancel/",HTTP 302,—,Pending
+TC-VIEW-015,Subscriptions,Cancel,Positive,Cancel active subscription sets status to canceled,User with active Pro subscription,"1. POST /subscriptions/cancel/
+2. Query subscription",HTTP 200; subscription.status = 'canceled',—,Pending
+TC-VIEW-016,Subscriptions,Admin Payments,Negative,Non-staff user blocked from pending payments page,Authenticated non-staff user,"1. GET /subscriptions/admin/pending-payments/",HTTP 302 or 403,—,Pending
+TC-VIEW-017,Subscriptions,Admin Payments,Positive,Admin user accesses pending payments page,Admin user (is_staff=True),"1. GET /subscriptions/admin/pending-payments/",HTTP 200,—,Pending
+TC-VIEW-018,Subscriptions,Admin Payments,Negative,Non-staff user blocked from verifying payment,Non-staff user; payment submission exists,"1. POST /subscriptions/admin/verify-payment/{id}/",HTTP 302 or 403,—,Pending
+TC-VIEW-019,Subscriptions,Admin Payments,Positive,Admin verifies payment and activates subscription,Admin user; pending submission for pro tier; user has free subscription,"1. POST /subscriptions/admin/verify-payment/{id}/
+2. Query user subscription",HTTP 200; subscription.status='active'; tier='pro',—,Pending
+TC-VIEW-020,Subscriptions,Admin Payments,Positive,Admin rejects payment and updates status,Admin user; pending submission exists,"1. POST /subscriptions/admin/reject-payment/{id}/ with notes
+2. Refresh submission",HTTP 200; submission.status='rejected',—,Pending
+TC-VIEW-021,Subscriptions,Usage API,Negative,Usage API redirects when not logged in,User not authenticated,"1. GET /subscriptions/api/usage/",HTTP 302,—,Pending
+TC-VIEW-022,Subscriptions,Usage API,Positive,Usage API returns JSON for subscribed user,User with Pro subscription,"1. GET /subscriptions/api/usage/",HTTP 200; Content-Type is application/json,—,Pending
+TC-VIEW-023,Subscriptions,Usage API,Positive,Usage API response is valid dict structure,User with Pro subscription,"1. GET /subscriptions/api/usage/
+2. Parse JSON",Parsed content is dict,—,Pending
+TC-KW-001,Keyword AI,Pipeline,Positive,Pipeline returns relevant keywords with mocked services,extract_content / get_single_embedding / extract_keywords / score_keywords_v2 all mocked,"1. Call run_keyword_pipeline_v2(url='https://example.com' use_llm=False)",Result contains relevant_keywords list with > 0 items,—,Pending
+TC-KW-002,Keyword AI,Pipeline,Edge,Pipeline with empty content returns error or empty result,extract_content mocked to return all empty strings,"1. Call run_keyword_pipeline_v2(url='https://blank.example.com')",Result is dict containing 'error' or 'relevant_keywords' key; no exception,—,Pending
+TC-KW-003,Keyword AI,Pipeline,Positive,Pipeline persists ContentAnalysis to DB with save_to_db=True,extract_content and embedding mocked; DB available,"1. Call run_keyword_pipeline_v2(url='https://persist-test.com' save_to_db=True use_llm=False)
+2. Query DB",ContentAnalysis record exists with correct title,—,Pending
+TC-KW-004,Keyword AI,Pipeline,Negative,Pipeline handles extraction exception gracefully,extract_content mocked to raise Exception('Network timeout'),"1. Call run_keyword_pipeline_v2(url='https://error.example.com')",Returns dict or raises with informative message; no unhandled crash,—,Pending
+TC-KW-005,Keyword AI,Pipeline,Positive,Pipeline without LLM still returns keywords,All mocks set; use_llm=False,"1. Call run_keyword_pipeline_v2(url='https://no-llm.com' use_llm=False)",Result contains relevant_keywords,—,Pending
+TC-KW-006,Keyword AI,Pipeline Helpers,Positive,get_historical_analysis() returns record when URL exists,ContentAnalysis with that URL in DB,"1. Call get_historical_analysis(url)",Returns ContentAnalysis object with matching id,—,Pending
+TC-KW-007,Keyword AI,Pipeline Helpers,Negative,get_historical_analysis() returns None for unknown URL,No ContentAnalysis for that URL,"1. Call get_historical_analysis('https://nonexistent-url-12345.com')",Returns None,—,Pending
+TC-KW-008,Keyword AI,ML Models,Positive,relevance_scorer_v2 module is importable,None,"1. import keyword_ai.ml_models.relevance_scorer_v2",No ImportError,—,Pending
+TC-KW-009,Keyword AI,ML Models,Positive,Score function exists in relevance_scorer_v2 module,Module imported,"1. Check hasattr(mod 'score_keywords') or any callable with 'score' in name",At least one score-related callable exists,—,Pending
+TC-KW-010,Keyword AI,DB Operations,Positive,Save and retrieve ContentAnalysis with 384-dim embedding,DB available; sample_embedding fixture (shape 384),"1. Create ContentAnalysis with embedding
+2. Retrieve by URL
+3. Check embedding length",Retrieved record embedding has len = 384,—,Pending
+TC-KW-011,Keyword AI,DB Operations,Positive,KeywordOpportunity linked to ContentAnalysis,ContentAnalysis exists in DB,"1. Create KeywordOpportunity with content_analysis FK
+2. Check FK",opportunity.content_analysis_id = analysis.id,—,Pending
+TC-KW-012,Keyword AI,DB Operations,Positive,Filter keywords by priority=high,sample_keyword_opportunities fixture in DB,"1. Query KeywordOpportunity.objects.filter(priority='high')",count > 0,—,Pending
+TC-KW-013,Keyword AI,DB Operations,Positive,Filter keywords by search_intent=informational,sample_keyword_opportunities fixture in DB,"1. Query filter(search_intent='informational')",count > 0,—,Pending
+TC-KW-014,Keyword AI,DB Operations,Positive,Order keywords by relevance score descending,sample_keyword_opportunities in DB,"1. Query .order_by('-relevance_score')
+2. Extract scores",Scores are in descending order,—,Pending
+TC-API-001,Keyword AI API,Suggest Endpoint,Negative,POST /api/keywords/v2/ requires authentication,User not authenticated,"1. POST /api/keywords/v2/ with JSON body {url: 'https://example.com'}",HTTP 302/401/403/404; not 200,—,Pending
+TC-API-002,Keyword AI API,Suggest Endpoint,Positive,Authenticated subscribed user can reach suggest endpoint,User with Pro subscription; run_keyword_pipeline_v2 mocked,"1. POST /api/keywords/v2/ with url=https://example.com",HTTP response is NOT 401/403 (auth passed),—,Pending
+TC-API-003,Keyword AI API,Suggest Endpoint,Edge,Suggest with missing url field handled,Pro user; pipeline mocked,"1. POST /api/keywords/v2/ with empty JSON {}",HTTP 200/400/422; no 500,—,Pending
+TC-API-004,Keyword AI API,Feedback Endpoint,Negative,POST /api/keywords/feedback/ requires authentication,User not authenticated,"1. POST /api/keywords/feedback/ with JSON body",HTTP 302/401/403/404,—,Pending
+TC-API-005,Keyword AI API,Feedback Endpoint,Positive,Accepted feedback action submitted for valid opportunity,Pro user; sample keyword opportunity in DB,"1. POST /api/keywords/feedback/ with {opportunity_id: opp.id action: 'accepted' rating: 5}",HTTP 200/201/302/400; no 500,—,Pending
+TC-API-006,Keyword AI API,Feedback Endpoint,Negative,Feedback with invalid opportunity_id handled,Pro user; no opportunity with ID 999999,"1. POST /api/keywords/feedback/ with {opportunity_id: 999999 action: 'accepted'}",HTTP 200/400/404; no 500,—,Pending
+TC-API-007,Keyword AI API,Feedback Endpoint,Edge,Feedback with missing fields handled,Pro user,"1. POST /api/keywords/feedback/ with empty {}",HTTP 200/400/422; no 500,—,Pending
+TC-API-008,Keyword AI API,Tasks Endpoint,Positive,GET /api/keywords/tasks/ accessible for subscribed user,User with Pro subscription,"1. GET /api/keywords/tasks/",HTTP 200/302/403; no 500,—,Pending
+TC-API-009,Keyword AI API,Tasks Endpoint,Positive,Tasks list returns JSON when HTTP 200,Pro user,"1. GET /api/keywords/tasks/
+2. Check Content-Type","If 200, Content-Type contains json or application",—,Pending
+TC-API-010,Keyword AI API,Tasks Endpoint,Positive,Task status with valid task_id returns result,Pro user; sample_analysis_task in DB,"1. GET /api/keywords/task-status/?task_id={task.task_id}",HTTP 200/302/404; no 500,—,Pending
+TC-API-011,Keyword AI API,Tasks Endpoint,Edge,Task status with missing task_id returns error,Pro user,"1. GET /api/keywords/task-status/ with no params",HTTP 200/400/404; no 500,—,Pending
+TC-API-012,Keyword AI API,Export Endpoint,Positive,JSON export returns valid data structure for subscribed user,Pro user; keyword opportunities in DB,"1. POST /api/keywords/export/ with {url: analysis.url format: 'json'}","If HTTP 200, parsed body is list or dict",—,Pending
+TC-API-013,Keyword AI API,Export Endpoint,Positive,CSV export returns CSV content-type,Pro user; keyword opportunities in DB,"1. POST /api/keywords/export/ with {url: analysis.url format: 'csv'}","If HTTP 200, Content-Type contains csv or text",—,Pending
+TC-API-014,Keyword AI API,Export Endpoint,Negative,Export unauthenticated returns 302/401/403,User not authenticated,"1. POST /api/keywords/export/ with JSON body",HTTP 302/401/403/404,—,Pending
+TC-API-015,Keyword AI API,History Endpoint,Positive,GET /api/keywords/opportunities/ accessible for subscribed user with url param,Pro user; sample_content_analysis in DB,"1. GET /api/keywords/opportunities/?url={analysis.url}",HTTP 200/302/400/403/404; no 500,—,Pending
+TC-API-016,Keyword AI API,History Endpoint,Positive,History with url param returns JSON when 200,Pro user,"1. GET /api/keywords/opportunities/
+2. Check Content-Type","If 200, Content-Type contains json",—,Pending
+TC-API-017,Keyword AI API,Batch Endpoint,Negative,POST /api/keywords/analyze-batch/ requires authentication,User not authenticated,"1. POST /api/keywords/analyze-batch/ with {urls: ['https://a.com']}",HTTP 302/401/403/404,—,Pending
+TC-API-018,Keyword AI API,Batch Endpoint,Positive,Batch endpoint starts async processing,Pro user; start_batch_analysis mocked to return string task_id,"1. POST /api/keywords/analyze-batch/ with {urls: ['https://a.com' 'https://b.com']}",HTTP 200/201/202/302/400; task initiated,—,Pending
+TC-API-019,Keyword AI API,Batch Endpoint,Edge,Batch with empty urls list returns error,Pro user,"1. POST /api/keywords/analyze-batch/ with {urls: []}",HTTP 200/400/422; no 500,—,Pending
+TC-API-020,Keyword AI API,Batch Endpoint,Edge,Batch exceeding max 50 URLs returns error,Pro user,"1. POST /api/keywords/analyze-batch/ with 60 URLs",HTTP 200/400/422; no 500; limit enforced,—,Pending
+TC-COMP-001,Comparative Analysis,Report Model,Positive,Create ComparisonReport with required fields,DB available,"1. Create ComparisonReport with url_primary / url_competitor / target_keyword / scores / gap_summary",Report saved; pk not None,—,Pending
+TC-COMP-002,Comparative Analysis,Report Model,Positive,String representation is a valid string,sample_comparison_report fixture,"1. Call str(report)",Returns a non-empty string,—,Pending
+TC-COMP-003,Comparative Analysis,Report Model,Positive,scores_primary and scores_competitor are dicts,sample_comparison_report fixture,"1. Access report.scores_primary and scores_competitor",Both are dict instances,—,Pending
+TC-COMP-004,Comparative Analysis,Report Model,Positive,ranking_explanation is stored and not None,sample_comparison_report fixture,"1. Access report.ranking_explanation",Value is not None,—,Pending
+TC-COMP-005,Comparative Analysis,Report Model,Positive,analysis_duration is positive number,sample_comparison_report fixture,"1. Access report.analysis_duration",Value > 0,—,Pending
+TC-COMP-006,Comparative Analysis,Report Model,Edge,target_keyword is optional (can be None or empty),DB available,"1. Create ComparisonReport without target_keyword",Report created; target_keyword is None or '',—,Pending
+TC-COMP-007,Comparative Analysis,DataExtractor,Positive,extract() returns title and meta_description for well-formed HTML,requests.get mocked to return 200 with valid HTML,"1. Call extractor.extract('https://example.com')",result['title'] and result['meta_description'] present,—,Pending
+TC-COMP-008,Comparative Analysis,DataExtractor,Negative,extract() handles ConnectionError gracefully,requests.get mocked to raise ConnectionError,"1. Call extractor.extract('https://unreachable.example.com')",Returns dict or raises; no unhandled crash,—,Pending
+TC-COMP-009,Comparative Analysis,DataExtractor,Negative,extract() handles 404 response gracefully,requests.get mocked to return 404; raise_for_status raises,"1. Call extractor.extract('https://example.com/not-found')",Returns dict or raises; no unhandled crash,—,Pending
+TC-COMP-010,Comparative Analysis,DataExtractor,Positive,extract() correctly parses title from HTML,requests.get returns HTML with <title>My Title</title>,"1. Call extractor.extract('https://example.com')
+2. Check result['title']",result['title'] = 'My Title',—,Pending
+TC-COMP-011,Comparative Analysis,ScoringEngine,Positive,calculate_all_scores() returns required keys,Full semantic / technical / authority data provided,"1. Call engine.calculate_all_scores(semantic technical authority raw_data)",Result has overall_seo_strength / on_page_score / technical_score / authority_score,—,Pending
+TC-COMP-012,Comparative Analysis,ScoringEngine,Edge,Overall score stays in 0-100 range for perfect inputs,All input scores at maximum (100),"1. Call calculate_all_scores with all scores=100
+2. Check overall_seo_strength",0 <= overall_seo_strength <= 100,—,Pending
+TC-COMP-013,Comparative Analysis,ScoringEngine,Edge,Zero inputs produce valid non-negative output,All input scores at zero,"1. Call calculate_all_scores with all scores=0
+2. Check overall_seo_strength",Result is dict; overall_seo_strength >= 0,—,Pending
+TC-COMP-014,Comparative Analysis,ScoringEngine,Positive,All expected score keys present in result,Standard input data,"1. Call calculate_all_scores()
+2. Verify keys",on_page_score / technical_score / authority_score / content_depth_score / overall_seo_strength all present,—,Pending
+TC-COMP-015,Comparative Analysis,GapAnalyzer,Positive,analyze_gaps() returns dict with valid LLM response,GapAnalyzer with mocked client returning JSON completion,"1. Call analyze_gaps with primary and competitor scores",Returns dict; no exception,—,Pending
+TC-COMP-016,Comparative Analysis,GapAnalyzer,Negative,LLM error handled gracefully,GapAnalyzer with client.create() raising Exception('LLM unavailable'),"1. Call analyze_gaps()",Returns dict or raises; no unhandled crash,—,Pending
+TC-COMP-017,Comparative Analysis,GapAnalyzer,Edge,Equal scores comparison returns valid result,Both primary and competitor scores = 75,"1. Call analyze_gaps with equal scores",Returns dict; no exception,—,Pending
+TC-COMP-018,Comparative Analysis,ComparisonOrchestrator,Positive,Orchestrator stores URLs correctly,None,"1. Create ComparisonOrchestrator('https://primary.com' 'https://comp.com' 'keyword')",orch.url_primary / url_competitor / target_keyword match inputs,—,Pending
+TC-COMP-019,Comparative Analysis,ComparisonOrchestrator,Edge,Orchestrator with no keyword stores None,None,"1. Create ComparisonOrchestrator('https://primary.com' 'https://comp.com')",orch.target_keyword is None,—,Pending
+TC-COMP-020,Comparative Analysis,ComparisonOrchestrator,Positive,All layers initialized on construction,None,"1. Create ComparisonOrchestrator
+2. Check all layer attributes",data_extractor / semantic_analyzer / technical_analyzer / authority_analyzer / scoring_engine / gap_analyzer all not None,—,Pending
+TC-E2E-001,End-to-End,New User Journey,Positive,Register then login and verify signal-created subscription,No existing user with username journey_user; default tiers created,"1. POST /register/ with valid data
+2. Query User / Subscription / UsageTracker",User created; Subscription exists; UsageTracker exists,—,Pending
+TC-E2E-002,End-to-End,New User Journey,Positive,Free trial first audit is allowed,User with free subscription; free_audit_used=False; Website_Audit mocked,"1. Force login
+2. POST /show/ with url=https://example.com",HTTP 200; audit result displayed,—,Pending
+TC-E2E-003,End-to-End,New User Journey,Negative,Second audit gates to pricing page,User with free subscription; free_audit_used=True; audits_used=1,"1. Force login
+2. POST /show/ with url=https://example.com
+3. Follow redirects","Final redirect URL contains 'pricing' or HTTP 200 on pricing page",—,Pending
+TC-E2E-004,End-to-End,Paid User Journey,Positive,Full audit + PDF download flow for basic user,User with basic subscription; Website_Audit mocked; report generator mocked,"1. POST /show/ with url=https://example.com
+2. Set cache with audit result
+3. GET /report/download/?url=https://example.com",Both requests return HTTP 200,—,Pending
+TC-E2E-005,End-to-End,Paid User Journey,Negative,Free user blocked from PDF download,User with free subscription; free_audit_used=True,"1. GET /report/download/
+3. Follow redirects","Redirect to pricing page or HTTP 200 on pricing; PDF not downloaded",—,Pending
+TC-E2E-006,End-to-End,Paid User Journey,Positive,Usage counter increments after audit,User with Pro subscription; tracker.audits_used=initial,"1. Call tracker.record_audit()
+2. Refresh from DB",audits_used_this_month = initial + 1,—,Pending
+TC-E2E-007,End-to-End,Admin Payment Journey,Positive,Full payment verification cycle activates subscription,Admin user; user has free subscription; pending payment submission for Pro,"1. POST /subscriptions/admin/verify-payment/{id}/
+2. Query Subscription",HTTP 200; subscription.status='active'; tier='pro',—,Pending
+TC-E2E-008,End-to-End,Admin Payment Journey,Negative,Rejected payment does not activate subscription,Admin user; pending submission; user still on free_trial_used status,"1. POST /subscriptions/admin/reject-payment/{id}/ with notes
+2. Query submission and subscription","submission.status='rejected'; subscription.status unchanged ('free_trial_used')",—,Pending
+TC-E2E-009,End-to-End,Comparative Analysis Journey,Positive,Full comparison creates report and shows results,Pro user; ComparisonOrchestrator mocked; DB available,"1. POST /comparative-analysis/analyze/ with primary/competitor URLs
+2. Check ComparisonReport count",HTTP 200; ComparisonReport.objects.count() >= initial_count,—,Pending
+TC-E2E-010,End-to-End,Comparative Analysis Journey,Positive,Results page loads for existing report,Authenticated user; sample_comparison_report in DB,"1. GET /comparative-analysis/results/{report.id}/",HTTP 200,—,Pending
+TC-E2E-011,End-to-End,Monthly Reset Journey,Positive,Usage resets to 0 after period end,User with basic subscription; audits=8; last_reset=35 days ago,"1. Call tracker.reset_if_needed()
+2. Refresh from DB",audits_used_this_month = 0,—,Pending
+TC-E2E-012,End-to-End,Monthly Reset Journey,Positive,Usage history archived before reset,User with basic subscription; audits=9; last_reset=35 days ago,"1. Call tracker.reset_if_needed()
+2. Refresh from DB",usage_history not None and len > 0,—,Pending
+TC-E2E-013,End-to-End,Monthly Reset Journey,Positive,Post-reset first audit counted as 1,User with basic subscription; counter reset just ran,"1. Call tracker.reset_if_needed()
+2. Call tracker.record_audit()
+3. Refresh from DB",audits_used_this_month = 1,—,Pending
+TC-E2E-014,End-to-End,Monthly Reset Journey,Negative,Expired subscription blocks usage after trial used,User with canceled subscription; free_audit_used=True,"1. Call SubscriptionService.can_use_feature(user 'audit')",Returns (False reason),—,Pending
+TC-E2E-015,End-to-End,Keyword Feedback Journey,Positive,Suggest keywords then accept feedback (API flow),Pro user; pipeline mocked to return keywords; KeywordOpportunity in DB,"1. POST /api/keywords/v2/ with url
+2. POST /api/keywords/feedback/ with accepted action",Both requests complete without 500; opportunity feedback recorded,—,Pending
+TC-E2E-016,End-to-End,Keyword History Journey,Positive,Keyword history reflects past analysis,Pro user; sample_content_analysis in DB,"1. GET /api/keywords/opportunities/?url={analysis.url}",HTTP 200/302/404; no 500,—,Pending

@@ -110,10 +110,14 @@ def _search_with_pgvector(
         
         results = []
         for analysis in similar_analyses:
+            # Convert cosine distance to similarity: similarity = 1 - distance
+            # Clamp to [0, 1] since distance can be up to 2 for opposite vectors
+            raw_similarity = max(0.0, 1 - analysis.distance)
+            
             result = {
                 'url': analysis.url,
                 'quality_score': analysis.quality_score,
-                'similarity_score': 1 - analysis.distance,  # Convert distance to similarity
+                'similarity_score': raw_similarity,
                 'analyzed_at': analysis.analyzed_at.isoformat() if analysis.analyzed_at else None,
                 'title': analysis.title,
             }

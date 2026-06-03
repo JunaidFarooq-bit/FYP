@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+{% load static %}
+<head>
+  <title>{% block title %}WebLift - AI-Powered SEO{% endblock %}</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+  <link rel="icon" type="image/ico" href="{% static 'favicon-1.ico' %}" />
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
+
+  <!-- Bootstrap CSS -->
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" />
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" />
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="{% static 'fyp.css' %}" />
+  <link rel="stylesheet" href="{% static 'modern-style.css' %}" />
+  <link rel="stylesheet" href="{% static 'dashboard-integrated.css' %}" />
+
+  {% block extra_css %}{% endblock %}
+</head>
+
+<body>
+  <!-- Sidebar Navigation -->
+  <header>
+    <nav id="sidebarMenu" class="sidebar collapse d-lg-block" aria-label="Main navigation">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">
+          <img src="{% static 'logo.png' %}" alt="WEB LIFT Logo" />
+          <h5>WEB LIFT</h5>
+        </div>
+      </div>
+      {% include 'partials/_sidebar.html' with active_page=active_page|default:'' %}
+    </nav>
+
+    <!-- Top Navbar -->
+    <nav id="main-navbar" class="navbar navbar-expand-lg fixed-top" role="navigation">
+      <div class="navbar-container">
+        <button class="navbar-toggler" id="navbar-toggle" type="button"
+          aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle navigation"
+          onclick="navbar()">
+          <i class="fas fa-bars"></i>
+        </button>
+
+        <form name="myForm" id="myForm" action="/show/" method="post" class="navbar-search">
+          {% csrf_token %}
+          <div class="search-wrapper">
+            <div class="search-input-group">
+              <i class="fas fa-search search-icon"></i>
+              <input placeholder="Enter website URL to analyze..." name="fname"
+                autocomplete="on" type="search" id="id_url" class="search-input"
+                aria-label="Website URL" />
+            </div>
+            <div class="navbar-actions">
+              <button id="analyzeBtn" onclick="myFunction()" class="btn btn-primary" type="submit">
+                <i class="fas fa-search-plus"></i>
+                <span>Analyze</span>
+              </button>
+              <a class="btn btn-primary" href="{% url 'Home' %}">
+                <i class="fas fa-redo"></i>
+                <span>New URL</span>
+              </a>
+              <!-- Profile Dropdown -->
+              {% include 'partials/_profile_dropdown.html' %}
+            </div>
+          </div>
+        </form>
+      </div>
+    </nav>
+  </header>
+
+  <!-- Main Content Area -->
+  <main class="main-content">
+    <!-- Alert Messages -->
+    {% if messages %}
+      {% for message in messages %}
+      <div class="alert alert-modern alert-{{ message.tags }}" id="msg" role="alert">
+        <div class="alert-content">
+          <i class="fas {% if message.tags == 'success' %}fa-check-circle{% else %}fa-exclamation-circle{% endif %}"></i>
+          <span>{{ message }}</span>
+        </div>
+        <button class="alert-close" onclick="this.parentElement.remove()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      {% endfor %}
+    {% endif %}
+
+    <div class="container-fluid content-wrapper px-2 px-md-3">
+      {% block content %}{% endblock %}
+    </div>
+  </main>
+
+  <!-- Bootstrap JS -->
+  <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+
+  <script>
+    function navbar() {
+      var sidebar = document.getElementById('sidebarMenu');
+      if (sidebar) sidebar.classList.toggle('show');
+    }
+    function myFunction() {
+      var loader = document.getElementById('loader');
+      if (loader) loader.style.display = 'flex';
+    }
+    // Profile dropdown toggle handled by _profile_dropdown.html partial
+  </script>
+
+  {% block extra_js %}{% endblock %}
+  {% include 'partials/_upgrade_modal.html' %}
+</body>
+</html>

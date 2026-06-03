@@ -1,0 +1,172 @@
+@startuml WebLift_ERD
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam linetype ortho
+
+title WebLift - Entity Relationship Diagram
+
+' === ENTITIES ===
+entity "User" as User {
+    * id : Integer <<PK>>
+    --
+    * username : String
+    * email : String
+    * password : String
+    * is_active : Boolean
+    * date_joined : DateTime
+}
+
+entity "Profile" as Profile {
+    * id : Integer <<PK>>
+    --
+    * user_id : Integer <<FK>>
+    * forget_password_token : String
+    * created_at : DateTime
+}
+
+entity "SubscriptionTier" as Tier {
+    * id : Integer <<PK>>
+    --
+    * name : String
+    * display_name : String
+    * price_monthly : Decimal
+    * price_yearly : Decimal
+    * max_audits_per_month : Integer
+    * max_keywords_per_analysis : Integer
+    * has_ai_suggestions : Boolean
+    * has_competitor_analysis : Boolean
+    * has_pdf_export : Boolean
+    * has_api_access : Boolean
+}
+
+entity "Subscription" as Sub {
+    * id : Integer <<PK>>
+    --
+    * user_id : Integer <<FK>>
+    * tier_id : Integer <<FK>>
+    * status : String
+    * billing_cycle : String
+    * current_period_start : DateTime
+    * current_period_end : DateTime
+}
+
+entity "UsageTracker" as Usage {
+    * id : Integer <<PK>>
+    --
+    * user_id : Integer <<FK>>
+    * audits_used_this_month : Integer
+    * keywords_generated_this_month : Integer
+    * free_audit_used : Boolean
+}
+
+entity "PaymentRecord" as Payment {
+    * id : Integer <<PK>>
+    --
+    * user_id : Integer <<FK>>
+    * subscription_id : Integer <<FK>>
+    * amount : Decimal
+    * status : String
+    * created_at : DateTime
+}
+
+entity "ManualPaymentSubmission" as ManualPay {
+    * id : Integer <<PK>>
+    --
+    * user_id : Integer <<FK>>
+    * tier_id : Integer <<FK>>
+    * amount : Decimal
+    * status : String
+    * sender_name : String
+}
+
+entity "ContentAnalysis" as Content {
+    * id : Integer <<PK>>
+    --
+    * url : URL
+    * content_hash : String
+    * title : String
+    * word_count : Integer
+    * quality_score : Float
+    * analyzed_at : DateTime
+}
+
+entity "KeywordOpportunity" as Keyword {
+    * id : Integer <<PK>>
+    --
+    * content_analysis_id : Integer <<FK>>
+    * keyword : String
+    * keyword_type : String
+    * relevance_score : Float
+    * search_intent : String
+    * priority : String
+}
+
+entity "SuggestionFeedback" as Feedback {
+    * id : Integer <<PK>>
+    --
+    * opportunity_id : Integer <<FK>>
+    * user_action : String
+    * rating : Integer
+    * timestamp : DateTime
+}
+
+entity "CompetitorAnalysis" as Competitor {
+    * id : Integer <<PK>>
+    --
+    * user_content_id : Integer <<FK>>
+    * competitor_url : URL
+    * competitor_title : String
+}
+
+entity "GapAnalysis" as Gap {
+    * id : Integer <<PK>>
+    --
+    * content_analysis_id : Integer <<FK>>
+    * total_gap_opportunities : Integer
+}
+
+entity "ComparisonReport" as Compare {
+    * id : Integer <<PK>>
+    --
+    * url_primary : URL
+    * url_competitor : URL
+    * target_keyword : String
+    * gap_summary : Text
+    * created_at : DateTime
+}
+
+' === RELATIONSHIPS ===
+User ||--|| Profile : has
+User ||--|| Sub : has
+User ||--|| Usage : has
+User ||--o{ Payment : makes
+User ||--o{ ManualPay : submits
+
+Sub }|--|| Tier : belongs to
+
+Content ||--o{ Keyword : generates
+Content ||--|| Gap : has
+Content ||--o{ Competitor : analyzes
+
+Keyword ||--o{ Feedback : receives
+
+' === NOTES ===
+note right of User
+  Django built-in auth user
+  Extended via 1:1 Profile
+end note
+
+note right of Content
+  Core entity for keyword AI
+  Stores crawled content analysis
+end note
+
+note bottom of Sub
+  Subscription tiers:
+  - Free (1 audit)
+  - Basic ($9/mo)
+  - Pro ($29/mo)  
+  - Enterprise ($99/mo)
+end note
+
+@enduml

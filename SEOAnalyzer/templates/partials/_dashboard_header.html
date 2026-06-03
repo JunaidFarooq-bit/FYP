@@ -1,37 +1,40 @@
 {% comment %}
-  Dashboard Header Component
-  Displays domain info, analysis timestamp, and overall score ring
+  SEO health score card with stitched theme visuals.
+  Keeps existing score ring classes for script compatibility.
 {% endcomment %}
 
-<div class="dashboard-header">
-  <div class="header-domain-info">
-    <h1>{{ url|default:"Website Analysis" }}</h1>
-    <div class="header-meta">
-      <span>
+<div class="score-health-card">
+  <div class="score-health-intro">
+    <p class="eyebrow-pill">Current analysis</p>
+    <h2>{{ url|default:"Website Analysis" }}</h2>
+    <ul class="score-health-meta">
+      <li>
         <i class="far fa-clock"></i>
-        Analyzed: {{ analysis_time|default:"Just now" }}
-      </span>
-      {% if ttfb %}
-      <span>
-        <i class="fas fa-bolt"></i>
-        TTFB: {{ ttfb }}s
-      </span>
+        {{ analysis_time|default:"Just now" }}
+      </li>
+      {% if final_url %}
+      <li>
+        <i class="fas fa-link"></i>
+        {{ final_url }}
+      </li>
       {% endif %}
-      <span>
-        <i class="fas fa-mobile-alt"></i>
-        {{ mobile_optimized|yesno:"Mobile Ready,Needs Mobile Optimization" }}
-      </span>
-    </div>
+      {% if status %}
+      <li>
+        <i class="fas fa-check-circle"></i>
+        {{ status|default:"Unknown" }}
+      </li>
+      {% endif %}
+    </ul>
   </div>
-  
+
   <div class="header-score">
     <div class="score-ring-container">
-      <svg class="score-ring-svg" viewBox="0 0 140 140">
+      <svg class="score-ring-svg" viewBox="0 0 140 140" role="img" aria-label="Overall SEO health score">
         <circle class="score-ring-bg" cx="70" cy="70" r="60"></circle>
-        <circle 
-          class="score-ring-fill" 
-          cx="70" 
-          cy="70" 
+        <circle
+          class="score-ring-fill"
+          cx="70"
+          cy="70"
           r="60"
           stroke-dasharray="377"
           stroke-dashoffset="{{ score_ring_offset|default:94 }}"
@@ -40,13 +43,28 @@
       </svg>
       <div class="score-ring-value">
         <div class="value">{{ avg_score|default:"75" }}</div>
-        <div class="label">Overall</div>
+        <div class="label">Health</div>
       </div>
     </div>
     <span class="score-verdict">{{ optimization_level|default:"Good" }}</span>
   </div>
-</div>
 
-{{comment}}
-  Score ring animation is handled by the main template script to avoid duplication.
-{{endcomment}}
+  <div class="score-chip-row">
+    {% if ttfb %}
+    <span class="score-chip">
+      <i class="fas fa-bolt"></i>
+      TTFB {{ ttfb }}s
+    </span>
+    {% endif %}
+    <span class="score-chip">
+      <i class="fas fa-mobile-alt"></i>
+      {{ mobile_optimized|yesno:"Mobile ready,Needs mobile love" }}
+    </span>
+    {% if status_code %}
+    <span class="score-chip">
+      <i class="fas fa-signal"></i>
+      {{ status_code }} status
+    </span>
+    {% endif %}
+  </div>
+</div>

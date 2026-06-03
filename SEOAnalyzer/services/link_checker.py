@@ -255,7 +255,7 @@ class BrokenLinkChecker:
         try:
             url_domain = urlparse(url).netloc.lower().replace('www.', '')
             link_type = "internal" if url_domain == self.domain else "external"
-        except:
+        except (ValueError, TypeError):
             link_type = "external"
         
         try:
@@ -267,7 +267,7 @@ class BrokenLinkChecker:
                 if response.status_code in (405, 501):
                     response = self.session.get(url, timeout=timeout, allow_redirects=True, stream=True)
                     response.close()
-            except:
+            except requests.exceptions.RequestException:
                 response = self.session.get(url, timeout=timeout, allow_redirects=True, stream=True)
                 response.close()
             

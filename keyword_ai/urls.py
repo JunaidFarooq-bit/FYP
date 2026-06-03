@@ -5,6 +5,7 @@ urlpatterns = [
     # Original endpoints
     path("", views.keyword_suggestions, name="keyword_suggestions"),
     path("v2/", views.keyword_suggestions_v2, name="keyword_suggestions_v2"),
+    path("traffic-analysis/", views.analyze_traffic_signals, name="analyze_traffic_signals"),
     path("streaming/", views.keyword_suggestions_streaming, name="keyword_suggestions_streaming"),
     path("feedback/", views.submit_feedback, name="submit_feedback"),
     path("opportunities/", views.get_opportunities, name="get_opportunities"),

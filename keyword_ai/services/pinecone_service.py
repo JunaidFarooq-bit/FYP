@@ -23,7 +23,10 @@ import logging
 from typing import List, Dict, Optional, Any
 from django.conf import settings
 from django.db import connection
+from django.core.cache import cache
 import numpy as np
+
+from .model_manager import get_embedding_model
 
 logger = logging.getLogger(__name__)
 

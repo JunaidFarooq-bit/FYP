@@ -1,0 +1,29 @@
+# Railway Nixpacks Configuration
+# https://nixpacks.com/docs/configuration/file
+
+[phases.build]
+# Install dependencies and collect static files
+cmds = [
+    "pip install -r requirements.txt",
+    "python manage.py collectstatic --noinput",
+]
+
+[phases.setup]
+# Use Python 3.12
+nixPkgs = ["python312", "postgresql", "redis"]
+
+[phases.deploy]
+# Run migrations and start Gunicorn
+cmds = [
+    "python manage.py migrate --noinput",
+    "gunicorn Project.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers 2 --threads 4 --timeout 60 --access-logfile - --error-logfile -",
+]
+
+[start]
+cmd = "gunicorn Project.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers 2 --threads 4 --timeout 60 --access-logfile - --error-logfile -"
+
+[variables]
+PYTHON_VERSION = "3.12"
+PIP_DISABLE_PIP_VERSION_CHECK = "1"
+PYTHONDONTWRITEBYTECODE = "1"
+PYTHONUNBUFFERED = "1"

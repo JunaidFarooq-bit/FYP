@@ -1,0 +1,403 @@
+:root {
+  --stitch-bg: #f4f6fb;
+  --stitch-shell: #edf1fb;
+  --stitch-deep-blue: #0f1f3d;
+  --stitch-indigo: #1f2c74;
+  --stitch-primary: #4f5af7;
+  --stitch-primary-dark: #2f3ac4;
+  --stitch-lilac: #a3a9ff;
+  --stitch-emerald: #1ecad3;
+  --stitch-good: #2dd4bf;
+  --stitch-warn: #fbbf24;
+  --stitch-risk: #f87171;
+  --stitch-card: #ffffff;
+  --stitch-border: #e4e8f7;
+  --font-hero: "Space Grotesk", "Outfit", "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+body.stitch-shell {
+  background: linear-gradient(135deg, #eef1fc 0%, #f8fbff 100%);
+  font-family: "Outfit", "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #0f172a;
+}
+
+.stitch-page {
+  padding: 120px 24px 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.stitch-navbar {
+  background: rgba(255, 255, 255, 0.95);
+  border-bottom: 1px solid var(--stitch-border);
+  box-shadow: 0 10px 30px rgba(20, 27, 69, 0.08);
+  backdrop-filter: blur(12px);
+}
+
+.stitch-navbar .navbar-page-context {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stitch-navbar h4 {
+  font-family: var(--font-hero);
+  font-weight: 600;
+  margin: 0;
+  color: var(--stitch-deep-blue);
+}
+
+.eyebrow-pill {
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #6b7bba;
+  background: rgba(79, 90, 247, 0.1);
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.stitch-main {
+  position: relative;
+}
+
+.audit-hero {
+  background: var(--stitch-card);
+  border-radius: 28px;
+  padding: 32px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 32px;
+  box-shadow: 0 30px 60px rgba(31, 44, 116, 0.12);
+}
+
+.audit-hero h1 {
+  font-family: var(--font-hero);
+  font-weight: 600;
+  font-size: clamp(1.75rem, 3vw, 2.6rem);
+  margin: 8px 0 12px;
+  color: var(--stitch-deep-blue);
+}
+
+.audit-hero p {
+  margin: 0;
+  color: #4a577d;
+  line-height: 1.6;
+}
+
+.audit-url-form {
+  background: #f7f9ff;
+  border-radius: 20px;
+  padding: 24px;
+  border: 1px solid var(--stitch-border);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.audit-url-form label {
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  color: #6b7bba;
+}
+
+.audit-form-fields {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.input-pill {
+  flex: 1;
+  min-width: 220px;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 1px solid var(--stitch-border);
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.input-pill input {
+  border: none;
+  width: 100%;
+  font-size: 0.95rem;
+  padding: 14px 4px;
+  outline: none;
+  background: transparent;
+}
+
+.audit-url-form .btn.btn-primary {
+  background: linear-gradient(135deg, var(--stitch-primary) 0%, var(--stitch-primary-dark) 100%);
+  border: none;
+  border-radius: 999px;
+  padding: 14px 24px;
+  font-weight: 600;
+  box-shadow: 0 10px 20px rgba(79, 90, 247, 0.35);
+}
+
+.form-hint {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: #5b678f;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.form-hint a {
+  color: var(--stitch-primary-dark);
+  font-weight: 600;
+}
+
+.audit-health-grid {
+  display: grid;
+  grid-template-columns: 2fr 1.2fr;
+  gap: 24px;
+}
+
+.stitch-score-wrapper {
+  background: linear-gradient(135deg, var(--stitch-indigo) 0%, #1b2661 100%);
+  box-shadow: 0 30px 50px rgba(18, 29, 74, 0.4);
+}
+
+.score-health-card h2 {
+  font-family: var(--font-hero);
+  font-size: 1.6rem;
+  color: #fff;
+  margin-bottom: 8px;
+}
+
+.score-health-intro {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.score-health-meta {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 0.85rem;
+}
+
+.score-health-meta i {
+  margin-right: 6px;
+}
+
+.score-chip-row {
+  margin-top: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.score-chip {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #fff;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.audit-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.metric-card {
+  background: var(--stitch-card);
+  border-radius: 20px;
+  padding: 20px;
+  border: 1px solid var(--stitch-border);
+  box-shadow: 0 15px 25px rgba(15, 23, 42, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.metric-card .metric-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: var(--stitch-primary);
+}
+
+.metric-card.metric-good .metric-icon { background: var(--stitch-good); }
+.metric-card.metric-warn .metric-icon { background: var(--stitch-warn); }
+.metric-card.metric-risk .metric-icon { background: var(--stitch-risk); }
+
+.metric-card .metric-label {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #6b7bba;
+}
+
+.metric-card .metric-value {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--stitch-deep-blue);
+}
+
+.metric-card .metric-value small {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #94a3c7;
+  margin-left: 4px;
+}
+
+.metric-status {
+  font-size: 0.9rem;
+  color: #4c5783;
+}
+
+.content-diagnostics {
+  background: var(--stitch-card);
+  border-radius: 28px;
+  padding: 32px;
+  border: 1px solid var(--stitch-border);
+  box-shadow: 0 20px 60px rgba(14, 23, 53, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.content-diagnostics header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.content-diagnostics h2 {
+  margin: 8px 0 0;
+  font-family: var(--font-hero);
+  color: var(--stitch-deep-blue);
+}
+
+.section-hint {
+  color: #7b86b2;
+  margin: 0;
+}
+
+.diagnostic-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 18px;
+}
+
+.diagnostic-card {
+  border: 1px solid var(--stitch-border);
+  border-radius: 22px;
+  padding: 18px;
+  background: #ffffff;
+  display: flex;
+  gap: 14px;
+  box-shadow: 0 12px 30px rgba(13, 18, 48, 0.08);
+}
+
+.diagnostic-card .card-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  background: rgba(79, 90, 247, 0.1);
+  color: var(--stitch-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+}
+
+.diagnostic-card.state-good .card-icon { background: rgba(45, 212, 191, 0.16); color: var(--stitch-good); }
+.diagnostic-card.state-warn .card-icon { background: rgba(251, 191, 36, 0.18); color: var(--stitch-warn); }
+.diagnostic-card.state-risk .card-icon { background: rgba(248, 113, 113, 0.18); color: var(--stitch-risk); }
+
+.diagnostic-card h3 {
+  margin: 0 0 6px;
+  font-size: 1rem;
+  color: var(--stitch-deep-blue);
+}
+
+.diagnostic-card p {
+  margin: 0;
+  color: #4a577d;
+}
+
+.card-meta {
+  margin-top: 8px;
+  font-size: 0.85rem;
+  color: #7d88b4;
+}
+
+.card-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.card-chips span {
+  background: rgba(15, 23, 42, 0.05);
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #4b59ac;
+}
+
+.heading-metrics {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+  display: flex;
+  gap: 10px;
+  color: #4a577d;
+}
+
+.badge {
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.badge.good { background: rgba(45, 212, 191, 0.15); color: var(--stitch-good); }
+.badge.risk { background: rgba(248, 113, 113, 0.15); color: var(--stitch-risk); }
+
+.audit-deep-dive {
+  margin-top: 8px;
+}
+
+@media (max-width: 992px) {
+  .audit-health-grid { grid-template-columns: 1fr; }
+  .stitch-page { padding: 100px 16px 48px; }
+}
+
+@media (max-width: 640px) {
+  .audit-hero {
+    padding: 24px;
+    border-radius: 22px;
+  }
+  .content-diagnostics { padding: 24px; }
+  .dashboard-container .btn.btn-primary {
+    width: 100%;
+  }
+}

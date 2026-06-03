@@ -1,10 +1,10 @@
 {% comment %}
   KPI Cards - Bootstrap Grid Version
-  Clean, elegant cards using Bootstrap 4 grid
+  Clean, elegant cards using Bootstrap 4 grid - Enhanced for mobile
 {% endcomment %}
 
 <!-- Page Speed -->
-<div class="col-lg-2 col-md-4 col-6 mb-3">
+<div class="col-6 col-md-4 col-lg-2 mb-3">
   <div class="kpi-card {% if ttfb <= 0.8 %}success{% elif ttfb <= 1.8 %}warning{% else %}danger{% endif %}">
     <div class="kpi-label">
       <i class="fas fa-bolt"></i> Page Speed
@@ -18,7 +18,7 @@
 </div>
 
 <!-- Link Health -->
-<div class="col-lg-2 col-md-4 col-6 mb-3">
+<div class="col-6 col-md-4 col-lg-2 mb-3">
   <div class="kpi-card {% if b_links == 0 %}success{% elif b_links <= 5 %}warning{% else %}danger{% endif %}">
     <div class="kpi-label">
       <i class="fas fa-link"></i> Link Health
@@ -36,7 +36,7 @@
 </div>
 
 <!-- Image Optimization -->
-<div class="col-lg-2 col-md-4 col-6 mb-3">
+<div class="col-6 col-md-4 col-lg-2 mb-3">
   <div class="kpi-card {% if image_optimization >= 80 %}success{% elif image_optimization >= 50 %}warning{% else %}danger{% endif %}">
     <div class="kpi-label">
       <i class="fas fa-image"></i> Images
@@ -50,7 +50,7 @@
 </div>
 
 <!-- Heading Structure -->
-<div class="col-lg-2 col-md-4 col-6 mb-3">
+<div class="col-6 col-md-4 col-lg-2 mb-3">
   <div class="kpi-card {% if h1_count == 1 and h2_count >= 3 %}success{% elif h1_count == 1 %}warning{% else %}danger{% endif %}">
     <div class="kpi-label">
       <i class="fas fa-heading"></i> Headings
@@ -72,7 +72,7 @@
 </div>
 
 <!-- Content Volume -->
-<div class="col-lg-2 col-md-4 col-6 mb-3">
+<div class="col-6 col-md-4 col-lg-2 mb-3">
   <div class="kpi-card {% if total_words >= 500 %}success{% elif total_words >= 300 %}warning{% else %}info{% endif %}">
     <div class="kpi-label">
       <i class="fas fa-file-word"></i> Content
@@ -96,7 +96,7 @@
 </div>
 
 <!-- Grammar Score -->
-<div class="col-lg-2 col-md-4 col-6 mb-3">
+<div class="col-6 col-md-4 col-lg-2 mb-3">
   <div class="kpi-card {% if grammar_score >= 90 %}success{% elif grammar_score >= 75 %}warning{% else %}danger{% endif %}">
     <div class="kpi-label">
       <i class="fas fa-spell-check"></i> Grammar
@@ -105,22 +105,22 @@
       <div class="grammar-score-badge {% if grammar_score >= 90 %}success{% elif grammar_score >= 75 %}warning{% else %}danger{% endif %}">
         {{ grammar_score|default:"--" }}
       </div>
-      <div class="ml-2" style="flex: 1;">
-        <div class="d-flex justify-content-between" style="font-size: 0.6875rem;">
-          <span style="color: #64748b;">Spelling</span>
+      <div class="ml-2 flex-grow-1">
+        <div class="d-flex justify-content-between font-small">
+          <span class="text-muted">Spelling</span>
           <span class="{% if spelling_errors %}text-danger{% else %}text-success{% endif %}">
             {% if spelling_errors %}<i class="fas fa-times"></i>{% else %}<i class="fas fa-check"></i>{% endif %}
           </span>
         </div>
-        <div class="d-flex justify-content-between" style="font-size: 0.6875rem;">
-          <span style="color: #64748b;">Grammar</span>
+        <div class="d-flex justify-content-between font-small">
+          <span class="text-muted">Grammar</span>
           <span class="{% if grammar_issues %}text-danger{% else %}text-success{% endif %}">
             {% if grammar_issues %}<i class="fas fa-times"></i>{% else %}<i class="fas fa-check"></i>{% endif %}
           </span>
         </div>
       </div>
     </div>
-    <span class="kpi-status {% if grammar_score >= 90 %}success{% elif grammar_score >= 75 %}warning{% else %}danger{% endif %}" style="margin-top: 0.5rem;">
+    <span class="kpi-status {% if grammar_score >= 90 %}success{% elif grammar_score >= 75 %}warning{% else %}danger{% endif %} mt-2">
       {% if grammar_score >= 90 %}<i class="fas fa-check-circle"></i> Excellent{% elif grammar_score >= 75 %}<i class="fas fa-exclamation-circle"></i> Good{% else %}<i class="fas fa-times-circle"></i> Issues{% endif %}
     </span>
     <div class="kpi-detail">Writing quality score</div>

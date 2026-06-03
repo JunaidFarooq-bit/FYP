@@ -145,7 +145,8 @@ def extract_tfidf_keywords(text: str, top_n: int = 20) -> List[Dict]:
         stopwords = {'the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'can', 'had', 'her', 'was', 'one', 'our', 'out', 'day', 'get', 'has', 'him', 'his', 'how', 'man', 'new', 'now', 'old', 'see', 'two', 'way', 'who', 'boy', 'did', 'its', 'let', 'put', 'say', 'she', 'too', 'use'}
         filtered_words = [w for w in words if w not in stopwords]
         word_freq = Counter(filtered_words)
-        return [{"keyword": word, "tfidf_score": round(freq / len(words), 4)} 
+        total_words = len(words) if words else 1  # Avoid division by zero
+        return [{"keyword": word, "tfidf_score": round(freq / total_words, 4)} 
                 for word, freq in word_freq.most_common(top_n)]
     
     try:
@@ -229,7 +230,7 @@ def calculate_content_quality_score(readability: Dict, structure: Dict, text: st
     return round(min(100, max(0, score)), 2)
 
 
-def analyze_content(text: str, url: str = None) -> Dict:
+def analyze_content(text: str, url: str = None, content_embedding=None) -> Dict:
     """
     Main content analysis function.
     Performs comprehensive analysis of content.
@@ -237,6 +238,7 @@ def analyze_content(text: str, url: str = None) -> Dict:
     Args:
         text: The content text to analyze
         url: Optional URL for context
+        content_embedding: Pre-computed embedding to avoid redundant encoding
         
     Returns:
         Dict with all analysis results
@@ -254,12 +256,15 @@ def analyze_content(text: str, url: str = None) -> Dict:
     structure = analyze_content_structure(text)
     quality_score = calculate_content_quality_score(readability, structure, text)
     
-    # Get semantic embedding
-    try:
-        embedding = get_single_embedding(text[:1000])  # Limit to first 1000 chars for speed
-        embedding_vector = embedding.tolist()
-    except Exception:
-        embedding_vector = None
+    # Use pre-computed embedding if available, otherwise compute one
+    if content_embedding is not None:
+        embedding_vector = content_embedding.tolist() if hasattr(content_embedding, 'tolist') else list(content_embedding)
+    else:
+        try:
+            embedding = get_single_embedding(text[:1000])
+            embedding_vector = embedding.tolist()
+        except Exception:
+            embedding_vector = None
     
     return {
         "url": url,

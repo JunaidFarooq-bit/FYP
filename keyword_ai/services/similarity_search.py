@@ -1,17 +1,20 @@
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 from .embeddings import get_embeddings
+from keyword_ai.utils.year_injector import current_year
 
 
 # A small built-in seed vocabulary for expansion.
 # In production you can replace this with a loaded CSV word list.
-SEED_VOCABULARY = [
-    "best", "top", "cheap", "affordable", "buy", "review", "guide",
-    "how to", "tutorial", "vs", "comparison", "alternative", "near me",
-    "online", "free", "download", "software", "tool", "service", "price",
-    "example", "template", "tips", "strategy", "2026", "beginner",
-    "advanced", "professional", "course", "learn",
-]
+def _get_seed_vocabulary() -> list[str]:
+    """Return vocabulary with dynamic current year."""
+    return [
+        "best", "top", "cheap", "affordable", "buy", "review", "guide",
+        "how to", "tutorial", "vs", "comparison", "alternative", "near me",
+        "online", "free", "download", "software", "tool", "service", "price",
+        "example", "template", "tips", "strategy", str(current_year()), "beginner",
+        "advanced", "professional", "course", "learn",
+    ]
 
 
 def expand_keywords(
@@ -27,20 +30,22 @@ def expand_keywords(
     Returns a list of dicts sorted by similarity score (descending).
     """
     if vocabulary is None:
-        vocabulary = SEED_VOCABULARY
+        vocabulary = _get_seed_vocabulary()
 
     if not seed_keywords or not vocabulary:
         return []
 
+    # Limit seeds to top 10 to keep candidate count manageable
+    seed_keywords = seed_keywords[:10]
+
     # Build candidate phrases by combining seeds + modifiers
-    candidates = []
+    candidates_set = set()
     for seed in seed_keywords:
         for modifier in vocabulary:
-            candidates.append(f"{seed} {modifier}")
-            candidates.append(f"{modifier} {seed}")
+            candidates_set.add(f"{seed} {modifier}")
+            candidates_set.add(f"{modifier} {seed}")
 
-    # Deduplicate
-    candidates = list(set(candidates))
+    candidates = list(candidates_set)
 
     # Encode everything
     seed_embeddings = get_embeddings(seed_keywords)       # (n_seeds, 384)

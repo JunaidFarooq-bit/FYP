@@ -1,0 +1,152 @@
+{% extends 'base.html' %}
+{% load subscription_tags %}
+
+{% block title %}Payment Instructions - {{ tier.display_name }} - WebLift{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <!-- Header -->
+            <div class="text-center mb-4">
+                <h1 class="display-5 fw-bold">Complete Your Payment</h1>
+                <p class="lead text-muted">
+                    {{ tier.display_name }} Plan - ${{ amount }}{% if billing_cycle == 'yearly' %}/year{% else %}/month{% endif %}
+                </p>
+            </div>
+
+            <!-- Bank Transfer Instructions -->
+            <div class="card border-primary mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-university"></i> Bank Transfer Instructions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info mb-4">
+                        <strong><i class="fas fa-info-circle"></i> Important:</strong> Use the reference code below so we can match your payment to your account.
+                    </div>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-borderless">
+                            <tbody>
+                                <tr class="bg-light">
+                                    <td class="fw-bold text-primary">Payment Reference (Required)</td>
+                                    <td class="font-monospace fs-5">{{ reference }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">Bank Name</td>
+                                    <td>{{ bank_details.name }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">Account Name</td>
+                                    <td>{{ bank_details.account_name }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">Account Number</td>
+                                    <td class="font-monospace">{{ bank_details.account_number }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">IBAN</td>
+                                    <td class="font-monospace">{{ bank_details.iban }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">SWIFT/BIC Code</td>
+                                    <td class="font-monospace">{{ bank_details.swift_code }}</td>
+                                </tr>
+                                {% if bank_details.branch %}
+                                <tr>
+                                    <td class="fw-bold">Branch</td>
+                                    <td>{{ bank_details.branch }}</td>
+                                </tr>
+                                {% endif %}
+                                <tr class="bg-success bg-opacity-10">
+                                    <td class="fw-bold">Amount to Transfer</td>
+                                    <td class="fs-5 fw-bold">${{ amount }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="alert alert-warning mt-3">
+                        <strong>Please Note:</strong>
+                        <ul class="mb-0">
+                            <li>Include the reference code <strong>{{ reference }}</strong> in your transfer description</li>
+                            <li>Your subscription will be activated within 24 hours of payment verification</li>
+                            <li>You'll receive an email confirmation once activated</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Submit Payment Proof Form -->
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-upload"></i> Submit Payment Proof</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-4">
+                        Already made the transfer? Submit your payment details below so we can verify and activate your subscription faster.
+                    </p>
+                    
+                    <form method="post" action="{% url 'subscriptions:submit_payment_proof' %}" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <input type="hidden" name="tier" value="{{ tier.name }}">
+                        <input type="hidden" name="billing_cycle" value="{{ billing_cycle }}">
+                        <input type="hidden" name="amount" value="{{ amount }}">
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Your Name (as on bank account) *</label>
+                                <input type="text" name="sender_name" class="form-control" required 
+                                       placeholder="John Doe">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Payment Date *</label>
+                                <input type="date" name="payment_date" class="form-control" required>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Last 4 Digits of Account</label>
+                                <input type="text" name="sender_account_last4" class="form-control" 
+                                       maxlength="4" placeholder="1234">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Transaction/Reference Number</label>
+                                <input type="text" name="transaction_reference" class="form-control" 
+                                       placeholder="Transaction ID from bank">
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Proof of Payment (Screenshot/Receipt)</label>
+                            <input type="file" name="proof_document" class="form-control" 
+                                   accept="image/*,.pdf">
+                            <div class="form-text">Upload screenshot or PDF of bank transfer confirmation</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Additional Notes</label>
+                            <textarea name="notes" class="form-control" rows="2" 
+                                      placeholder="Any additional information about your payment"></textarea>
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="fas fa-paper-plane"></i> Submit Payment Proof
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Back to Pricing -->
+            <div class="text-center mt-4">
+                <a href="{% url 'subscriptions:pricing' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Pricing
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

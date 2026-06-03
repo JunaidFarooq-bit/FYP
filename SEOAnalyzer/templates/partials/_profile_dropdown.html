@@ -1,0 +1,89 @@
+<div class="profile-dropdown-wrapper" style="position:relative;display:inline-block;">
+  <button class="btn btn-primary profile-avatar-btn" id="profileDropdownBtn" type="button"
+    onclick="toggleProfileDropdown()" aria-haspopup="true" aria-expanded="false"
+    style="border-radius:50%;width:38px;height:38px;padding:0;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:1rem;background:linear-gradient(135deg,#023761,#0275d8);border:2px solid rgba(255,255,255,0.3);">
+    {{ request.user.username|first|upper }}
+  </button>
+  <div id="profileDropdownMenu" style="display:none;position:absolute;right:0;top:calc(100% + 8px);min-width:260px;background:#fff;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.18);z-index:9999;overflow:hidden;">
+    <div style="background:linear-gradient(135deg,#023761,#0275d8);padding:16px 18px;color:#fff;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:1.2rem;font-weight:700;">
+          {{ request.user.username|first|upper }}
+        </div>
+        <div>
+          <div style="font-weight:600;font-size:0.95rem;">{{ request.user.username }}</div>
+          <div style="font-size:0.78rem;opacity:0.85;">{{ request.user.email }}</div>
+        </div>
+      </div>
+    </div>
+    {% if nav_subscription %}
+    <div style="padding:12px 18px;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:.05em;color:#888 !important;margin-bottom:2px;">Current Plan</div>
+        <div style="font-weight:600;color:#023761 !important;">{{ nav_subscription.tier.display_name }}</div>
+      </div>
+      {% if nav_subscription.is_active %}
+        <span style="background:#d4edda;color:#155724 !important;padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:600;">Active</span>
+      {% elif nav_subscription.status == 'free_trial_used' %}
+        {% if not nav_subscription.usage.free_audit_used %}
+          <span style="background:#fff3cd;color:#856404 !important;padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:600;">Free Trial</span>
+        {% else %}
+          <span style="background:#f8d7da;color:#721c24 !important;padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:600;">Trial Used</span>
+        {% endif %}
+      {% else %}
+        <span style="background:#e2e3e5;color:#383d41 !important;padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:600;">{{ nav_subscription.status|title }}</span>
+      {% endif %}
+    </div>
+    <div style="padding:12px 18px;border-bottom:1px solid #f0f0f0;">
+      <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:.05em;color:#888 !important;margin-bottom:8px;">Usage This Month</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <span style="font-size:0.85rem;color:#555 !important;">SEO Audits</span>
+        <span style="font-size:0.85rem;font-weight:600;color:#023761 !important;">
+          {{ nav_subscription.usage.audits_used }} / {% if nav_subscription.usage.audits_limit %}{{ nav_subscription.usage.audits_limit }}{% else %}&#x221e;{% endif %}
+        </span>
+      </div>
+      {% if nav_subscription.usage.audits_limit %}
+      <div style="background:#e9ecef;border-radius:4px;height:6px;overflow:hidden;">
+        <div style="height:100%;border-radius:4px;background:{% if nav_subscription.usage.audits_used >= nav_subscription.usage.audits_limit %}#dc3545{% else %}#0275d8{% endif %};width:{% widthratio nav_subscription.usage.audits_used nav_subscription.usage.audits_limit 100 %}%;"></div>
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+    <div style="padding:6px 0;background:#fff;">
+      <a href="{% url 'subscriptions:dashboard' %}" style="display:flex;align-items:center;gap:10px;padding:9px 18px;color:#333 !important;text-decoration:none !important;font-size:0.875rem;" onmouseover="this.style.background='#f5f7fa'" onmouseout="this.style.background='transparent'">
+        <i class="fas fa-crown" style="color:#f4a422;width:16px;"></i> My Subscription
+      </a>
+      <a href="{% url 'subscriptions:pricing' %}" style="display:flex;align-items:center;gap:10px;padding:9px 18px;color:#333 !important;text-decoration:none !important;font-size:0.875rem;" onmouseover="this.style.background='#f5f7fa'" onmouseout="this.style.background='transparent'">
+        <i class="fas fa-tags" style="color:#0275d8;width:16px;"></i> Pricing &amp; Plans
+      </a>
+      <div style="border-top:1px solid #f0f0f0;margin:4px 0;"></div>
+      <a href="{% url 'logout' %}" style="display:flex;align-items:center;gap:10px;padding:9px 18px;color:#dc3545 !important;text-decoration:none !important;font-size:0.875rem;" onmouseover="this.style.background='#fff5f5'" onmouseout="this.style.background='transparent'">
+        <i class="fas fa-sign-out-alt" style="width:16px;"></i> Logout
+      </a>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function() {
+    if (window._profileDropdownInit) return;
+    window._profileDropdownInit = true;
+    function toggleProfileDropdown() {
+      var menu = document.getElementById('profileDropdownMenu');
+      var btn = document.getElementById('profileDropdownBtn');
+      var isOpen = menu.style.display === 'block';
+      menu.style.display = isOpen ? 'none' : 'block';
+      btn.setAttribute('aria-expanded', String(!isOpen));
+    }
+    window.toggleProfileDropdown = toggleProfileDropdown;
+    document.addEventListener('click', function(e) {
+      var wrapper = document.querySelector('.profile-dropdown-wrapper');
+      if (wrapper && !wrapper.contains(e.target)) {
+        var menu = document.getElementById('profileDropdownMenu');
+        var btn = document.getElementById('profileDropdownBtn');
+        if (menu) menu.style.display = 'none';
+        if (btn) btn.setAttribute('aria-expanded', 'false');
+      }
+    });
+  })();
+</script>

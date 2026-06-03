@@ -1,13 +1,16 @@
 import json
 from openai import OpenAI
 from django.conf import settings
+from SEOAnalyzer.services.circuit_breaker import groq_circuit_breaker, CircuitBreakerOpen
+from .llm_model_selector import get_llm_model, log_model_selection
 
 _client = None
+_logged_selection = False
 
 
 def get_client():
     """Lazy initialization of AI client (Groq preferred, OpenAI fallback)."""
-    global _client
+    global _client, _logged_selection
     if _client is None:
         if getattr(settings, "USE_GROQ", True):
             api_key = getattr(settings, "GROQ_API_KEY", None)
@@ -17,14 +20,21 @@ def get_client():
             api_key = getattr(settings, "OPENAI_API_KEY", None)
             if api_key:
                 _client = OpenAI(api_key=api_key)
+        if not _logged_selection:
+            log_model_selection()
+            _logged_selection = True
     return _client
 
 
 def get_model():
-    """Return the active model name based on provider."""
-    if getattr(settings, "USE_GROQ", True):
-        return getattr(settings, "GROQ_MODEL", "llama-3.3-70b-versatile")
-    return getattr(settings, "OPENAI_MODEL", "gpt-3.5-turbo")
+    """Return the active model name (with gpt-4o -> gpt-4-turbo -> gpt-4 fallback chain)."""
+    try:
+        return get_llm_model()
+    except Exception:
+        # Hard fallback if selector fails for any reason
+        if getattr(settings, "USE_GROQ", True):
+            return getattr(settings, "GROQ_MODEL", "llama-3.3-70b-versatile")
+        return getattr(settings, "OPENAI_MODEL", "gpt-4o")
 
 
 def refine_keywords(keywords: list[str], page_topic: str = "", context: str = "") -> dict:
@@ -75,7 +85,9 @@ Respond ONLY with valid JSON in this exact format:
 }}"""
 
     try:
-        response = client.chat.completions.create(
+        # Use circuit breaker to fail fast if API is having issues
+        response = groq_circuit_breaker.call(
+            client.chat.completions.create,
             model=get_model(),
             messages=[{"role": "user", "content": prompt}],
             temperature=0.2,
@@ -93,6 +105,14 @@ Respond ONLY with valid JSON in this exact format:
         result["raw"] = keywords
         return result
 
+    except CircuitBreakerOpen:
+        # Circuit breaker is open - fail fast with fallback
+        return {
+            "groups": {"Uncategorized": keywords},
+            "focus_keywords": keywords[:5],
+            "raw": keywords,
+            "error": "AI service temporarily unavailable. Using basic keyword grouping.",
+        }
     except (json.JSONDecodeError, Exception) as e:
         # Graceful fallback — return ungrouped keywords
         return {

@@ -97,7 +97,7 @@ def analyze_batch_urls_task(self, task_id: str, urls: List[str], parameters: dic
         failed = 0
         
         for i, url in enumerate(urls):
-            progress = int((i / len(urls)) * 80)  # 0-80% for processing
+            progress = int(((i + 1) / len(urls)) * 80)  # 0-80% for processing
             task.update_progress(progress, f'Analyzing URL {i+1} of {len(urls)}: {url[:50]}...')
             
             try:
@@ -241,9 +241,12 @@ def start_single_url_analysis(url: str, parameters: dict, session_id: str = "") 
     """
     task = create_analysis_task('single_url', parameters, [url], session_id)
     
-    # Queue the Celery task
-    analyze_single_url_task.delay(task.task_id, url, parameters)
-    
+    # Queue the Celery task (falls back to inline if no broker)
+    try:
+        analyze_single_url_task.delay(task.task_id, url, parameters)
+    except Exception:
+        analyze_single_url_task(task.task_id, url, parameters)
+
     return task.task_id
 
 
@@ -256,7 +259,10 @@ def start_batch_analysis(urls: List[str], parameters: dict, session_id: str = ""
     """
     task = create_analysis_task('batch_urls', parameters, urls, session_id)
     
-    # Queue the Celery task
-    analyze_batch_urls_task.delay(task.task_id, urls, parameters)
-    
+    # Queue the Celery task (falls back to inline if no broker)
+    try:
+        analyze_batch_urls_task.delay(task.task_id, urls, parameters)
+    except Exception:
+        analyze_batch_urls_task(task.task_id, urls, parameters)
+
     return task.task_id

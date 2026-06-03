@@ -1,0 +1,159 @@
+{% extends 'admin/base_site.html' %}
+{% load static %}
+
+{% block title %}Pending Payment Verifications - WebLift Admin{% endblock %}
+
+{% block content %}
+<div id="content-main">
+    <h1><i class="fas fa-money-check-alt"></i> Pending Payment Verifications</h1>
+    
+    <!-- Pending Payments -->
+    {% if pending_payments %}
+    <div class="module">
+        <h2>Pending Verifications ({{ pending_payments|length }})</h2>
+        <div class="results">
+            <table id="result_list">
+                <thead>
+                    <tr>
+                        <th>Submitted</th>
+                        <th>User</th>
+                        <th>Plan</th>
+                        <th>Amount</th>
+                        <th>Sender Name</th>
+                        <th>Payment Date</th>
+                        <th>Reference</th>
+                        <th>Proof</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for payment in pending_payments %}
+                    <tr class="{% cycle 'row1' 'row2' %}">
+                        <td>{{ payment.created_at|date:"M d, Y H:i" }}</td>
+                        <td>
+                            <strong>{{ payment.user.username }}</strong><br>
+                            <small>{{ payment.user.email }}</small>
+                        </td>
+                        <td>
+                            {{ payment.tier.display_name }}<br>
+                            <small>({{ payment.billing_cycle }})</small>
+                        </td>
+                        <td><strong>${{ payment.amount }}</strong></td>
+                        <td>{{ payment.sender_name }}</td>
+                        <td>{{ payment.payment_date|date:"M d, Y" }}</td>
+                        <td>
+                            <code>WEBLIFT-{{ payment.user.id }}-{{ payment.id }}</code><br>
+                            <small>Acc: ****{{ payment.sender_account_last4 }}</small>
+                        </td>
+                        <td>
+                            {% if payment.proof_document %}
+                            <a href="{{ payment.proof_document.url }}" target="_blank" class="button">
+                                View Proof
+                            </a>
+                            {% else %}
+                            <span class="text-muted">No file</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <form method="post" action="{% url 'subscriptions:verify_payment_admin' payment.id %}" style="display: inline;">
+                                {% csrf_token %}
+                                <input type="text" name="verification_notes" placeholder="Notes (optional)" style="width: 150px; margin-bottom: 5px;"><br>
+                                <button type="submit" class="button" style="background: #28a745; color: white;" 
+                                        onclick="return confirm('Verify this payment and activate subscription for {{ payment.user.username }}?');">
+                                    ✓ Verify & Activate
+                                </button>
+                            </form>
+                            <br><br>
+                            <form method="post" action="{% url 'subscriptions:reject_payment_admin' payment.id %}" style="display: inline;">
+                                {% csrf_token %}
+                                <input type="text" name="rejection_reason" placeholder="Rejection reason" style="width: 150px; margin-bottom: 5px;"><br>
+                                <button type="submit" class="button" style="background: #dc3545; color: white;"
+                                        onclick="return confirm('Reject this payment?');">
+                                    ✗ Reject
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% if payment.notes %}
+                    <tr class="{% cycle 'row1' 'row2' as rowcolor %}">
+                        <td colspan="9" style="background: #f8f9fa; padding: 10px;">
+                            <strong>User Notes:</strong> {{ payment.notes }}
+                        </td>
+                    </tr>
+                    {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-success">
+        <h3><i class="fas fa-check-circle"></i> No pending payments!</h3>
+        <p>All manual payment submissions have been processed.</p>
+    </div>
+    {% endif %}
+    
+    <!-- Recently Verified -->
+    {% if verified_payments %}
+    <div class="module" style="margin-top: 40px;">
+        <h2>Recently Verified (Last 20)</h2>
+        <div class="results">
+            <table id="result_list">
+                <thead>
+                    <tr>
+                        <th>Verified</th>
+                        <th>User</th>
+                        <th>Plan</th>
+                        <th>Amount</th>
+                        <th>Verified By</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for payment in verified_payments %}
+                    <tr class="{% cycle 'row1' 'row2' %}">
+                        <td>{{ payment.verified_at|date:"M d, Y H:i" }}</td>
+                        <td>{{ payment.user.username }}</td>
+                        <td>{{ payment.tier.display_name }}</td>
+                        <td>${{ payment.amount }}</td>
+                        <td>{{ payment.verified_by.username }}</td>
+                        <td>{{ payment.verification_notes|default:"-" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+    .results table {
+        width: 100%;
+    }
+    .results th {
+        background: #79aec8;
+        color: white;
+        padding: 10px;
+        text-align: left;
+    }
+    .results td {
+        padding: 10px;
+        border-bottom: 1px solid #eee;
+    }
+    .row1 {
+        background: #fff;
+    }
+    .row2 {
+        background: #f9f9f9;
+    }
+    .button {
+        padding: 5px 10px;
+        border: none;
+        border-radius: 3px;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+    }
+</style>
+{% endblock %}

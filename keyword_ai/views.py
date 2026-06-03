@@ -22,13 +22,17 @@ Each view function follows this pattern:
 import json      # For parsing request bodies
 import csv       # For CSV exports
 import io        # For in-memory file handling
+import logging   # For error logging
 from typing import Dict, Any, Optional  # Type hints for clarity
+
+# Third-party imports
+import validators  # For URL validation
 
 # Django imports
 from django.db.models import Q
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_http_methods
-from django.views.decorators.csrf import csrf_exempt
+# from django.views.decorators.csrf import csrf_exempt  # Removed for security
 from django.utils import timezone
 
 # Local imports - our keyword AI modules
@@ -36,6 +40,9 @@ from keyword_ai.pipeline import run_keyword_pipeline
 from keyword_ai.pipeline_v2 import run_keyword_pipeline_v2, get_historical_analysis
 from keyword_ai.models import KeywordOpportunity, SuggestionFeedback, AnalysisTask
 from keyword_ai.tasks import start_single_url_analysis, start_batch_analysis
+from keyword_ai.services.traffic_enrichment import enrich_with_traffic_signals
+from subscriptions.decorators import api_subscription_check
+from subscriptions.ratelimit import rate_limit_api, rate_limit_ai
 
 
 # =============================================================================
@@ -166,6 +173,8 @@ def parse_analysis_params(data: Dict) -> Dict:
         "analyze_competitors": parse_boolean_param(data.get("analyze_competitors"), False),
         "generate_optimization": parse_boolean_param(data.get("generate_optimization"), False),
         "target_audience": data.get("target_audience", ""),
+        # NEW v2.2: Geographic region for GEO/AEO scoring + LLM prompts
+        "target_region": (data.get("target_region") or "GLOBAL").upper(),
     }
 
 
@@ -244,8 +253,8 @@ def serialize_task(task: AnalysisTask, include_result: bool = False) -> Dict:
 # KEYWORD SUGGESTIONS
 # -----------------------------------------------------------------------------
 
-@csrf_exempt
 @require_http_methods(["GET", "POST"])
+@api_subscription_check
 def keyword_suggestions(request):
     """
     Basic keyword suggestions endpoint (v1).
@@ -281,6 +290,13 @@ def keyword_suggestions(request):
     url = data.get("url", "").strip()
     text = data.get("text", "").strip()
     
+    # Input validation
+    if url and not validators.url(url):
+        return error_response("Invalid URL format provided.")
+    
+    if text and len(text) > 50000:  # 50KB limit
+        return error_response("Text content too large. Maximum 50,000 characters allowed.")
+    
     # Must provide either URL or text
     if not url and not text:
         return error_response("Provide 'url' or 'text' in the request body.")
@@ -299,8 +315,9 @@ def keyword_suggestions(request):
     return JsonResponse(result)
 
 
-@csrf_exempt
 @require_http_methods(["GET", "POST"])
+@rate_limit_ai(requests_per_minute=10)  # AI endpoints are expensive
+@api_subscription_check
 def keyword_suggestions_v2(request):
     """
     Enhanced keyword suggestions endpoint (v2) with AI features.
@@ -325,9 +342,15 @@ def keyword_suggestions_v2(request):
         analyze_competitors: Include competitor analysis (default: false)
         generate_optimization: Get content optimization tips (default: false)
         target_audience: Who is the content for (e.g., "beginners")
-    
+        target_region: Target geographic region (NA, EU, APAC, LATAM, MEA, GLOBAL)
+            - Drives GEO/AEO scoring + LLM expansion prompt regionalization
+
     Returns:
-        Enhanced results with AI analysis, intent data, and more.
+        Enhanced results with AI analysis, intent data, and:
+        - geo_aeo_analysis: Per-keyword GEO scope + AEO friendliness scores
+        - traffic_potential_forecast: CTR + traffic forecasts at ranks 1/3/5/10
+        - scored_keywords: Each keyword now carries geo_data, aeo_signals,
+          estimated_ctr, traffic_potential, sge_impact, and risk_flags.
     """
     # Step 1: Get data from request
     data = get_request_data(request)
@@ -337,6 +360,13 @@ def keyword_suggestions_v2(request):
     # Step 2: Validate inputs
     url = data.get("url", "").strip()
     text = data.get("text", "").strip()
+    
+    # Input validation
+    if url and not validators.url(url):
+        return error_response("Invalid URL format provided.")
+    
+    if text and len(text) > 50000:  # 50KB limit
+        return error_response("Text content too large. Maximum 50,000 characters allowed.")
     
     if not url and not text:
         return error_response("Provide 'url' or 'text' in the request body.")
@@ -362,8 +392,8 @@ def keyword_suggestions_v2(request):
 # FEEDBACK & OPPORTUNITIES
 # -----------------------------------------------------------------------------
 
-@csrf_exempt
 @require_http_methods(["POST"])
+@api_subscription_check
 def submit_feedback(request):
     """
     Submit user feedback on a keyword suggestion.
@@ -490,8 +520,9 @@ def get_opportunities(request):
 # ASYNC ANALYSIS (For long-running operations)
 # -----------------------------------------------------------------------------
 
-@csrf_exempt
 @require_http_methods(["POST"])
+@rate_limit_api(requests_per_minute=20)  # Async analysis rate limit
+@api_subscription_check
 def analyze_url_async(request):
     """
     Start async analysis of a single URL.
@@ -534,8 +565,9 @@ def analyze_url_async(request):
     })
 
 
-@csrf_exempt
 @require_http_methods(["POST"])
+@rate_limit_api(requests_per_minute=5)  # Batch is expensive, strict limit
+@api_subscription_check
 def analyze_batch_async(request):
     """
     Start async batch analysis of multiple URLs.
@@ -691,8 +723,8 @@ def generate_csv_response(opportunities, analysis_id: int) -> HttpResponse:
     return response
 
 
-@csrf_exempt
 @require_http_methods(["POST"])
+@api_subscription_check
 def export_results(request):
     """
     Export keyword analysis results as CSV or JSON.
@@ -746,6 +778,70 @@ def export_results(request):
     })
 
 
+# -----------------------------------------------------------------------------
+# TRAFFIC ENRICHMENT ANALYSIS
+# -----------------------------------------------------------------------------
+
+@require_http_methods(["POST"])
+@api_subscription_check
+def analyze_traffic_signals(request):
+    """
+    Analyze real-time traffic signals for a list of keywords.
+
+    Enriches keywords with trending data, volume estimates, difficulty scores,
+    and strategic recommendations based on the traffic signal framework.
+
+    URL: /api/keywords/traffic-analysis/
+    Method: POST
+
+    POST Body:
+        keywords: List of keywords to analyze (required, max 50)
+        page_topic: Optional page topic for context
+        target_audience: Optional target audience description
+        use_google_trends: Whether to fetch real Google Trends data (default: true)
+
+    Returns:
+        {
+            "trending_alerts": [...],
+            "traffic_prioritized_keywords": [...],
+            "quick_win_keywords": [...],
+            "avoid_keywords": [...],
+            "topic_cluster": {...},
+            "enrichment_metadata": {...}
+        }
+    """
+    # Step 1: Parse request
+    data = get_request_data(request)
+    if "_error" in data:
+        return error_response(data["_error"])
+
+    # Step 2: Validate keywords
+    keywords = data.get("keywords", [])
+    if not keywords or not isinstance(keywords, list):
+        return error_response("Provide 'keywords' array in request body")
+
+    if len(keywords) > 50:
+        return error_response("Maximum 50 keywords per request")
+
+    # Step 3: Get optional parameters
+    page_topic = data.get("page_topic", "")
+    target_audience = data.get("target_audience", "")
+    use_google_trends = parse_boolean_param(data.get("use_google_trends"), True)
+
+    # Step 4: Run traffic enrichment
+    try:
+        result = enrich_with_traffic_signals(
+            keywords=keywords,
+            page_topic=page_topic,
+            target_audience=target_audience,
+            use_google_trends=use_google_trends
+        )
+        return JsonResponse(result)
+    except Exception as e:
+        logger.error(f"Traffic analysis failed: {e}")
+        return error_response(f"Traffic analysis failed: {str(e)}", 500)
+
+
 # =============================================================================
 # STREAMING RESPONSES - Real-time keyword suggestions (NEW)
 # =============================================================================
@@ -785,8 +881,8 @@ def stream_llm_response(prompt: str):
         yield json.dumps({"error": str(e)})
 
 
-@csrf_exempt
 @require_http_methods(["POST"])
+@api_subscription_check
 def keyword_suggestions_streaming(request):
     """
     Real-time streaming keyword suggestions.

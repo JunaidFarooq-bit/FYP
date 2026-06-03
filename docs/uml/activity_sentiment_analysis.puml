@@ -1,0 +1,48 @@
+@startuml Sentiment_Analysis_Activity
+!theme plain
+skinparam backgroundColor #FEFEFE
+
+title WebLift - Sentiment Analysis Activity Diagram
+
+|User|
+start
+:Enter Content URL;
+:Select Analysis Mode;
+:Submit Request;
+
+:Validate URL;
+
+if (Valid URL?) then (no)
+    :View Error;
+    stop
+else (yes)
+    if (Has Premium Access?) then (no)
+        :View Upgrade Required;
+        stop
+    else (yes)
+        :Fetch Webpage Content;
+        :Extract Clean Text;
+        
+        :Analyze Sentiment;
+        
+        fork
+            :Overall Sentiment Score;
+        fork again
+            :Emotion Detection;
+        fork again
+            :Tone Analysis;
+        fork again
+            :Subjectivity Score;
+        end fork
+        
+        :Generate Insights;
+        :Create Visualization;
+        
+        :View Sentiment Results;
+        :View Recommendations;
+        
+        stop
+    endif
+endif
+
+@enduml

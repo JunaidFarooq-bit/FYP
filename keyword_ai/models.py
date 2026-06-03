@@ -3,8 +3,15 @@ Database models for Phase 1: Content Analysis & Keyword Suggestion System.
 """
 
 from django.db import models
-from pgvector.django import VectorField
 import json
+
+# Try to import pgvector, fallback to JSONField if not available
+try:
+    from pgvector.django import VectorField
+    PGVECTOR_AVAILABLE = True
+except ImportError:
+    PGVECTOR_AVAILABLE = False
+    # Will use JSONField as fallback
 
 
 class ContentAnalysis(models.Model):
@@ -18,6 +25,7 @@ class ContentAnalysis(models.Model):
     # Content metrics
     title = models.CharField(max_length=300, blank=True)
     meta_description = models.TextField(blank=True)
+    full_text = models.TextField(blank=True, help_text="Full extracted text content")
     word_count = models.IntegerField(default=0)
     
     # Quality scores
@@ -34,8 +42,20 @@ class ContentAnalysis(models.Model):
     # TF-IDF keywords (stored as JSON)
     tfidf_keywords = models.JSONField(default=list, help_text="Top TF-IDF scored keywords")
     
-    # Semantic embedding using pgvector for similarity search (384 dimensions for all-MiniLM-L6-v2)
-    embedding = VectorField(dimensions=384, blank=True, null=True, help_text="Vector embedding for RAG similarity search")
+    # Semantic embedding - uses pgvector VectorField if available, else JSONField
+    if PGVECTOR_AVAILABLE:
+        embedding = VectorField(
+            dimensions=384,
+            blank=True,
+            null=True,
+            help_text="384-dim sentence transformer embedding for pgvector"
+        )
+    else:
+        embedding = models.JSONField(
+            blank=True,
+            null=True,
+            help_text="Vector embedding list (pgvector not installed)"
+        )
     
     # Analysis metadata
     analyzed_at = models.DateTimeField(auto_now_add=True)
@@ -55,9 +75,12 @@ class ContentAnalysis(models.Model):
     
     def get_embedding_list(self):
         """Get embedding as Python list for serialization."""
-        if self.embedding is not None:
+        if self.embedding is None:
+            return None
+        # JSONField already returns a list; handle numpy arrays from in-memory use
+        if hasattr(self.embedding, 'tolist'):
             return self.embedding.tolist()
-        return None
+        return self.embedding
 
 
 class KeywordOpportunity(models.Model):
@@ -121,6 +144,12 @@ class KeywordOpportunity(models.Model):
         verbose_name_plural = "Keyword Opportunities"
         ordering = ['-relevance_score']
         unique_together = ['content_analysis', 'keyword']
+        indexes = [
+            models.Index(fields=['content_analysis', '-relevance_score']),
+            models.Index(fields=['keyword', 'keyword_type']),
+            models.Index(fields=['search_intent', '-relevance_score']),
+            models.Index(fields=['priority', '-relevance_score']),
+        ]
     
     def __str__(self):
         return f"{self.keyword} ({self.relevance_score:.1f})"
@@ -164,6 +193,10 @@ class SuggestionFeedback(models.Model):
         verbose_name = "Suggestion Feedback"
         verbose_name_plural = "Suggestion Feedbacks"
         ordering = ['-timestamp']
+        indexes = [
+            models.Index(fields=['opportunity', '-timestamp']),
+            models.Index(fields=['user_action', '-timestamp']),
+        ]
     
     def __str__(self):
         return f"{self.opportunity.keyword}: {self.user_action}"
@@ -254,6 +287,11 @@ class AnalysisTask(models.Model):
         verbose_name = "Analysis Task"
         verbose_name_plural = "Analysis Tasks"
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['task_id']),
+            models.Index(fields=['status', '-created_at']),
+            models.Index(fields=['session_id', '-created_at']),
+        ]
     
     def __str__(self):
         return f"Task {self.task_id[:8]}: {self.task_type} ({self.status})"
@@ -325,7 +363,7 @@ class ModelPerformance(models.Model):
     Tracks ML model performance metrics over time.
     """
     model_name = models.CharField(max_length=100, db_index=True)
-    model_version = models.CharField(max_length=50)
+    model_version = models.CharField(max_length=100)
     
     # Performance metrics
     total_predictions = models.IntegerField(default=0)
@@ -399,7 +437,7 @@ class ABTest(models.Model):
     status = models.CharField(max_length=20, choices=TEST_STATUS_CHOICES, default='running')
     
     # Winner
-    winner = models.CharField(max_length=100, blank=True, help_text=" winning model variant")
+    winner = models.CharField(max_length=100, blank=True, help_text="Winning model variant")
     confidence_level = models.FloatField(null=True, blank=True, help_text="Statistical confidence 0-1")
     
     # Tracking

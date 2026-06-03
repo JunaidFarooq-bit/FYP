@@ -7,7 +7,7 @@ import json
 
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
-from django.views.decorators.csrf import csrf_exempt
+# from django.views.decorators.csrf import csrf_exempt  # Removed for security
 from django.utils import timezone
 from django.db.models import Count, Avg, Q
 from datetime import timedelta
@@ -234,7 +234,6 @@ def get_retraining_status(request):
     })
 
 
-@csrf_exempt
 @require_http_methods(["POST"])
 def trigger_retraining(request):
     """
@@ -275,7 +274,6 @@ def trigger_retraining(request):
         return JsonResponse(results)
 
 
-@csrf_exempt
 @require_http_methods(["POST"])
 def create_ab_test(request):
     """
@@ -319,7 +317,6 @@ def create_ab_test(request):
     })
 
 
-@csrf_exempt
 @require_http_methods(["POST"])
 def stop_ab_test(request):
     """

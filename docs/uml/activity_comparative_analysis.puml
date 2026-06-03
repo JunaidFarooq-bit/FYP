@@ -1,0 +1,52 @@
+@startuml Comparative_Analysis_Activity
+!theme plain
+skinparam backgroundColor #FEFEFE
+
+title WebLift - Comparative Analysis Activity Diagram
+
+|User|
+start
+:Enter Primary URL;
+:Enter Competitor URL;
+:Enter Target Keyword (Optional);
+:Submit Comparison Request;
+
+:Validate Both URLs;
+
+if (Valid URLs?) then (no)
+    :View Validation Error;
+    stop
+else (yes)
+    if (Has Competitor Feature?) then (no)
+        :View Upgrade Required;
+        stop
+    else (yes)
+        :Fetch Both Webpages;
+        
+        fork
+            :Analyze Primary URL;
+        fork again
+            :Analyze Competitor URL;
+        end fork
+        
+        fork
+            :Technical Comparison;
+        fork again
+            :Authority Comparison;
+        fork again
+            :Semantic Comparison;
+        fork again
+            :Gap Analysis;
+        end fork
+        
+        :Generate Comparison Report;
+        :Store Results;
+        
+        :View Side-by-Side Results;
+        :View Gap Recommendations;
+        
+        stop
+    endif
+endif
+
+@enduml

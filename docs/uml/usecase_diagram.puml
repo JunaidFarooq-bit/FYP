@@ -1,0 +1,92 @@
+@startuml WebLift_UseCase_Diagram
+!theme plain
+skinparam backgroundColor #FEFEFE
+
+skinparam usecase {
+    BackgroundColor #FFFFFF
+    BorderColor #34495E
+}
+
+skinparam actor {
+    BackgroundColor #F39C12
+    BorderColor #D35400
+}
+
+title WebLift - Use Case Diagram
+
+' === ACTORS ===
+left to right direction
+
+actor "Guest" as Guest #F8C471
+actor "User" as User #AED6F1
+actor "Premium User" as Premium #A9DFBF
+actor "Admin" as Admin #F5B7B1
+
+' === SYSTEM BOUNDARY ===
+rectangle "WebLift SEO Platform" {
+
+    ' --- AUTHENTICATION ---
+    usecase "Register" as UC_Register
+    usecase "Login" as UC_Login
+    usecase "Logout" as UC_Logout
+    usecase "Reset Password" as UC_ResetPass
+
+    ' --- SEO AUDIT ---
+    usecase "SEO Audit" as UC_Audit
+    usecase "View Reports" as UC_Reports
+    usecase "Download PDF" as UC_PDF
+    usecase "Email Report" as UC_Email
+
+    ' --- KEYWORD AI ---
+    usecase "Keyword Suggestions" as UC_Keywords
+    usecase "Batch Analysis" as UC_Batch
+    usecase "Export Results" as UC_Export
+
+    ' --- COMPETITOR ANALYSIS ---
+    usecase "Comparative Analysis" as UC_Compare
+
+    ' --- CONTENT TOOLS ---
+    usecase "Sentiment Analysis" as UC_Sentiment
+    usecase "Grammar Check" as UC_Grammar
+    usecase "E-E-A-T Analysis" as UC_EEAT
+
+    ' --- SUBSCRIPTION ---
+    usecase "View Pricing" as UC_Pricing
+    usecase "Manage Subscription" as UC_SubManage
+    usecase "Submit Payment" as UC_Payment
+
+    ' --- ADMIN ---
+    usecase "Verify Payments" as UC_Verify
+    usecase "Manage Tiers" as UC_Tiers
+}
+
+' === RELATIONSHIPS ===
+Guest --> UC_Register
+Guest --> UC_Login
+Guest --> UC_Pricing
+
+User --> UC_Logout
+User --> UC_Audit : << limited >>
+User --> UC_Reports
+User --> UC_Keywords : << limited >>
+User --> UC_SubManage
+User --> UC_Payment
+User --> UC_Pricing
+
+Premium --> UC_Audit : << unlimited >>
+Premium --> UC_PDF
+Premium --> UC_Email
+Premium --> UC_Batch
+Premium --> UC_Export
+Premium --> UC_Compare
+Premium --> UC_Sentiment
+Premium --> UC_Grammar
+Premium --> UC_EEAT
+
+Admin --> UC_Verify
+Admin --> UC_Tiers
+
+' === GENERALIZATIONS ===
+Premium --|> User
+
+@enduml

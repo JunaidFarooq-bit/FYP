@@ -282,10 +282,7 @@
 
           <!-- Navbar actions (right side) -->
           <div class="navbar-actions">
-            <a href="{% url 'logout' %}" class="btn btn-primary">
-              <i class="fas fa-sign-out-alt"></i>
-              <span>Logout</span>
-            </a>
+            {% include 'partials/_profile_dropdown.html' %}
           </div>
         </div>
       </nav>
@@ -490,5 +487,6 @@
         });
       }, 4000);
     </script>
+  {% include 'partials/_upgrade_modal.html' %}
   </body>
 </html>

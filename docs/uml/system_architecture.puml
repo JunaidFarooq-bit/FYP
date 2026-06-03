@@ -1,0 +1,131 @@
+@startuml WebLift_System_Architecture
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam componentStyle rectangle
+
+title WebLift - System Architecture Diagram
+
+' === CLIENT LAYER ===
+cloud "Client Layer" #FADBD8 {
+    component "Web Browser" as Browser
+    component "Mobile Device" as Mobile
+    component "API Client" as APIClient
+}
+
+' === WEB LAYER ===
+rectangle "Web Layer" #FCF3CF {
+    component "Nginx /\nWeb Server" as WebServer
+    component "WhiteNoise\nStatic Files" as StaticFiles
+}
+
+' === APPLICATION LAYER ===
+rectangle "Application Layer (Django)" #D5F5E3 {
+    
+    component "URL Router &\nMiddleware" as Router
+    
+    package "Django Apps" #A9DFBF {
+        component "SEOAnalyzer" as SEOApp
+        component "Keyword AI" as KeywordApp
+        component "Comparative\nAnalysis" as CompareApp
+        component "Subscriptions" as SubApp
+    }
+    
+    component "Django Admin" as Admin
+}
+
+' === SERVICES LAYER ===
+rectangle "Services Layer" #D6EAF8 {
+    component "SEO Analysis\nServices" as SEOServices
+    component "AI/ML Pipeline\nServices" as MLService
+    component "Subscription\nServices" as SubService
+}
+
+' === BACKGROUND PROCESSING ===
+rectangle "Background Processing" #F5B7B1 {
+    component "Celery\nWorkers" as Celery
+    component "Task Queue\n(Redis/Mem)" as TaskQueue
+    component "Celery\nBeat Scheduler" as Scheduler
+}
+
+' === DATA LAYER ===
+rectangle "Data Layer" #E8DAEF {
+    database "Primary Database\n(SQLite/PostgreSQL)" as PrimaryDB
+    database "Cache Layer\n(Redis/LocMem)" as Cache
+    storage "Media Storage\n(PDFs/Proofs)" as Media
+}
+
+' === EXTERNAL LAYER ===
+cloud "External Services" #D7BDE2 {
+    component "LLM APIs\n(Groq/OpenAI)" as LLM
+    component "Pinecone\nVector DB" as VectorDB
+    component "Moz API" as Moz
+    component "Google\nPageSpeed" as PageSpeed
+    component "SMTP\nEmail Service" as Email
+}
+
+' === CONNECTIONS ===
+Browser --> WebServer : HTTPS
+Mobile --> WebServer : HTTPS
+APIClient --> WebServer : API/HTTPS
+
+WebServer --> StaticFiles
+WebServer --> Router
+
+Router --> SEOApp
+Router --> KeywordApp
+Router --> CompareApp
+Router --> SubApp
+Router --> Admin
+
+SEOApp --> SEOServices
+KeywordApp --> MLService
+CompareApp --> SEOServices
+SubApp --> SubService
+
+MLService --> LLM
+MLService --> VectorDB
+SEOServices --> Moz
+SEOServices --> PageSpeed
+SEOApp --> Email
+
+SEOApp --> Celery
+KeywordApp --> Celery
+CompareApp --> Celery
+
+Celery --> TaskQueue
+Scheduler --> TaskQueue
+TaskQueue --> Celery
+
+Celery --> PrimaryDB
+Celery --> Media
+
+SEOApp --> PrimaryDB
+KeywordApp --> PrimaryDB
+CompareApp --> PrimaryDB
+SubApp --> PrimaryDB
+
+SEOApp --> Cache
+KeywordApp --> Cache
+
+SEOApp --> Media
+SubApp --> Media
+
+' === NOTES ===
+note right of WebServer
+  Production: Nginx
+  Development: Django dev server
+end note
+
+note right of PrimaryDB
+  SQLite for dev
+  PostgreSQL for production
+end note
+
+note bottom of Celery
+  Async task processing for:
+  - Batch keyword analysis
+  - PDF generation
+  - Report emails
+end note
+
+@enduml

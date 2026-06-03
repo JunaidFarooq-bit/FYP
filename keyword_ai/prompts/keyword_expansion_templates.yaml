@@ -1,0 +1,131 @@
+# Regional & contextual prompt templates for the LLM keyword expansion service.
+# Use {placeholders} for runtime substitution. Recognized placeholders:
+#   {keyword}         The seed keyword
+#   {n}               Number of suggestions to generate
+#   {current_year}    Current calendar year (auto-injected)
+#   {target_region}   Region label (NA, EU, APAC, LATAM, MEA, GLOBAL)
+#   {target_audience} Optional audience descriptor
+#   {trend_focus}     Optional trend focus (e.g. "AI tools", "sustainability")
+
+keyword_expansion_base:
+  NA: |
+    Generate {n} long-tail keyword variations for "{keyword}" optimized for
+    North American (US/CA) markets in {current_year}. Focus on:
+    - High commercial-intent phrases ("best", "top", "review", "near me")
+    - Localized variations (city/state-level when relevant)
+    - English-language idioms common in the US/Canada
+    - Mobile-first search patterns
+  EU: |
+    Generate {n} long-tail keyword variations for "{keyword}" optimized for
+    European markets in {current_year}. Focus on:
+    - GDPR-aware messaging where relevant
+    - Multi-locale phrasing (UK English variants, EU buyer terminology)
+    - Sustainability/privacy angles where applicable
+    - "{target_region}" specific city names if location intent detected
+  APAC: |
+    Generate {n} long-tail keyword variations for "{keyword}" optimized for
+    APAC markets (AU/SG/IN/JP/KR/HK) in {current_year}. Focus on:
+    - Mobile-first, short-form queries
+    - Local currency / pricing modifiers
+    - Bilingual queries common in metropolitan markets
+    - Country-specific consumer behaviors
+  LATAM: |
+    Generate {n} long-tail keyword variations for "{keyword}" optimized for
+    Latin American markets in {current_year}. Focus on:
+    - Spanish + Portuguese bilingual variants
+    - Local currency and regional pricing terms
+    - Mobile-dominant search patterns
+  MEA: |
+    Generate {n} long-tail keyword variations for "{keyword}" optimized for
+    Middle East & Africa markets in {current_year}. Focus on:
+    - Arabic/English bilingual variants
+    - Local regulations & business culture context
+    - Mobile-first behaviors
+  GLOBAL: |
+    Generate {n} long-tail keyword variations for "{keyword}" relevant in {current_year}.
+    Focus on emerging trends, new solutions, and broad-market consumer intent.
+    Include intent modifiers: "best", "how to", "top", "new in {current_year}".
+
+current_year_injection:
+  template: "...relevant to {current_year}..."
+  example_trends:
+    - "AI-powered solutions"
+    - "sustainability"
+    - "remote work"
+    - "automation tools"
+    - "data privacy"
+
+intent_modifiers:
+  commercial:
+    - "best {keyword}"
+    - "top {keyword} {current_year}"
+    - "{keyword} review"
+    - "{keyword} comparison"
+    - "buy {keyword}"
+  informational:
+    - "what is {keyword}"
+    - "how does {keyword} work"
+    - "{keyword} explained"
+    - "{keyword} guide {current_year}"
+  transactional:
+    - "{keyword} pricing"
+    - "{keyword} discount"
+    - "{keyword} for sale"
+  navigational:
+    - "{keyword} login"
+    - "{keyword} official site"
+
+aeo_prompt_addons: |
+  IMPORTANT — Answer Engine Optimization (AEO) guidance:
+  - Prioritize keywords likely to appear in ChatGPT, Gemini, and Copilot answers.
+  - Include FAQ-style, "what/how/why" question phrasings.
+  - Surface "definition", "list", and "comparison" patterns where appropriate.
+  - Mark each suggestion with an AEO_friendly flag (true/false).
+
+geo_prompt_addons: |
+  IMPORTANT — Geographic/regional guidance:
+  - Detect or assume target region: {target_region}.
+  - Suggest at least 2 location-modified variants if intent supports it.
+  - Use local market language norms (e.g. "fall" in NA, "autumn" in EU).
+  - Where useful, append "near me" / city tokens to drive local SEO.
+
+seo_optimization_guide: |
+  ## ADVANCED SEO GUIDANCE FOR KEYWORD EXPANSION
+  
+  **Search Volume Priority (Target Mix):**
+  - 40% keywords: 1K-10K monthly searches (sweet spot for new sites)
+  - 30% keywords: 100-1K searches (low competition, easy wins)
+  - 20% keywords: 10K-50K searches (medium difficulty, high reward)
+  - 10% keywords: 50K+ searches (aspirational, long-term targets)
+  
+  **Intent Distribution (Balanced Portfolio):**
+  - 50% Informational: "how to", "what is", "guide", "tutorial"
+  - 30% Commercial: "best", "top", "review", "comparison"
+  - 15% Transactional: "buy", "price", "discount", "deal"
+  - 5% Navigational: Brand-focused when relevant
+  
+  **Content Format Recommendations by Intent:**
+  - Informational → Ultimate guides, tutorials, explainers (2K+ words)
+  - Commercial → Product roundups, comparison tables, pros/cons lists
+  - Transactional → Product pages, pricing tables, checkout flows
+  - Navigational → Brand pages, contact info, login portals
+  
+  **High-Performance Keyword Patterns:**
+  - "Best {keyword} for {specific_use_case}" (commercial + specific)
+  - "How to {keyword} without {common_problem}" (informational + solution)
+  - "{keyword} vs {competitor}: Which is better?" (commercial + comparison)
+  - "Why is my {keyword} {problem}?" (informational + troubleshooting)
+  - "{current_year} {keyword} trends" (timely + informational)
+  
+  **Avoid These Low-Value Patterns:**
+  - Generic single-word terms (too broad, high competition)
+  - Overly long 8+ word phrases (too specific, no search volume)
+  - Keyword stuffing variations ("cheap {keyword} discount sale")
+  - Duplicate intent without differentiation
+  
+  **SERP Feature Optimization:**
+  - Featured snippets: "What is...", "How to...", "Why does..."
+  - People Also Ask: Question-based keywords with multiple angles
+  - Video carousels: "tutorial", "demo", "how to", "review"
+  - Shopping results: "buy", "price", "best", "top"
+  - Local pack: "near me", "in {city}", "local", "nearby"

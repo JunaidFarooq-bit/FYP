@@ -1,0 +1,175 @@
+@startuml WebLift_Class_Diagram
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam classAttributeIconSize 0
+
+title WebLift - Class Diagram
+
+' === DJANGO BUILT-IN ===
+class User {
+    + username: String
+    + email: String
+    + password: String
+    + is_active: Boolean
+    + date_joined: DateTime
+}
+
+' === SEOANALYZER APP ===
+class Profile {
+    + forget_password_token: String
+    + created_at: DateTime
+}
+
+' === SUBSCRIPTIONS APP ===
+class SubscriptionTier {
+    + name: String
+    + display_name: String
+    + price_monthly: Decimal
+    + price_yearly: Decimal
+    + max_audits_per_month: Integer
+    + max_keywords_per_analysis: Integer
+    + has_ai_suggestions: Boolean
+    + has_competitor_analysis: Boolean
+    + has_pdf_export: Boolean
+    + has_api_access: Boolean
+}
+
+class Subscription {
+    + status: String
+    + billing_cycle: String
+    + current_period_start: DateTime
+    + current_period_end: DateTime
+    --
+    + is_active(): Boolean
+    + can_use_feature(feature): Boolean
+}
+
+class UsageTracker {
+    + audits_used_this_month: Integer
+    + keywords_generated_this_month: Integer
+    + free_audit_used: Boolean
+    --
+    + has_used_free_audit(): Boolean
+    + record_audit()
+}
+
+class PaymentRecord {
+    + amount: Decimal
+    + currency: String
+    + status: String
+    + created_at: DateTime
+}
+
+class ManualPaymentSubmission {
+    + amount: Decimal
+    + sender_name: String
+    + transaction_reference: String
+    + status: String
+    + proof_document: File
+}
+
+' === KEYWORD_AI APP ===
+class ContentAnalysis {
+    + url: URL
+    + content_hash: String
+    + title: String
+    + word_count: Integer
+    + quality_score: Float
+    + tfidf_keywords: JSON
+    + embedding: JSON
+    + analyzed_at: DateTime
+}
+
+class KeywordOpportunity {
+    + keyword: String
+    + keyword_type: String
+    + relevance_score: Float
+    + search_intent: String
+    + priority: String
+    + ai_reasoning: Text
+    + is_accepted: Boolean
+}
+
+class SuggestionFeedback {
+    + user_action: String
+    + user_comment: Text
+    + rating: Integer
+    + timestamp: DateTime
+}
+
+class CompetitorAnalysis {
+    + competitor_url: URL
+    + competitor_title: String
+    + top_keywords: JSON
+}
+
+class GapAnalysis {
+    + total_gap_opportunities: Integer
+    + high_priority_gaps: JSON
+    + recommendations: JSON
+}
+
+' === COMPARATIVE_ANALYSIS APP ===
+class ComparisonReport {
+    + url_primary: URL
+    + url_competitor: URL
+    + target_keyword: String
+    + scores_primary: JSON
+    + scores_competitor: JSON
+    + gap_summary: Text
+    + created_at: DateTime
+}
+
+' === RELATIONSHIPS ===
+User "1" -- "1" Profile : extends
+User "1" -- "1" Subscription : has
+User "1" -- "1" UsageTracker : has
+User "1" -- "0..*" PaymentRecord : payments
+User "1" -- "0..*" ManualPaymentSubmission : manual_payments
+
+Subscription "*" -- "1" SubscriptionTier : belongs to
+
+ContentAnalysis "1" -- "0..*" KeywordOpportunity : opportunities
+ContentAnalysis "1" -- "0..*" CompetitorAnalysis : competitor_analyses
+ContentAnalysis "1" -- "1" GapAnalysis : gap_analysis
+
+KeywordOpportunity "1" -- "0..*" SuggestionFeedback : feedback
+
+' === SERVICES (Simplified) ===
+class SubscriptionService {
+    + create_default_tiers()
+    + create_default_subscription(user)
+    + can_use_feature(user, feature)
+    + upgrade_subscription(user, tier)
+    + get_subscription_summary(user)
+}
+
+class WebsiteAuditOrchestrator {
+    + url: URL
+    + fetch_page()
+    + run_analysis()
+}
+
+class KeywordPipeline {
+    + run_keyword_pipeline_v2()
+    + extract_keywords()
+    + score_keywords()
+}
+
+class ComparisonOrchestrator {
+    + url_primary: URL
+    + url_competitor: URL
+    + run_full_analysis()
+}
+
+' === SERVICE CONNECTIONS ===
+SubscriptionService ..> Subscription : manages
+SubscriptionService ..> SubscriptionTier : manages
+SubscriptionService ..> UsageTracker : tracks
+
+WebsiteAuditOrchestrator ..> ContentAnalysis : uses
+KeywordPipeline ..> ContentAnalysis : creates
+KeywordPipeline ..> KeywordOpportunity : creates
+ComparisonOrchestrator ..> ComparisonReport : creates
+
+@enduml

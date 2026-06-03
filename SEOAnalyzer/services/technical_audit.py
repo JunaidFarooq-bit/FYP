@@ -310,7 +310,7 @@ class FaviconAnalyzer:
                         'icon_flag': True,
                         'favicon_url': favicon_url
                     }
-            except:
+            except requests.exceptions.RequestException:
                 continue
         
         # Check HTML for favicon links

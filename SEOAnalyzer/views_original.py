@@ -1,4 +1,7 @@
 from keyword_ai.pipeline_v2 import run_keyword_pipeline_v2
+import logging
+
+logger = logging.getLogger(__name__)
 # ================================
 # DJANGO CORE IMPORTS
 # ================================
@@ -7,6 +10,7 @@ from .services.sentiment_analyzer import analyze_sentiment
 from django.contrib.auth.models import User                 # Django built-in User model
 from django.contrib.auth import authenticate, login, logout # Authentication utilities
 from django.contrib.auth.decorators import login_required   # Protect views with login
+from django.db import IntegrityError, DatabaseError          # Database exceptions
 from django.shortcuts import render, redirect, reverse      # Rendering and redirects
 from django.http import JsonResponse                        # HTTP responses
 from django.views.decorators.cache import never_cache       # Disable caching for views
@@ -280,7 +284,7 @@ class Website_Audit(object):
         if use_groq:
             api_key = getattr(settings, 'GROQ_API_KEY', '') or os.getenv('GROQ_API_KEY', '')
             if not api_key:
-                print("Warning: No GROQ_API_KEY found. Using fallback E-E-A-T analysis.")
+                logger.warning("No GROQ_API_KEY found. Using fallback E-E-A-T analysis.")
                 return None
             return OpenAI(
                 api_key=api_key,
@@ -291,7 +295,7 @@ class Website_Audit(object):
 
         api_key = os.getenv('OPENROUTER_API_KEY') or OPENROUTER_API_KEY
         if not api_key:
-            print("Warning: No API key found. Using fallback E-E-A-T analysis.")
+            logger.warning("No API key found. Using fallback E-E-A-T analysis.")
             return None
 
         return OpenAI(
@@ -707,8 +711,8 @@ Return ONLY valid JSON, no markdown, no preamble."""
             }
             
         except json.JSONDecodeError as e:
-            print(f"JSON parsing failed for {content_type}: {e}")
-            print(f"Response was: {response_text[:200]}")
+            logger.error(f"JSON parsing failed for {content_type}: {e}")
+            logger.error(f"Response was: {response_text[:200]}")
             return self._fallback_eeat_analysis(content_type, content)
         except Exception as e:
             logger.error(f"AI E-E-A-T analysis failed for {content_type}: {e}")
@@ -739,7 +743,7 @@ Return ONLY valid JSON, no markdown, no preamble."""
             title_text = title_tag.get_text(strip=True)
             title = self.remove_unicode_characters(title_text)
         except Exception as e:
-            print(f"Error extracting title: {str(e)}")
+            logger.error(f"Error extracting title: {str(e)}")
             title = ''
         
         title = title.strip()
@@ -963,7 +967,7 @@ Return ONLY valid JSON, no markdown, no preamble."""
                 heading_text = heading_tags[0].get_text(strip=True)
                 self.comp_head = heading_text
             except Exception as e:
-                print(f"Error extracting heading: {str(e)}")
+                logger.error(f"Error extracting heading: {str(e)}")
 
             com_heading = self.remove_unicode_characters(heading_text).strip()
             heading_length = len(com_heading)
@@ -1153,7 +1157,7 @@ Return ONLY valid JSON, no markdown, no preamble."""
             }
             
         except Exception as e:
-            print(f"Error calculating optimization score: {str(e)}")
+            logger.error(f"Error calculating optimization score: {str(e)}")
             self.avg_score = 0
             avg_eeat = 0
         
@@ -1272,7 +1276,7 @@ Return ONLY valid JSON, no markdown, no preamble."""
         try:
             from spellchecker import SpellChecker
         except ImportError:
-            print("Warning: pyspellchecker not installed. Run: pip install pyspellchecker")
+            logger.warning("pyspellchecker not installed. Run: pip install pyspellchecker")
             self._set_empty_grammar_data()
             return None
         
@@ -1290,7 +1294,7 @@ Return ONLY valid JSON, no markdown, no preamble."""
             text = self.soup.get_text(separator=' ', strip=True)
             text = self.remove_unicode_characters(text)
         except Exception as e:
-            print(f"Error extracting text for grammar analysis: {str(e)}")
+            logger.error(f"Error extracting text for grammar analysis: {str(e)}")
             self._set_empty_grammar_data()
             return None
         
@@ -1546,7 +1550,7 @@ Return ONLY valid JSON, no markdown, no preamble."""
         # Create directory if it doesn't exist
         if not os.path.exists(dict_dir):
             os.makedirs(dict_dir)
-            print(f"Created dictionaries directory: {dict_dir}")
+            logger.info(f"Created dictionaries directory: {dict_dir}")
         
         # List of dictionary files to load
         dict_files = [
@@ -1571,7 +1575,7 @@ Return ONLY valid JSON, no markdown, no preamble."""
                         if line and not line.startswith('#'):
                             custom_words.add(line)
             except Exception as e:
-                print(f"Warning: Could not load dictionary file {filename}: {str(e)}")
+                logger.warning(f"Could not load dictionary file {filename}: {str(e)}")
         
         return custom_words
 
@@ -1680,9 +1684,9 @@ codup
             with open(filepath, 'w', encoding='utf-8') as f:
                 content = sample_content.get(filename, '# Custom dictionary words\n# Add one word per line\n')
                 f.write(content)
-            print(f"Created sample dictionary: {filepath}")
+            logger.info(f"Created sample dictionary: {filepath}")
         except Exception as e:
-            print(f"Warning: Could not create dictionary file {filename}: {str(e)}")
+            logger.warning(f"Could not create dictionary file {filename}: {str(e)}")
 
 
     @require_POST
@@ -1978,7 +1982,7 @@ codup
                         alt += f"{self.alt_count + 1}) {str(image)}\n"
                         self.alt_count += 1
             except Exception as e:
-                print(f"Error processing image tag: {str(e)}")
+                logger.error(f"Error processing image tag: {str(e)}")
                 missing_alt_images.append(image)
                 alt += f"{self.alt_count + 1}) {str(image)}\n"
                 self.alt_count += 1
@@ -2080,12 +2084,12 @@ codup
                         external_links += f"{self.external_links}) {href_link}\n"
                         
                 except Exception as e:
-                    print(f"Error parsing URL {href_link}: {str(e)}")
+                    logger.error(f"Error parsing URL {href_link}: {str(e)}")
                     self.internal_links += 1
                     internal_links += f"{self.internal_links}) {href_link} (parse error)\n"
                     
             except Exception as e:
-                print(f"Error processing link: {str(e)}")
+                logger.error(f"Error processing link: {str(e)}")
                 continue
         
         self.data['Internal_links'] = self.internal_links
@@ -2184,7 +2188,7 @@ codup
             self.data['status'] = status
             self.data['status_code'] = 0
             self.data['status_verdict'] = "⚠️ Status check failed"
-            print(f"Status check error: {str(e)}")
+            logger.error(f"Status check error: {str(e)}")
         
         return
 
@@ -2225,16 +2229,16 @@ codup
             try:
                 fig.write_image(tag)
             except Exception as e:
-                print(f"Error saving chart image {tag}: {str(e)}")
+                logger.error(f"Error saving chart image {tag}: {str(e)}")
                 try:
                     html_tag = tag.replace('.png', '.html').replace('.jpg', '.html')
                     fig.write_html(html_tag)
-                    print(f"Saved as HTML instead: {html_tag}")
+                    logger.info(f"Saved as HTML instead: {html_tag}")
                 except Exception as e2:
-                    print(f"Could not save chart in any format: {str(e2)}")
+                    logger.error(f"Could not save chart in any format: {str(e2)}")
             
         except Exception as e:
-            print(f"Error creating score graph for {name}: {str(e)}")
+            logger.error(f"Error creating score graph for {name}: {str(e)}")
         
         return
 
@@ -2275,12 +2279,12 @@ codup
             except requests.exceptions.RequestException as e:
                 robot_verdict = "⚠️ Not Found - Consider adding robots.txt file"
                 self.robot_flag = False
-                print(f"Error checking robots.txt: {str(e)}")
+                logger.error(f"Error checking robots.txt: {str(e)}")
                 
         except Exception as e:
             robot_verdict = "⚠️ Error checking robots.txt"
             self.robot_flag = False
-            print(f"Unexpected error in robots.txt check: {str(e)}")
+            logger.error(f"Unexpected error in robots.txt check: {str(e)}")
         
         self.data['robot'] = robot_verdict
         self.data['robots_url'] = robots_url if 'robots_url' in locals() else None
@@ -2339,7 +2343,7 @@ codup
                 except requests.exceptions.RequestException:
                     continue
                 except Exception as e:
-                    print(f"Error checking sitemap at {path}: {str(e)}")
+                    logger.error(f"Error checking sitemap at {path}: {str(e)}")
                     continue
             
             if not sitemap_found:
@@ -2350,7 +2354,7 @@ codup
         except Exception as e:
             sitemap_verdict = "⚠️ Error checking sitemap"
             self.sitemap_flag = False
-            print(f"Unexpected error in sitemap check: {str(e)}")
+            logger.error(f"Unexpected error in sitemap check: {str(e)}")
         
         self.data['sitemap'] = sitemap_verdict
         self.data['sitemap_location'] = sitemap_location if sitemap_found else None
@@ -2417,7 +2421,7 @@ codup
             })
             return self.data
         
-        print(f"Checking {len(unique_urls)} unique links out of {total_links} total links...")
+        logger.info(f"Checking {len(unique_urls)} unique links out of {total_links} total links...")
         
         def check_link(url: str) -> Optional[Dict]:
             anchor_text = link_map.get(url, "[No Text]")
@@ -2426,7 +2430,7 @@ codup
                 url_domain = urlparse(url).netloc.lower().replace('www.', '')
                 site_domain = self.domain.lower().replace('www.', '')
                 link_type = "internal" if url_domain == site_domain else "external"
-            except:
+            except (ValueError, AttributeError):
                 link_type = "external"
             
             try:
@@ -2436,7 +2440,7 @@ codup
                     if r.status_code == 405 or r.status_code == 501:
                         r = self.session.get(url, timeout=timeout, allow_redirects=True, stream=True)
                         r.close()
-                except:
+                except Exception:
                     r = self.session.get(url, timeout=timeout, allow_redirects=True, stream=True)
                     r.close()
                 
@@ -2504,7 +2508,7 @@ codup
             with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
                 results = list(executor.map(check_link, unique_urls))
         except Exception as e:
-            print(f"Error in concurrent link checking: {str(e)}")
+            logger.error(f"Error in concurrent link checking: {str(e)}")
             results = [check_link(url) for url in unique_urls]
         
         for result in results:
@@ -2707,7 +2711,7 @@ codup
             self.data['schema_format'] = schema_formats if schema_formats else None
             
         except Exception as e:
-            print(f"Error in schema detection: {str(e)}")
+            logger.error(f"Error in schema detection: {str(e)}")
             self.schema_flag = False
             self.data['schema'] = f"⚠️ Error checking schema: {str(e)}"
         
@@ -2749,7 +2753,7 @@ codup
                             og_tags[tag_name]['found'] = True
                             og_tags[tag_name]['content'] = content
                 except Exception as e:
-                    print(f"Error checking {tag_name}: {str(e)}")
+                    logger.error(f"Error checking {tag_name}: {str(e)}")
                     continue
             
             found_tags = [tag for tag, data in og_tags.items() if data['found']]
@@ -2814,7 +2818,7 @@ codup
             self.data['og_recommendations'] = recommendations if recommendations else ["✓ Open Graph implementation is complete"]
             
         except Exception as e:
-            print(f"Error in Open Graph detection: {str(e)}")
+            logger.error(f"Error in Open Graph detection: {str(e)}")
             self.ogp_flag = False
             self.data['open_gp'] = f"⚠️ Error checking Open Graph tags: {str(e)}"
         
@@ -2894,7 +2898,7 @@ codup
                             self.data['favicon_url'] = favicon_url
                             favicon_found = True
                             break
-                    except:
+                    except Exception:
                         continue
                 
                 if not favicon_found:
@@ -3395,17 +3399,17 @@ codup
             self.data['best_practices_score'] = round(best_practices_score * 100) if best_practices_score else 0
 
         except requests.exceptions.Timeout:
-            print(f"Error: PageSpeed API request timed out")
+            logger.error("PageSpeed API request timed out")
             self.data['lcp'] = self.data['cls'] = self.data['inp'] = self.data['full_page_load'] = "Timeout"
             self.data['fcp'] = self.data['tti'] = self.data['tbt'] = "Timeout"
             self.data['performance_score'] = self.data['seo_score'] = 0
         except requests.exceptions.RequestException as e:
-            print(f"Error fetching Core Web Vitals: {e}")
+            logger.error(f"Error fetching Core Web Vitals: {e}")
             self.data['lcp'] = self.data['cls'] = self.data['inp'] = self.data['full_page_load'] = "Error"
             self.data['fcp'] = self.data['tti'] = self.data['tbt'] = "Error"
             self.data['performance_score'] = self.data['seo_score'] = 0
         except Exception as e:
-            print(f"Unexpected error in Core Web Vitals: {e}")
+            logger.error(f"Unexpected error in Core Web Vitals: {e}")
             self.data['lcp'] = self.data['cls'] = self.data['inp'] = self.data['full_page_load'] = "Error"
             self.data['fcp'] = self.data['tti'] = self.data['tbt'] = "Error"
             self.data['performance_score'] = self.data['seo_score'] = 0
@@ -3663,7 +3667,7 @@ codup
                 try:
                     from django.conf import settings
                     output_dir = os.path.join(settings.MEDIA_ROOT, 'reports')
-                except:
+                except (ImportError, AttributeError):
                     output_dir = os.path.join(os.getcwd(), 'reports')
             
             send_email = bool(current_user_email)
@@ -4140,7 +4144,7 @@ def mobiletest(request):
                     try:
                         if int(size.strip()) < 12:
                             small_fonts += 1
-                    except: 
+                    except (ValueError, AttributeError):
                         pass
             data["ux_checks"]["font_size_ok"] = small_fonts == 0
 
@@ -4342,21 +4346,37 @@ def keyword_ai_suggestions(request):
         
         data["keyword_count"] = len(result.get("relevant_keywords", []))
         
-        # Fetch actual opportunity IDs from database for feedback buttons
+        # Fetch or create opportunity IDs for feedback buttons
         try:
             from keyword_ai.models import ContentAnalysis, KeywordOpportunity
             content_analysis = ContentAnalysis.objects.filter(url=url).order_by('-analyzed_at').first()
             if content_analysis:
-                # Get all opportunities for this analysis
+                # Get existing opportunities
                 opportunities = {
-                    opp.keyword: opp.id 
+                    opp.keyword: opp.id
                     for opp in KeywordOpportunity.objects.filter(content_analysis=content_analysis)
                 }
-                # Add opportunity_id to each scored keyword
+                # Create opportunities for keywords that don't have them
                 for item in data["scored_keywords"]:
-                    item["opportunity_id"] = opportunities.get(item["keyword"], None)
+                    keyword = item["keyword"]
+                    if keyword in opportunities:
+                        item["opportunity_id"] = opportunities[keyword]
+                    else:
+                        # Create new opportunity for this keyword
+                        opp = KeywordOpportunity.objects.create(
+                            content_analysis=content_analysis,
+                            keyword=keyword,
+                            keyword_type=item.get("type", "tfidf"),
+                            relevance_score=item.get("relevance_score", item.get("score", 50)),
+                            search_volume_estimate=item.get("search_volume", "Unknown"),
+                            difficulty_score=item.get("difficulty", 50),
+                            intent=item.get("intent", "informational"),
+                            priority="medium",
+                        )
+                        item["opportunity_id"] = opp.id
+                        opportunities[keyword] = opp.id
         except Exception as e:
-            logger.warning(f"Could not fetch opportunity IDs: {e}")
+            logger.warning(f"Could not create opportunity IDs: {e}")
         
         messages.success(request, f'Successfully analyzed and found {data["keyword_count"]} relevant keywords!')
         return render(request, 'keyword_ai_suggestions.html', data)
@@ -4426,7 +4446,7 @@ def register(request):
             user = User.objects.create_user(username, email, password1, first_name=first_name, last_name=last_name)
             profile = Profile.objects.create(user=user)
             return redirect('login')
-        except:
+        except (IntegrityError, DatabaseError):
             messages.error(request, 'This User already exist!')
             return render(request, 'register.html')
 

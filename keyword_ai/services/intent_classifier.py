@@ -17,6 +17,14 @@ from openai import OpenAI
 from django.conf import settings
 import numpy as np
 
+from keyword_ai.utils.intent_detection import (
+    INFORMATIONAL_INDICATORS,
+    NAVIGATIONAL_INDICATORS,
+    TRANSACTIONAL_INDICATORS,
+    COMMERCIAL_INDICATORS,
+    classify_keyword_intent,
+)
+
 logger = logging.getLogger(__name__)
 
 _client = None
@@ -52,42 +60,25 @@ class IntentClassifier:
     - LLM-based for nuanced understanding
     """
     
-    # Intent definitions with weights
+    # Intent definitions using shared canonical indicator lists
     INTENTS = {
         "informational": {
-            "indicators": [
-                "what", "how", "why", "when", "where", "who", "which",
-                "guide", "tutorial", "explained", "meaning", "definition",
-                "learn", "understand", "examples", "tips", "ideas",
-                "vs", "versus", "difference between", "comparison",
-            ],
+            "indicators": INFORMATIONAL_INDICATORS,
             "weight": 1.0,
             "description": "Seeking information or answers"
         },
         "navigational": {
-            "indicators": [
-                "login", "signin", "signup", "sign in", "sign up",
-                "official", "website", "homepage", "app", "download",
-                "portal", "dashboard", "account", "profile",
-            ],
+            "indicators": NAVIGATIONAL_INDICATORS,
             "weight": 1.0,
             "description": "Looking for a specific website or page"
         },
         "transactional": {
-            "indicators": [
-                "buy", "purchase", "order", "shop", "price", "cost",
-                "discount", "deal", "coupon", "sale", "cheap", "affordable",
-                "free shipping", "add to cart", "checkout", "pay",
-            ],
+            "indicators": TRANSACTIONAL_INDICATORS,
             "weight": 1.0,
             "description": "Ready to make a purchase"
         },
         "commercial": {
-            "indicators": [
-                "best", "top", "review", "reviews", "compare", "comparison",
-                "vs", "alternative", "alternatives to", "features",
-                "pros and cons", "rating", "recommended", "which is better",
-            ],
+            "indicators": COMMERCIAL_INDICATORS,
             "weight": 0.9,
             "description": "Researching before purchase"
         },
@@ -238,7 +229,7 @@ Respond ONLY with valid JSON:
         intent_distribution = {
             intent: {
                 "count": count,
-                "percentage": round(count / total * 100, 1)
+                "percentage": round(count / total * 100, 1) if total > 0 else 0.0
             }
             for intent, count in intent_counts.items()
         }

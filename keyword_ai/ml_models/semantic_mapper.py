@@ -7,8 +7,16 @@ Uses FAISS for efficient similarity search.
 import os
 import numpy as np
 from typing import List, Dict, Tuple, Optional
-from sentence_transformers import SentenceTransformer
-import faiss
+
+# Optional FAISS import with fallback
+try:
+    import faiss
+    FAISS_AVAILABLE = True
+except ImportError:
+    faiss = None
+    FAISS_AVAILABLE = False
+
+from keyword_ai.services.embeddings import get_model as get_embedding_model
 
 # Model paths
 MODEL_DIR = os.path.join(os.path.dirname(__file__), "..", "models")
@@ -16,17 +24,8 @@ FAISS_INDEX_PATH = os.path.join(MODEL_DIR, "keyword_index.faiss")
 KEYWORD_VOCAB_PATH = os.path.join(MODEL_DIR, "keyword_vocabulary.npy")
 
 # Lazy-loaded models
-_embedding_model = None
 _faiss_index = None
 _keyword_vocabulary = None
-
-
-def get_embedding_model():
-    """Lazy load sentence transformer model."""
-    global _embedding_model
-    if _embedding_model is None:
-        _embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
-    return _embedding_model
 
 
 class SemanticKeywordMapper:
@@ -52,6 +51,10 @@ class SemanticKeywordMapper:
     def _build_index(self):
         """Build FAISS index from keyword vocabulary."""
         if not self.keyword_vocabulary:
+            return
+        
+        if not FAISS_AVAILABLE:
+            print("Warning: FAISS not available. Semantic keyword mapping will use fallback method.")
             return
         
         print(f"Building FAISS index for {len(self.keyword_vocabulary)} keywords...")
@@ -91,6 +94,9 @@ class SemanticKeywordMapper:
         Returns:
             List of keyword dicts with similarity scores
         """
+        if not FAISS_AVAILABLE:
+            return []
+        
         if self._faiss_index is None or self._faiss_index.ntotal == 0:
             return []
         

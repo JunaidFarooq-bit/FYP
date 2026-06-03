@@ -15,9 +15,17 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path,include
-from SEOAnalyzer import views
+from django.conf import settings
+from django.conf.urls.static import static
+from SEOAnalyzer import views_pages as views
+from SEOAnalyzer.views import health_check, readiness_check, liveness_check
 
 urlpatterns = [
+    # Health checks (must be before other paths for load balancer access)
+    path('health/', health_check, name='health_check'),
+    path('ready/', readiness_check, name='readiness_check'),
+    path('live/', liveness_check, name='liveness_check'),
+    
     path('admin/', admin.site.urls),
     path('home/',views.index,name="Home"),
     path('show/', views.show, name="show"),
@@ -38,5 +46,6 @@ urlpatterns = [
     path('sentimentanalysis/', views.sentiment_analysis_page, name='sentiment_analysis'),
     path('sentimentanalysis/analyze/', views.analyze_sentiment_view, name='analyze_sentiment'),
     path('comparative-analysis/', include('comparative_analysis.urls')),
-    path("api/keywords/", include("keyword_ai.urls"))
-]
+    path("api/keywords/", include("keyword_ai.urls")),
+    path('subscriptions/', include('subscriptions.urls')),  # Subscription management
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

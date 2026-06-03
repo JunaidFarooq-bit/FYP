@@ -11,9 +11,87 @@ Features:
 """
 
 import json
+import re
 from typing import List, Dict, Optional
 from openai import OpenAI
 from django.conf import settings
+
+
+def get_smart_content_slice(content_text: str, num_paragraphs: int = 10, max_chars: int = 2000) -> str:
+    """
+    Intelligently slice content for LLM prompts.
+    
+    Instead of naive truncation [:2000], this function:
+    1. Splits content into paragraphs
+    2. Scores each paragraph by length and character density
+    3. Returns the top N richest paragraphs
+    
+    This ensures the LLM receives actual product/service descriptions
+    rather than fragmented text from aggressive truncation.
+    
+    Args:
+        content_text: Full page content
+        num_paragraphs: Number of top paragraphs to include (default 10)
+        max_chars: Maximum characters to return (default 2000)
+    
+    Returns:
+        Rich content slice for LLM processing
+    """
+    if not content_text:
+        return ""
+    
+    # Split into paragraphs (by double newline or single newline)
+    raw_paragraphs = re.split(r'\n\n+|\n', content_text)
+    
+    # Clean and score paragraphs
+    scored_paragraphs = []
+    for para in raw_paragraphs:
+        para = para.strip()
+        if len(para) < 30:  # Skip very short fragments
+            continue
+        
+        # Calculate metrics
+        char_count = len(para)
+        word_count = len(para.split())
+        
+        # Character density: ratio of alphanumeric to total chars
+        # Higher density = more readable content (less symbols/punctuation noise)
+        alnum_chars = sum(1 for c in para if c.isalnum() or c.isspace())
+        density = alnum_chars / max(char_count, 1)
+        
+        # Penalty for excessive punctuation/symbols (often indicates junk)
+        punct_count = sum(1 for c in para if c in '!@#$%^&*()_+-=[]{}|;:,.<>?')
+        punct_ratio = punct_count / max(char_count, 1)
+        
+        # Composite score: longer + higher density - punctuation penalty
+        score = (word_count * 0.6) + (density * 100) - (punct_ratio * 50)
+        
+        scored_paragraphs.append((para, score, char_count))
+    
+    if not scored_paragraphs:
+        # Fallback to simple truncation if no good paragraphs found
+        return content_text[:max_chars].strip()
+    
+    # Sort by score descending
+    scored_paragraphs.sort(key=lambda x: x[1], reverse=True)
+    
+    # Take top N paragraphs that fit within max_chars
+    selected = []
+    total_chars = 0
+    
+    for para, score, char_count in scored_paragraphs[:num_paragraphs]:
+        if total_chars + char_count > max_chars:
+            # If this paragraph would exceed limit, check if we can take a partial
+            remaining = max_chars - total_chars
+            if remaining > 100:  # Only add if we can get meaningful content
+                selected.append(para[:remaining])
+            break
+        selected.append(para)
+        total_chars += char_count
+    
+    # Join with newlines for readability
+    result = "\n\n".join(selected)
+    return result.strip()
 
 _client = None
 
@@ -34,10 +112,14 @@ def get_client():
 
 
 def get_model():
-    """Return the active model name based on provider."""
-    if getattr(settings, "USE_GROQ", True):
-        return getattr(settings, "GROQ_MODEL", "llama-3.3-70b-versatile")
-    return getattr(settings, "OPENAI_MODEL", "gpt-4")
+    """Return the active model name (uses centralized selector with gpt-4o fallback chain)."""
+    try:
+        from .llm_model_selector import get_llm_model
+        return get_llm_model()
+    except Exception:
+        if getattr(settings, "USE_GROQ", True):
+            return getattr(settings, "GROQ_MODEL", "llama-3.3-70b-versatile")
+        return getattr(settings, "OPENAI_MODEL", "gpt-4o")
 
 
 def expand_keywords_with_llm(
@@ -45,41 +127,101 @@ def expand_keywords_with_llm(
     existing_keywords: List[str],
     page_topic: str = "",
     target_audience: str = "",
-    num_suggestions: int = 15
+    num_suggestions: int = 15,
+    page_metadata: Dict = None,
+    target_region: str = "GLOBAL",
+    trend_focus: str = "",
+    include_geo: bool = True,
+    include_aeo: bool = True,
 ) -> List[Dict]:
     """
     Use LLM to intelligently expand keywords with reasoning.
-    
+
     Args:
         content_text: The page content
         existing_keywords: Keywords already identified
         page_topic: Topic description
         target_audience: Target audience description
         num_suggestions: Number of new keywords to suggest
-        
+        page_metadata: Dict with 'title', 'meta_description', 'og_tags' for context
+        target_region: Geographic region (NA/EU/APAC/LATAM/MEA/GLOBAL)
+        trend_focus: Optional trend focus for the current year
+        include_geo: Whether to inject GEO prompt add-ons
+        include_aeo: Whether to inject AEO prompt add-ons
+
     Returns:
-        List of suggestion dicts with reasoning
+        List of suggestion dicts with reasoning (each carries expansion_context
+        and generation_metadata)
     """
+    from .llm_prompt_generator import build_expansion_prompt
+    from ..utils.year_injector import build_year_context, inject_in_dict
+
     client = get_client()
     if client is None:
         return []
-    
-    # Truncate content for token limit
-    content_summary = content_text[:2000] if len(content_text) > 2000 else content_text
-    existing_kw_list = ", ".join(existing_keywords[:20])
-    
+
+    # Smart content slicing: get richest paragraphs instead of naive truncation
+    content_summary = get_smart_content_slice(content_text, num_paragraphs=10, max_chars=2000)
+
+    # Build business metadata context for LLM
+    metadata_context = ""
+    if page_metadata:
+        title = page_metadata.get('title', '')
+        meta_desc = page_metadata.get('meta_description', '')
+        og_tags = page_metadata.get('og_tags', {})
+
+        metadata_parts = []
+        if title:
+            metadata_parts.append(f"Page Title: {title}")
+        if meta_desc:
+            metadata_parts.append(f"Meta Description: {meta_desc}")
+        if og_tags.get('og:description'):
+            metadata_parts.append(f"OG Description: {og_tags['og:description']}")
+        if og_tags.get('og:site_name'):
+            metadata_parts.append(f"Site Name: {og_tags['og:site_name']}")
+        if og_tags.get('og:type'):
+            metadata_parts.append(f"Content Type: {og_tags['og:type']}")
+        if og_tags.get('article:section'):
+            metadata_parts.append(f"Article Section: {og_tags['article:section']}")
+
+        if metadata_parts:
+            metadata_context = "\n".join(metadata_parts)
+
+    # Build a GEO + year-aware prompt header from templates
+    seed_keyword = page_topic or (existing_keywords[0] if existing_keywords else "your topic")
+    base_prompt, gen_meta = build_expansion_prompt(
+        keyword=seed_keyword,
+        n=num_suggestions,
+        target_region=target_region,
+        target_audience=target_audience,
+        trend_focus=trend_focus,
+        include_geo=include_geo,
+        include_aeo=include_aeo,
+        existing_keywords=existing_keywords,
+    )
+
+    year_ctx = build_year_context()
     prompt = f"""You are an expert SEO strategist with 10+ years of experience.
 
-Analyze the following content and suggest {num_suggestions} NEW keyword opportunities that are NOT in the existing list.
+{base_prompt}
 
-CONTENT:
+IMPORTANT CONTEXT (Business Metadata):
+{metadata_context if metadata_context else "No additional metadata available."}
+
+PAGE CONTENT:
 {content_summary}
-
-EXISTING KEYWORDS (DO NOT SUGGEST THESE):
-{existing_kw_list}
 
 PAGE TOPIC: {page_topic or "Not specified"}
 TARGET AUDIENCE: {target_audience or "General"}
+TARGET REGION: {target_region}
+CURRENT YEAR: {year_ctx['current_year']}
+
+INSTRUCTIONS:
+- Use the business metadata above to understand the company/product context
+- Generate keywords that are contextually relevant to this specific business
+- AVOID generic suggestions that could apply to any industry
+- When generating year-specific keywords, use {year_ctx['current_year']} (NOT older years)
+- Focus on keywords matching the detected industry/business type and target region
 
 For each suggested keyword, provide:
 1. The keyword phrase
@@ -88,6 +230,7 @@ For each suggested keyword, provide:
 4. Competition level (High/Medium/Low)
 5. Strategic reasoning - why this keyword is valuable
 6. Content recommendation - specific advice on how to target this keyword
+7. AEO friendly flag (true if likely surfaced by AI answer engines)
 
 Respond ONLY with valid JSON in this format:
 {{
@@ -97,38 +240,55 @@ Respond ONLY with valid JSON in this format:
       "intent": "Informational",
       "search_volume": "High",
       "competition": "Medium",
+      "region": "{target_region}",
+      "aeo_friendly": true,
       "reasoning": "This keyword captures users looking for...",
       "recommendation": "Add an H2 section titled 'Example Keyword Guide'..."
     }}
   ]
 }}"""
 
+    model_name = get_model()
+    temperature = 0.3
     try:
         response = client.chat.completions.create(
-            model=get_model(),
+            model=model_name,
             messages=[{"role": "user", "content": prompt}],
-            temperature=0.3,
+            temperature=temperature,
             max_tokens=2000,
         )
-        
+
         raw_text = response.choices[0].message.content.strip()
-        
+
         # Clean markdown fences
         if raw_text.startswith("```"):
             raw_text = raw_text.split("```")[1]
             if raw_text.startswith("json"):
                 raw_text = raw_text[4:]
-        
+
         result = json.loads(raw_text)
         suggestions = result.get("suggestions", [])
-        
+
+        # Ensure any {current_year} placeholders in LLM output get resolved
+        suggestions = inject_in_dict(suggestions)
+
         # Add metadata
         for sug in suggestions:
             sug["source"] = "llm_expansion"
             sug["confidence"] = _calculate_confidence(sug)
-        
+            sug["expansion_context"] = {
+                "region": gen_meta.get("region"),
+                "year": gen_meta.get("year"),
+                "trend_focus": gen_meta.get("trend_focus"),
+            }
+            sug["generation_metadata"] = {
+                "prompt_version": gen_meta.get("prompt_version"),
+                "llm_model": model_name,
+                "temperature": temperature,
+            }
+
         return suggestions
-        
+
     except (json.JSONDecodeError, Exception) as e:
         print(f"LLM expansion error: {e}")
         return []
@@ -250,19 +410,24 @@ def generate_question_keywords(
     if client is None:
         return []
     
-    content_summary = content_text[:1500] if len(content_text) > 1500 else content_text
-    
+    from ..utils.year_injector import build_year_context, inject_in_dict
+
+    # Smart content slicing for better context
+    content_summary = get_smart_content_slice(content_text, num_paragraphs=8, max_chars=1500)
+    year_ctx = build_year_context()
+
     prompt = f"""You are an SEO expert specializing in featured snippets and People Also Ask optimization.
 
-Based on this content, generate {num_questions} question-based search queries that users might ask.
+Based on this content, generate {num_questions} question-based search queries that users might ask in {year_ctx['current_year']}.
 
 CONTENT:
 {content_summary}
 
 PAGE TOPIC: {page_topic or "General"}
+CURRENT YEAR: {year_ctx['current_year']}
 
 For each question:
-1. The question as a search query
+1. The question as a search query (use {year_ctx['current_year']} where year context is relevant - NOT older years)
 2. Question type (What/How/Why/When/Where/Who/Which/Can/Does/Is)
 3. Search volume estimate (High/Medium/Low)
 4. Brief answer that could appear in a featured snippet
@@ -298,11 +463,14 @@ Respond ONLY with valid JSON:
         
         result = json.loads(raw_text)
         questions = result.get("questions", [])
-        
+
+        # Resolve any {current_year} placeholders in LLM output
+        questions = inject_in_dict(questions)
+
         for q in questions:
             q["source"] = "llm_questions"
             q["keyword_type"] = "question"
-        
+
         return questions
         
     except (json.JSONDecodeError, Exception) as e:

@@ -145,15 +145,8 @@
                   <span>New URL</span>
                 </a>
 
-                <a
-                  class="btn btn-primary"
-                  href="{% url 'logout' %}"
-                  class="btn btn-outline logout-btn"
-                  id="logout"
-                >
-                  <i class="fas fa-sign-out-alt"></i>
-                  <span>Logout</span>
-                </a>
+                <!-- Profile Dropdown -->
+                {% include 'partials/_profile_dropdown.html' %}
               </div>
             </div>
           </form>
@@ -185,26 +178,30 @@
              ======================================== -->
         <div class="row mb-4">
           <div class="col-12">
-            <div class="analysis-card featured-card" style="background: linear-gradient(135deg, #023761 0%, #02569b 100%); color: white;">
+            <div class="analysis-card featured-card dashboard-header-wrapper">
               <div class="card-body">
                 <div class="row align-items-center">
                   <div class="col-md-8">
-                    <small style="opacity: 0.8; text-transform: uppercase; letter-spacing: 0.05em;">Analysis Results for</small>
-                    <h2 style="font-weight: 600; margin: 0.25rem 0; word-break: break-word;">{{ domain|default:url|truncatechars:50 }}</h2>
-                    <div style="opacity: 0.8; font-size: 0.875rem;">
-                      <i class="far fa-calendar mr-2"></i>{{ analysis_date|default:"Today" }}
-                      <i class="far fa-clock ml-3 mr-2"></i>{{ analysis_time|default:"Now" }}
+                    <small class="domain-label">Analysis Results for</small>
+                    <h2 class="domain-name">{{ domain|default:url|truncatechars:50 }}</h2>
+                    <div class="header-meta">
+                      <span class="meta-item">
+                        <i class="far fa-calendar"></i>{{ analysis_date|default:"Today" }}
+                      </span>
+                      <span class="meta-item">
+                        <i class="far fa-clock"></i>{{ analysis_time|default:"Now" }}
+                      </span>
                     </div>
                   </div>
                   <div class="col-md-4 text-center mt-3 mt-md-0">
-                    <div style="background: white; border-radius: 12px; padding: 1rem; display: inline-block;">
-                      <div class="score-ring-container" style="width: 80px; height: 80px;">
+                    <div class="score-box">
+                      <div class="score-ring-container header-score-ring">
                         <svg class="score-ring" viewBox="0 0 140 140">
                           <circle class="score-ring-bg" cx="70" cy="70" r="60"></circle>
-                          <circle 
-                            class="score-ring-fill {{ score_class|default:'good' }}" 
-                            cx="70" 
-                            cy="70" 
+                          <circle
+                            class="score-ring-fill {{ score_class|default:'good' }}"
+                            cx="70"
+                            cy="70"
                             r="60"
                             data-score="{{ avg_score|default:75 }}"
                             stroke-dasharray="377"
@@ -213,11 +210,11 @@
                           ></circle>
                         </svg>
                         <div class="score-ring-value">
-                          <span class="value" style="font-size: 1.5rem;">{{ avg_score|default:75 }}</span>
+                          <span class="value">{{ avg_score|default:75 }}</span>
                           <span class="label">/100</span>
                         </div>
                       </div>
-                      <div class="score-verdict {{ score_class|default:'good' }}" style="margin-top: 0.5rem; font-size: 0.75rem; padding: 0.25rem 0.75rem; border-radius: 20px; display: inline-block;">
+                      <div class="score-verdict {{ score_class|default:'good' }}">
                         {{ overall_verdict|default:"Good" }}
                       </div>
                     </div>
@@ -2623,6 +2620,8 @@
         toggler.classList.toggle("show");
       }
 
+      // Profile Dropdown Toggle handled by _profile_dropdown.html partial
+
       // Toggle Details Function
       function toggleDetails(containerId) {
         const container = document.getElementById(containerId);
@@ -2859,5 +2858,6 @@ function getCookie(name) {
   to { opacity: 1; transform: translateY(0); }
 }
 </style>
+  {% include 'partials/_upgrade_modal.html' %}
   </body>
 </html>

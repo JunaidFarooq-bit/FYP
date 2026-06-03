@@ -1,12 +1,124 @@
+# ── Python ──────────────────────────────────────────────────
 *.pyc
+*.pyo
+*.pyd
 *~
 __pycache__/
-db.sqlite3
-myenv/
+*.egg-info/
+*.egg
+dist/
+build/
+.eggs/
+
+# ── Virtual environments ─────────────────────────────────────
 venv/
+myenv/
+env/
+.venv/
+ENV/
+
+# ── Django ───────────────────────────────────────────────────
+db.sqlite3
 staticfiles/
 media/
+*.log
+logs/
+
+# ── Environment / Secrets ────────────────────────────────────
 .env
+.env.local
+.env.*.local
+
+# ── Test & Coverage artifacts ────────────────────────────────
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+.pytest_cache/
+.tox/
+nosetests.xml
+test_media/
+test_static/
+test_data/
+
+# ── ML model binaries & datasets ─────────────────────────────
+keyword_ai/models/*.pkl
+keyword_ai/models/*.faiss
+keyword_ai/models/*.npy
+keyword_ai/dataset/*.csv
+
+# ── Generated / build output ─────────────────────────────────
 reports/
-# Added by code-review-graph
+*.pdf
+
+# ── IDE & editor configs ─────────────────────────────────────
+.vscode/
+.cursor/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ── Tool-specific ────────────────────────────────────────────
 .code-review-graph/
+.qodo/
+.kiro/
+.claude/
+.opencode.json
+.mcp.json
+.windsurfrules
+.windsurf/
+
+# ── Local dev files ─────────────────────────────────────────
+.envold
+.env.backup
+*.bak
+*.tmp
+*.temp
+
+# ── Celery ───────────────────────────────────────────────────
+celerybeat-schedule
+*.pid
+
+# ── Redis ─────────────────────────────────────────────────────
+dump.rdb
+*.rdb
+
+# ── SSL/TLS Certificates ────────────────────────────────────
+*.pem
+*.key
+*.crt
+certs/
+
+# ── Node/Frontend ─────────────────────────────────────────────
+node_modules/
+npm-debug.log*
+yarn-error.log*
+package-lock.json
+
+# ── Compressed archives ──────────────────────────────────────
+*.zip
+*.tar.gz
+*.rar
+
+# ── Database dumps ───────────────────────────────────────────
+*.dump
+*.sql
+dumps/
+
+# ── Generated reports & docs ────────────────────────────────
+*.docx
+RESULTS_AND_EVALUATION.docx
+
+# ── Local testing artifacts ──────────────────────────────────
+.coverage_html/
+prof/
+
+# ── System files ─────────────────────────────────────────────
+*.lock
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db

@@ -24,12 +24,14 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
 from django.contrib import messages
 from django.conf import settings
+from django.db import IntegrityError
 
 from .models import Profile
 from .helpers import send_forget_password_mail
 from .services.sentiment_analyzer import analyze_sentiment
-from .views import Website_Audit
+from .views_original import Website_Audit
 from keyword_ai.pipeline_v2 import run_keyword_pipeline_v2
+from subscriptions.decorators import track_usage, enforce_free_trial_limit, require_feature
 
 logger = logging.getLogger(__name__)
 
@@ -180,6 +182,7 @@ def Report(request):
 
 
 @login_required(login_url='login')
+@require_feature('pdf_export')  # PDF export is a premium feature
 def download_report(request):
     """
     Generate and download SEO report PDF directly to device.
@@ -340,6 +343,7 @@ def index(request):
 
 
 @login_required(login_url='login')
+@track_usage('audit')  # Track SEO audit usage
 def show(request):
     """Main SEO audit view - runs full analysis and displays results."""
     import validators
@@ -384,6 +388,9 @@ def show(request):
         logger.info(f"AUDIT DATA - Speed: {audit_data.get('speed')}s, Links: {audit_data.get('internal_links')}/{audit_data.get('external_links')}")
         logger.info(f"AUDIT DATA - Flags: robots={audit_data.get('robot_flag')}, sitemap={audit_data.get('sitemap_flag')}, schema={audit_data.get('schema_flag')}")
         logger.info(f"=" * 60)
+        
+        # Signal to track_usage decorator that a real audit was performed
+        request._audit_performed = True
         
         # Prepare dashboard data for integration with home.html
         dashboard_data = _prepare_dashboard_data(audit_data)
@@ -861,7 +868,20 @@ def mobiletest(request):
             })
         except Exception as e:
             logger.warning(f"Lighthouse fetch error: {e}")
-            data["lighthouse_error"] = str(e)
+            error_str = str(e)
+            # Provide user-friendly messages for common Lighthouse errors
+            if "NO_FCP" in error_str:
+                data["lighthouse_error"] = "The page couldn't be fully rendered for testing. This may happen if the site blocks automated tests or has heavy JavaScript that times out. Basic HTML checks are still available below."
+            elif "NO_LCP" in error_str:
+                data["lighthouse_error"] = "The page took too long to display content. The site may be slow or temporarily unavailable. Basic HTML checks are still available below."
+            elif "TIMED_OUT" in error_str or "Timeout" in error_str:
+                data["lighthouse_error"] = "The test timed out while loading the page. The site may be slow or temporarily unavailable. Basic HTML checks are still available below."
+            elif "DNS_FAILURE" in error_str:
+                data["lighthouse_error"] = "Could not resolve the domain name. Please check the URL and try again."
+            elif "400" in error_str:
+                data["lighthouse_error"] = "The page couldn't be analyzed. This may be due to access restrictions, slow loading, or JavaScript rendering issues. Basic HTML checks are still available below."
+            else:
+                data["lighthouse_error"] = f"Page analysis unavailable: {error_str[:100]}"
 
         try:
             html = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=20).text
@@ -885,7 +905,7 @@ def mobiletest(request):
                     try:
                         if int(size.strip()) < 12:
                             small_fonts += 1
-                    except: 
+                    except (ValueError, AttributeError):
                         pass
             data["ux_checks"]["font_size_ok"] = small_fonts == 0
 
@@ -1040,6 +1060,7 @@ def keysuggestion(request):
 
 
 @login_required(login_url='login')
+@track_usage('audit')  # Track keyword analysis as audit usage
 def keyword_ai_suggestions(request):
     """AI-Powered Keyword Suggestion using keyword_ai pipeline."""
     try:
@@ -1050,16 +1071,20 @@ def keyword_ai_suggestions(request):
         url = request.POST.get("url", "").strip()
         text = request.POST.get("text", "").strip()
         page_topic = request.POST.get("page_topic", "").strip()
+        target_audience = request.POST.get("target_audience", "").strip()
+        target_region = (request.POST.get("target_region") or "GLOBAL").upper()
         use_llm = request.POST.get("use_llm", "true").lower() != "false"
-        
+
         if not url and not text:
             messages.error(request, 'Please provide either a URL or text content.')
             return render(request, 'keyword_ai_suggestions.html', data)
-        
+
         result = run_keyword_pipeline_v2(
             url=url if url else None,
             text=text if text else None,
             page_topic=page_topic,
+            target_audience=target_audience,
+            target_region=target_region,
             use_llm=use_llm,
             use_advanced_ai=True,
             analyze_competitors=False,
@@ -1075,6 +1100,8 @@ def keyword_ai_suggestions(request):
             "url": url,
             "text": text[:200] + "..." if len(text) > 200 else text,
             "page_topic": page_topic,
+            "target_audience": target_audience,
+            "target_region": target_region,
             "page_title": result.get("page_title", ""),
             "relevant_keywords": result.get("relevant_keywords", []),
             "scored_keywords": result.get("scored_keywords", [])[:20],
@@ -1089,8 +1116,16 @@ def keyword_ai_suggestions(request):
             "question_keywords": result.get("question_keywords", [])[:8],
             "intent_classifications": result.get("intent_classifications", []),
             "content_analysis": result.get("content_analysis", {}),
+            "traffic_analysis": result.get("traffic_analysis", {}),
+            # NEW v2.2: GEO/AEO + Traffic Potential signals
+            "geo_aeo_analysis": result.get("geo_aeo_analysis", {}),
+            "traffic_potential_forecast": result.get("traffic_potential_forecast", []),
+            "pipeline_context": result.get("context", {}),
             "keyword_count": len(result.get("relevant_keywords", []))
         })
+        
+        # Signal to track_usage decorator that a real analysis was performed
+        request._audit_performed = True
         
         messages.success(request, f'Successfully analyzed and found {data["keyword_count"]} relevant keywords!')
         return render(request, 'keyword_ai_suggestions.html', data)
@@ -1169,8 +1204,12 @@ def register(request):
             )
             Profile.objects.create(user=user)
             return redirect('login')
-        except:
+        except IntegrityError:
             messages.error(request, 'This username already exists!')
+            return render(request, 'register.html')
+        except Exception as e:
+            logger.error(f"Registration error: {e}")
+            messages.error(request, 'An error occurred during registration. Please try again.')
             return render(request, 'register.html')
 
     return render(request, 'register.html')
@@ -1193,6 +1232,11 @@ def ChangePassword(request, token):
 
     try:
         profile_obj = Profile.objects.filter(forget_password_token=token).first()
+
+        if not profile_obj:
+            messages.error(request, 'This password reset link is invalid or has already been used.')
+            return redirect('forget_password')
+
         context = {'user_id': profile_obj.user.id}
 
         if request.method == 'POST':
@@ -1200,7 +1244,7 @@ def ChangePassword(request, token):
             confirm_password = request.POST.get('reconfirm_password')
             user_id = request.POST.get('user_id')
 
-            if user_id is None:
+            if not user_id:
                 messages.error(request, 'No user id found.')
                 return redirect(f'/change-password/{token}/')
 
@@ -1208,14 +1252,24 @@ def ChangePassword(request, token):
                 messages.error(request, 'Passwords do not match.')
                 return redirect(f'/change-password/{token}/')
 
+            if len(new_password) < 8:
+                messages.error(request, 'Password must be at least 8 characters long.')
+                return redirect(f'/change-password/{token}/')
+
             user_obj = User.objects.get(id=user_id)
             user_obj.set_password(new_password)
             user_obj.save()
+
+            profile_obj.forget_password_token = ''
+            profile_obj.save()
+
+            messages.success(request, 'Your password has been updated successfully. Please log in.')
             return redirect('login')
 
     except Exception as e:
         logger.error(f'ChangePassword error: {e}')
-    
+        messages.error(request, 'An error occurred. Please try again.')
+
     return render(request, 'change-password.html', context)
 
 
@@ -1237,7 +1291,7 @@ def ForgetPassword(request):
 
             token = str(uuid.uuid4())
 
-            profile = Profile.objects.get(user=user)
+            profile, _ = Profile.objects.get_or_create(user=user)
             profile.forget_password_token = token
             profile.save()
 

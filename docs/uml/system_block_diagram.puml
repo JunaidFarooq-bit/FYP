@@ -1,0 +1,177 @@
+@startuml WebLift_System_Block_Diagram
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam componentStyle rectangle
+
+title WebLift - System Block Diagram
+
+' === EXTERNAL ENTITIES ===
+cloud "External APIs" as ExternalAPIs #D7BDE2 {
+    portout "LLM APIs\n(Groq/OpenAI)" as LLM
+    portout "Pinecone\nVector DB" as Pinecone
+    portout "Moz API" as Moz
+    portout "Google\nPageSpeed" as PageSpeed
+    portout "SMTP\nEmail" as SMTP
+}
+
+' === WEBLIFT SYSTEM ===
+rectangle "WebLift SEO Platform" #E8F4FD {
+
+    ' --- FRONTEND LAYER ---
+    rectangle "Frontend Layer" #FADBD8 {
+        component "Django Templates\n+ Static Assets" as Frontend
+    }
+
+    ' --- API LAYER ---
+    rectangle "API Layer" #FCF3CF {
+        component "Django URL Router" as URLRouter
+        component "REST API Endpoints" as API
+        component "Middleware\n(Auth, Security)" as Middleware
+    }
+
+    ' --- CORE APPLICATIONS ---
+    rectangle "Core Applications" #D5F5E3 {
+        
+        package "SEOAnalyzer" #A9DFBF {
+            component "Audit Controller" as AuditCtrl
+            component "Report Generator" as ReportGen
+            database "Audit Cache\n(Redis/SQLite)" as AuditCache
+        }
+        
+        package "Keyword AI" #A9DFBF {
+            component "Pipeline V2" as KeywordPipeline
+            component "ML Models" as MLModels
+            database "Keyword DB" as KeywordDB
+        }
+        
+        package "Comparative\nAnalysis" #A9DFBF {
+            component "Comparison\nOrchestrator" as CompareOrch
+            database "Comparison\nReports" as CompareDB
+        }
+        
+        package "Subscriptions" #A9DFBF {
+            component "Subscription\nService" as SubService
+            component "Usage Tracker" as UsageTracker
+            database "Subscription\nDB" as SubDB
+        }
+    }
+
+    ' --- SERVICES LAYER ---
+    rectangle "Services Layer" #D6EAF8 {
+        component "SEO Analysis\nService" as SEOService
+        component "Technical Audit\nService" as TechService
+        component "Content Analysis\nService" as ContentService
+        component "Sentiment\nAnalyzer" as SentimentSvc
+        component "E-E-A-T\nAnalyzer" as EEATSvc
+        component "Grammar\nChecker" as GrammarSvc
+        component "Link Checker" as LinkSvc
+        component "Minification\nChecker" as MinifySvc
+    }
+
+    ' --- AI/ML SERVICES ---
+    rectangle "AI/ML Services" #E8DAEF {
+        component "RAG Retriever" as RAG
+        component "Vector DB\nAdapter" as VectorAdapter
+        component "LLM Expander" as LLMExpander
+        component "Intent\nClassifier" as IntentClass
+        component "Embedding\nGenerator" as Embeddings
+        component "Content\nOptimizer" as ContentOpt
+        component "Feedback\nCollector" as FeedbackSvc
+        component "A/B Testing" as ABTest
+    }
+
+    ' --- INFRASTRUCTURE ---
+    rectangle "Infrastructure" #F5B7B1 {
+        component "Celery\nTask Queue" as Celery
+        component "Async HTTP\nClient" as HTTPClient
+        component "Circuit Breaker" as CircuitBreaker
+        component "Caching Layer" as Cache
+    }
+
+    ' --- DATA LAYER ---
+    rectangle "Data Layer" #F2D7D5 {
+        database "SQLite /\nPostgreSQL" as MainDB #FADBD8
+        database "Redis Cache\n(Optional)" as RedisCache #FADBD8
+        storage "Media Storage\n(PDFs, Proofs)" as MediaStore #FADBD8
+    }
+}
+
+' === USERS ===
+actor "End User" as EndUser #F8C471
+actor "Administrator" as Admin #F5B7B1
+actor "Celery Worker" as Worker #D7BDE2
+
+' === CONNECTIONS - USERS TO SYSTEM ===
+EndUser --> Frontend : HTTPS
+Admin --> Frontend : HTTPS
+Worker --> Celery : Process Tasks
+
+' === FRONTEND TO API ===
+Frontend --> URLRouter
+URLRouter --> Middleware
+Middleware --> API
+
+' === API TO APPLICATIONS ===
+API --> AuditCtrl
+API --> KeywordPipeline
+API --> CompareOrch
+API --> SubService
+
+' === APPLICATIONS TO SERVICES ===
+AuditCtrl --> SEOService
+AuditCtrl --> ReportGen
+KeywordPipeline --> MLModels
+CompareOrch --> SEOService
+SubService --> UsageTracker
+
+' === SERVICES TO AI/ML ===
+SEOService --> TechService
+SEOService --> ContentService
+SEOService --> SentimentSvc
+SEOService --> EEATSvc
+SEOService --> GrammarSvc
+SEOService --> LinkSvc
+SEOService --> MinifySvc
+
+ContentService --> RAG
+MLModels --> RAG
+MLModels --> VectorAdapter
+MLModels --> LLMExpander
+MLModels --> IntentClass
+MLModels --> Embeddings
+MLModels --> ContentOpt
+MLModels --> FeedbackSvc
+MLModels --> ABTest
+
+' === TO INFRASTRUCTURE ===
+KeywordPipeline --> Celery : Async Tasks
+AuditCtrl --> HTTPClient
+HTTPClient --> CircuitBreaker
+ReportGen --> Cache
+
+' === TO DATA LAYER ===
+AuditCtrl --> MainDB
+KeywordPipeline --> KeywordDB
+KeywordDB --> MainDB
+CompareOrch --> CompareDB
+CompareDB --> MainDB
+SubService --> SubDB
+SubDB --> MainDB
+UsageTracker --> SubDB
+
+ReportGen --> MediaStore
+SubService --> MediaStore
+
+' === TO EXTERNAL APIs ===
+LLMExpander --> LLM : HTTP/JSON
+VectorAdapter --> Pinecone : HTTP/JSON
+SEOService --> Moz : HTTP/JSON
+TechService --> PageSpeed : HTTP/JSON
+ReportGen --> SMTP : Email
+
+' === CACHING ===
+AuditCtrl --> AuditCache
+SEOService --> Cache
+KeywordPipeline --> Cache
+
+@enduml

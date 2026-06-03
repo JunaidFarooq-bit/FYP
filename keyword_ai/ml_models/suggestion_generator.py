@@ -7,23 +7,14 @@ Uses semantic similarity and generative patterns.
 import os
 import numpy as np
 from typing import List, Dict, Tuple
-from sentence_transformers import SentenceTransformer
 import re
 from collections import Counter
 
+from keyword_ai.services.embeddings import get_model as get_embedding_model
+from keyword_ai.utils.year_injector import current_year
+
 # Model paths
 MODEL_DIR = os.path.join(os.path.dirname(__file__), "..", "models")
-
-# Lazy-loaded model
-_embedding_model = None
-
-
-def get_embedding_model():
-    """Lazy load sentence transformer model."""
-    global _embedding_model
-    if _embedding_model is None:
-        _embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
-    return _embedding_model
 
 
 class KeywordSuggestionGenerator:
@@ -83,6 +74,42 @@ class KeywordSuggestionGenerator:
             "{keyword} tricks",
         ]
     
+    def _filter_seeds_by_relevance(
+        self, 
+        seed_keywords: List[str], 
+        content_embedding: np.ndarray,
+        min_similarity: float = 0.4
+    ) -> List[str]:
+        """
+        Filter seed keywords by cosine similarity to content.
+        Seeds with similarity below threshold are dropped.
+        """
+        if content_embedding is None or not seed_keywords:
+            return seed_keywords
+        
+        # Batch encode all seeds and compute similarities once
+        seed_embeddings = self.embedding_model.encode(
+            seed_keywords, 
+            convert_to_numpy=True, 
+            show_progress_bar=False
+        )
+        
+        norms = np.linalg.norm(seed_embeddings, axis=1) * np.linalg.norm(content_embedding)
+        similarities = np.dot(seed_embeddings, content_embedding) / norms
+        
+        # Filter by threshold
+        filtered_seeds = [
+            seed for seed, sim in zip(seed_keywords, similarities)
+            if sim >= min_similarity
+        ]
+        
+        # Fallback: if too few passed, keep top 5 by similarity
+        if len(filtered_seeds) < 3 and len(seed_keywords) >= 3:
+            top_indices = np.argsort(similarities)[-5:][::-1]
+            filtered_seeds = [seed_keywords[i] for i in top_indices]
+        
+        return filtered_seeds
+    
     def generate_suggestions(
         self, 
         seed_keywords: List[str], 
@@ -101,6 +128,14 @@ class KeywordSuggestionGenerator:
             List of suggestion dicts with scores
         """
         suggestions = []
+        
+        # FIX 3: Relevance gate on seeds - filter low-similarity seeds before templating
+        if content_embedding is not None:
+            seed_keywords = self._filter_seeds_by_relevance(
+                seed_keywords, 
+                content_embedding, 
+                min_similarity=0.4
+            )
         
         # Strategy 1: Long-tail variations
         long_tail = self._generate_long_tail(seed_keywords)
@@ -221,33 +256,32 @@ class KeywordSuggestionGenerator:
         if not self.content_text or content_embedding is None:
             return []
         
-        # Get content embedding
-        if content_embedding is None:
-            content_embedding = self.embedding_model.encode(self.content_text, convert_to_numpy=True)
-        
-        # Extract bigrams and trigrams
+        # Extract bigrams, deduplicate, and cap to avoid encoding thousands
         words = re.findall(r'\b[a-z]{4,}\b', self.content_text)
         
-        # Generate candidate phrases
+        seen = set()
         candidates = []
         for i in range(len(words) - 1):
             bigram = f"{words[i]} {words[i+1]}"
-            if len(bigram) > 10:
+            if len(bigram) > 10 and bigram not in seen:
+                seen.add(bigram)
                 candidates.append(bigram)
+                if len(candidates) >= 200:
+                    break
         
+        if not candidates:
+            return []
+
         # Score by semantic similarity to content
-        if candidates:
-            candidate_embeddings = self.embedding_model.encode(candidates, convert_to_numpy=True, show_progress_bar=False)
-            
-            similarities = np.dot(candidate_embeddings, content_embedding) / (
-                np.linalg.norm(candidate_embeddings, axis=1) * np.linalg.norm(content_embedding)
-            )
-            
-            # Return top candidates by similarity
-            top_indices = np.argsort(similarities)[-20:][::-1]
-            return [candidates[i] for i in top_indices if similarities[i] > 0.3]
+        candidate_embeddings = self.embedding_model.encode(candidates, convert_to_numpy=True, show_progress_bar=False)
         
-        return []
+        similarities = np.dot(candidate_embeddings, content_embedding) / (
+            np.linalg.norm(candidate_embeddings, axis=1) * np.linalg.norm(content_embedding)
+        )
+        
+        # Return top candidates by similarity
+        top_indices = np.argsort(similarities)[-20:][::-1]
+        return [candidates[i] for i in top_indices if similarities[i] > 0.3]
     
     def _generate_modifiers(self, seed_keywords: List[str]) -> List[Dict]:
         """Generate keyword variations with location/audience modifiers."""
@@ -260,7 +294,7 @@ class KeywordSuggestionGenerator:
         audience_modifiers = ["for beginners", "for experts", "for small business", "for startups"]
         
         # Time modifiers
-        time_modifiers = ["2024", "2025", "latest", "updated", "new"]
+        time_modifiers = [str(current_year()), "latest", "updated", "new"]
         
         for seed in seed_keywords[:8]:
             # Geographic

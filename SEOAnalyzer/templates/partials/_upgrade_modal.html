@@ -1,0 +1,77 @@
+{% if request.session.upgrade_required %}
+<!-- Upgrade Required Modal -->
+<div id="upgradeModal" style="display:flex;position:fixed;inset:0;z-index:99999;align-items:center;justify-content:center;">
+  <!-- Backdrop -->
+  <div onclick="closeUpgradeModal()" style="position:absolute;inset:0;background:rgba(0,0,0,0.55);backdrop-filter:blur(3px);"></div>
+  <!-- Card -->
+  <div style="position:relative;width:100%;max-width:460px;margin:16px;background:#fff;border-radius:16px;box-shadow:0 24px 64px rgba(0,0,0,0.22);overflow:hidden;animation:upgradeModalIn .25s ease;">
+    <!-- Top bar -->
+    <div style="background:linear-gradient(135deg,#023761 0%,#0275d8 100%);padding:28px 28px 22px;color:#fff;text-align:center;">
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.15);display:inline-flex;align-items:center;justify-content:center;margin-bottom:12px;">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      </div>
+      <h4 style="margin:0 0 4px;font-weight:700;font-size:1.25rem;">Upgrade Your Plan</h4>
+      <p style="margin:0;opacity:0.85;font-size:0.9rem;">Unlock the full power of WebLift</p>
+    </div>
+    <!-- Body -->
+    <div style="padding:24px 28px;">
+      <div style="background:#fff8e1;border:1px solid #ffe082;border-radius:10px;padding:14px 16px;margin-bottom:20px;display:flex;gap:12px;align-items:flex-start;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <p style="margin:0;font-size:0.875rem;color:#92400e;line-height:1.5;">{{ request.session.upgrade_reason }}</p>
+      </div>
+      <!-- Feature highlights -->
+      <p style="font-size:0.8rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#888;margin:0 0 10px;">What you unlock:</p>
+      <ul style="list-style:none;padding:0;margin:0 0 22px;display:flex;flex-direction:column;gap:8px;">
+        <li style="display:flex;align-items:center;gap:10px;font-size:0.875rem;color:#333;">
+          <span style="width:20px;height:20px;border-radius:50%;background:#e8f5e9;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+          More SEO audits every month
+        </li>
+        <li style="display:flex;align-items:center;gap:10px;font-size:0.875rem;color:#333;">
+          <span style="width:20px;height:20px;border-radius:50%;background:#e8f5e9;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+          AI keyword suggestions &amp; competitor analysis
+        </li>
+        <li style="display:flex;align-items:center;gap:10px;font-size:0.875rem;color:#333;">
+          <span style="width:20px;height:20px;border-radius:50%;background:#e8f5e9;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+          PDF export &amp; full API access
+        </li>
+      </ul>
+      <!-- Actions -->
+      <div style="display:flex;gap:10px;">
+        <a href="{% url 'subscriptions:pricing' %}" style="flex:1;display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 16px;background:linear-gradient(135deg,#023761,#0275d8);color:#fff !important;text-decoration:none !important;border-radius:8px;font-weight:600;font-size:0.9rem;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          View Plans
+        </a>
+        <button onclick="closeUpgradeModal()" style="padding:11px 16px;background:#f5f5f5;border:none;border-radius:8px;color:#555;font-size:0.9rem;cursor:pointer;font-weight:500;">
+          Maybe Later
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+@keyframes upgradeModalIn {
+  from { opacity: 0; transform: scale(0.92) translateY(16px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+</style>
+
+<script>
+  function closeUpgradeModal() {
+    var el = document.getElementById('upgradeModal');
+    if (el) el.style.display = 'none';
+    // Clear via AJAX so it doesn't show again on refresh
+    fetch('{% url "subscriptions:clear_upgrade_flag" %}', { method: 'POST', headers: { 'X-CSRFToken': '{{ csrf_token }}' } });
+  }
+  // Close on Escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeUpgradeModal();
+  });
+</script>
+{% endif %}

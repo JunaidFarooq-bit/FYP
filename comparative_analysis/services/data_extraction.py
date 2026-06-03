@@ -230,7 +230,7 @@ class DataExtractor:
                         for item in data:
                             if isinstance(item, dict) and '@type' in item:
                                 types.add(item['@type'])
-                except:
+                except (json.JSONDecodeError, AttributeError, TypeError):
                     pass
         
         return list(types)

@@ -175,10 +175,10 @@ def calculate_readability_score(text):
             score = max(0, min(100, score))
             
             return int(score)
-        
-    except:
+
+    except (ZeroDivisionError, ValueError, TypeError):
         pass
-    
+
     return 50  # Default
 
 

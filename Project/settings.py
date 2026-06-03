@@ -10,10 +10,11 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.1/ref/settings/
 """
 import os
+import sys
 from pathlib import Path
-import dj_database_url
 from dotenv import load_dotenv
 from celery.schedules import crontab
+import dj_database_url
 
 load_dotenv()
 
@@ -41,22 +42,21 @@ CSRF_TRUSTED_ORIGINS = [
 
 INSTALLED_APPS = [
     'keyword_ai',
-    'pgvector',  # Vector database support for RAG
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.humanize',  # Number formatting (intcomma)
     'SEOAnalyzer',
     'comparative_analysis',
-    # "keyword_suggestion.apps.KeywordSuggestionConfig",
-    # "pipeline.apps.PipelineConfig",
-    # "ml_models.apps.MlModelsConfig",
+    'subscriptions',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # Static file serving for production
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -78,6 +78,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'SEOAnalyzer.context_processors.user_subscription',
             ],
         },
     },
@@ -86,33 +87,45 @@ TEMPLATES = [
 WSGI_APPLICATION = 'Project.wsgi.application'
 
 
-# Database
-# https://docs.djangoproject.com/en/4.1/ref/settings/#databases
+# Database Configuration — Supports SQLite (dev), PostgreSQL, and Railway DATABASE_URL
+DATABASE_URL = os.getenv('DATABASE_URL')
+USE_SQLITE = os.getenv('USE_SQLITE', 'true').lower() == 'true' if not DATABASE_URL else False
 
-# Choose database: SQLite (USE_SQLITE=true) or PostgreSQL (default)
-# Note: SQLite works best with Pinecone for vector storage (pgvector requires PostgreSQL)
-USE_SQLITE = os.getenv('USE_SQLITE', 'false').lower() == 'true'
-
-if USE_SQLITE:
-    # SQLite - simple file-based database, good for development
+if DATABASE_URL:
+    # Railway/Heroku PostgreSQL - uses DATABASE_URL
+    DATABASES = {
+        'default': dj_database_url.parse(
+            DATABASE_URL,
+            conn_max_age=600,  # Connection pooling: 10 minutes
+            conn_health_checks=True,
+        )
+    }
+elif USE_SQLITE:
+    # SQLite — Development only
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
             'NAME': BASE_DIR / 'db.sqlite3',
+            'OPTIONS': {
+                'timeout': 30,  # 30 seconds timeout to prevent database locks
+            }
         }
     }
 else:
-    # PostgreSQL with pgvector support for RAG (Supabase or local)
-    # Configure via environment variables:
-    #   DB_NAME, DB_USER, DB_PASSWORD, DB_HOST, DB_PORT
+    # PostgreSQL — Production (manual configuration)
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
-            'NAME': os.getenv('DB_NAME', 'postgres'),
-            'USER': os.getenv('DB_USER', 'postgres'),
+            'NAME': os.getenv('DB_NAME', 'weblift'),
+            'USER': os.getenv('DB_USER', 'weblift_user'),
             'PASSWORD': os.getenv('DB_PASSWORD', ''),
             'HOST': os.getenv('DB_HOST', 'localhost'),
-            'PORT': os.getenv('DB_PORT', '5432'),
+            'PORT': os.getenv('DB_PORT', '5433'),
+            'CONN_MAX_AGE': 600,  # Connection pooling: 10 minutes
+            'OPTIONS': {
+                'connect_timeout': 10,
+                'options': '-c statement_timeout=30000'  # 30 seconds query timeout
+            }
         }
     }
 
@@ -153,8 +166,20 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 _STATIC_DIR = os.path.join(BASE_DIR, 'static')
 STATICFILES_DIRS = (_STATIC_DIR,) if os.path.isdir(_STATIC_DIR) else ()
+
+# WhiteNoise static file serving (production)
+# Always use plain storage when running the dev server to prevent stale manifest issues
+USING_RUNSERVER = 'runserver' in sys.argv
+if DEBUG or USING_RUNSERVER:
+    STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
+else:
+    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
 # LOCAL
 SITE_URL = os.getenv('SITE_URL', 'http://127.0.0.1:8000')
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
@@ -167,7 +192,8 @@ DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
-SESSION_COOKIE_AGE = 300000
+SESSION_COOKIE_AGE = 3600  # 1 hour (reduced from 300000 ~3.5 days for security)
+SESSION_SAVE_EVERY_REQUEST = True  # Refresh session expiry on each request
 SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SECURE = not DEBUG
 
@@ -175,7 +201,20 @@ CSRF_COOKIE_SECURE = not DEBUG
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = 'DENY'
+
+# SSL redirect (disable for localhost/127.0.0.1 to avoid cert errors)
 SECURE_SSL_REDIRECT = not DEBUG
+if SECURE_SSL_REDIRECT and ('localhost' in ALLOWED_HOSTS or '127.0.0.1' in ALLOWED_HOSTS):
+    # Don't redirect to HTTPS on localhost (no SSL cert)
+    SECURE_SSL_REDIRECT = False
+
+# HTTP Strict Transport Security (HSTS) - disable for localhost
+if 'localhost' in ALLOWED_HOSTS or '127.0.0.1' in ALLOWED_HOSTS:
+    SECURE_HSTS_SECONDS = 0  # Disable HSTS on localhost
+else:
+    SECURE_HSTS_SECONDS = 31536000  # 1 year in production
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
 
 # API Keys (must be set via environment)
 MOZ_ACCESS_ID = os.getenv('MOZ_ACCESS_ID')
@@ -188,7 +227,7 @@ PAGESPEED_API_KEY = os.getenv('PAGESPEED_API_KEY', '')
 
 # AI API Configuration (supports OpenAI, OpenRouter, and Groq)
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
-OPENAI_MODEL = os.getenv('OPENAI_MODEL', 'gpt-4o-mini')
+OPENAI_MODEL = os.getenv('OPENAI_MODEL', 'gpt-4o')
 USE_OPENROUTER = os.getenv('USE_OPENROUTER', 'false').lower() == 'true'
 OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY')
 
@@ -214,6 +253,41 @@ CACHES = {
     }
 }
 
+# Use Redis for production if available AND reachable
+if os.getenv('USE_REDIS_CACHE', 'false').lower() == 'true':
+    import socket
+    _redis_host = os.getenv('REDIS_HOST', '127.0.0.1')
+    _redis_port = int(os.getenv('REDIS_PORT', '6379'))
+    _redis_available = False
+    try:
+        _s = socket.create_connection((_redis_host, _redis_port), timeout=1)
+        _s.close()
+        _redis_available = True
+    except OSError:
+        pass
+
+    if _redis_available:
+        CACHES['default'] = {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": os.getenv('REDIS_URL', f'redis://{_redis_host}:{_redis_port}/1'),
+            "OPTIONS": {
+                "CLIENT_CLASS": "django_redis.client.DefaultClient",
+                "CONNECTION_POOL_KWARGS": {
+                    "max_connections": 50,
+                    "retry_on_timeout": True,
+                }
+            },
+            "TIMEOUT": 300,
+        }
+    else:
+        import warnings
+        warnings.warn(
+            f"USE_REDIS_CACHE=true but Redis is not reachable at {_redis_host}:{_redis_port}. "
+            "Falling back to LocMemCache.",
+            RuntimeWarning
+        )
+
+
 
 LOGGING = {
     "version": 1,
@@ -238,52 +312,89 @@ LOGGING = {
         "SEOAnalyzer": {"handlers": ["console", "file"], "level": "INFO", "propagate": False},
         "comparative_analysis": {"handlers": ["console", "file"], "level": "INFO", "propagate": False},
         "keyword_ai": {"handlers": ["console", "file"], "level": "INFO", "propagate": False},
+        "django.db.backends": {"handlers": ["console"], "level": "DEBUG", "propagate": False} if DEBUG else {"handlers": [], "level": "WARNING"},
     },
 }
 
+# Database query logging for performance analysis (production)
+LOG_SLOW_QUERIES = os.getenv("LOG_SLOW_QUERIES", "false").lower() == "true"
+SLOW_QUERY_THRESHOLD = float(os.getenv("SLOW_QUERY_THRESHOLD", "0.5"))  # seconds
 
-ML_MODELS_DIR = BASE_DIR / "keyword_ai" / "ml_models"
-FAISS_INDEX_PATH = ML_MODELS_DIR / "faiss_index.bin"
-KEYWORDS_JSON_PATH = ML_MODELS_DIR / "keywords.json"
+if LOG_SLOW_QUERIES and not DEBUG:
+    LOGGING["loggers"]["django.db.backends"] = {
+        "handlers": ["file"],
+        "level": "WARNING",
+        "propagate": False,
+    }
 
 
 # Celery Configuration
-CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://127.0.0.1:6379/0')
-CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', 'redis://127.0.0.1:6379/0')
+# Default to memory:// broker so the dev server starts without Redis installed.
+# Set CELERY_BROKER_URL=redis://127.0.0.1:6379/0 in .env when Redis is available.
+USE_CELERY = os.getenv('USE_CELERY', 'false').lower() == 'true'
+
+if USE_CELERY:
+    CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0')
+    CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
+else:
+    CELERY_BROKER_URL = 'memory://'
+    CELERY_RESULT_BACKEND = 'cache+memory://'
+
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
 
-# pipeline app is currently disabled — beat schedule entries are commented out
-# to avoid celery errors at startup. Re-enable when pipeline is added back to INSTALLED_APPS.
+# Task execution settings (production)
+CELERY_TASK_TIME_LIMIT = 600  # 10 minutes max per task
+CELERY_TASK_SOFT_TIME_LIMIT = 300  # 5 minutes warning
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1  # For long tasks
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+
 CELERY_BEAT_SCHEDULE = {
     "cleanup-old-tasks-daily": {
         "task": "keyword_ai.tasks.cleanup_old_tasks",
-        "schedule": crontab(minute=0, hour=3),  # 3 AM daily
+        "schedule": crontab(minute=0, hour=3),
     },
-    # "collect-trends-every-6h": {
-    #     "task": "pipeline.collect_trends",
-    #     "schedule": crontab(minute=0, hour="*/6"),
-    # },
-    # "collect-search-console-daily": {
-    #     "task": "pipeline.collect_search_console",
-    #     "schedule": crontab(minute=0, hour=6),
-    # },
-    # "check-and-train-hourly": {
-    #     "task": "pipeline.check_and_train",
-    #     "schedule": crontab(minute=30),
-    # },
-    # "full-retrain-weekly": {
-    #     "task": "pipeline.full_retrain",
-    #     "schedule": crontab(minute=0, hour=2, day_of_week="sunday"),
-    # },
 }
 
 
 # ═══════════════════════════════════════════════════════════════
-# GOOGLE SEARCH CONSOLE CONFIGURATION
-# (used by pipeline app — re-enable when pipeline is added back)
+# BANK TRANSFER CONFIGURATION (Manual Payment)
 # ═══════════════════════════════════════════════════════════════
-# GSC_CLIENT_SECRETS_PATH = BASE_DIR / os.getenv("GSC_CLIENT_SECRETS_PATH", "client_secret.json")
-# GSC_CREDENTIALS_PATH = BASE_DIR / os.getenv("GSC_CREDENTIALS_PATH", ".gsc_credentials.json")
+# Set these in your .env file to receive payments directly to your account
+BANK_NAME = os.getenv('BANK_NAME', 'Your Bank Name')
+BANK_ACCOUNT_NAME = os.getenv('BANK_ACCOUNT_NAME', 'WebLift Inc.')
+BANK_ACCOUNT_NUMBER = os.getenv('BANK_ACCOUNT_NUMBER', 'XXXX-XXXX-XXXX-1234')
+BANK_IBAN = os.getenv('BANK_IBAN', 'XX00 0000 0000 0000 0000 00')
+BANK_SWIFT = os.getenv('BANK_SWIFT', 'XXXXXXXX')
+BANK_BRANCH = os.getenv('BANK_BRANCH', 'Main Branch')
+BANK_COUNTRY = os.getenv('BANK_COUNTRY', 'Your Country')
+
+# Free trial configuration
+FREE_TRIAL_AUDITS = int(os.getenv('FREE_TRIAL_AUDITS', '1'))  # Number of free audits for new users
+
+# ═══════════════════════════════════════════════════════════════
+# SENTRY ERROR TRACKING (Production)
+# ═══════════════════════════════════════════════════════════════
+SENTRY_DSN = os.getenv('SENTRY_DSN', '')
+if SENTRY_DSN and not DEBUG:
+    import sentry_sdk
+    from sentry_sdk.integrations.django import DjangoIntegration
+    from sentry_sdk.integrations.celery import CeleryIntegration
+    
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        integrations=[
+            DjangoIntegration(),
+            CeleryIntegration(),
+        ],
+        # Performance monitoring
+        traces_sample_rate=float(os.getenv('SENTRY_TRACES_SAMPLE_RATE', '0.1')),
+        # Profiling (sentry-sdk 1.40+ required)
+        profiles_sample_rate=float(os.getenv('SENTRY_PROFILES_SAMPLE_RATE', '0.1')),
+        # Environment
+        environment=os.getenv('SENTRY_ENVIRONMENT', 'production'),
+        # Release version (optional, for tracking deployments)
+        release=os.getenv('SENTRY_RELEASE', None),
+    )

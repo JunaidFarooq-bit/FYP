@@ -103,7 +103,7 @@ class RetrainingPipeline:
             training_data.append({
                 "keyword": opp.keyword,
                 "content_text": "",  # ContentAnalysis stores no raw text; embedding used instead
-                "content_embedding": content.get_embedding() if callable(getattr(content, 'get_embedding', None)) else None,
+                "content_embedding": content.get_embedding_list() if callable(getattr(content, 'get_embedding_list', None)) else None,
                 "relevance_score": opp.relevance_score,
                 "label": label,
                 "user_rating": fb.rating,

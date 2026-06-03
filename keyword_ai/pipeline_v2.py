@@ -39,6 +39,15 @@ from .ml_models.semantic_mapper import find_semantic_keywords, SemanticKeywordMa
 from .models import ContentAnalysis, KeywordOpportunity, GapAnalysis
 from .services.embeddings import get_single_embedding
 from .services.rag_retriever import retrieve_similar_analyses, format_rag_context
+from .services.keyword_filter import decontaminate_pipeline_output
+from .services.traffic_enrichment import enrich_with_traffic_signals
+from .services.traffic_data_providers import KeywordDataAggregator
+from .services.geo_aeo_analyzer import analyze_geo_aeo, analyze_keywords_batch as analyze_geo_aeo_batch
+from .services.traffic_potential_analyzer import (
+    calculate_traffic_potential,
+    analyze_keywords_batch as analyze_traffic_potential_batch,
+)
+from .utils.year_injector import inject_in_dict, build_year_context
 
 logger = logging.getLogger(__name__)
 
@@ -161,15 +170,17 @@ def run_keyword_pipeline_v2(
     text: str = None,
     page_topic: str = "",
     use_llm: bool = True,
-    use_advanced_ai: bool = True,  # NEW: Phase 3 AI features
+    use_advanced_ai: bool = True,  # Phase 3 AI features
     analyze_competitors: bool = False,
-    generate_optimization: bool = False,  # NEW: Generate AI optimization suggestions
-    target_audience: str = "",  # NEW: Target audience for AI suggestions
+    generate_optimization: bool = False,  # Generate AI optimization suggestions
+    target_audience: str = "",  # Target audience for AI suggestions
+    target_region: str = "GLOBAL",  # NEW v2.2: Geographic region for GEO/AEO + LLM prompts
     save_to_db: bool = True,
 ) -> dict:
     """
-    Enhanced keyword pipeline v2 (Phase 1 + Phase 2 ML + Phase 3 AI).
-    
+    Enhanced keyword pipeline v2.2 (Phase 1 + Phase 2 ML + Phase 2.5 Traffic +
+    Phase 2.6 GEO/AEO + Phase 3 AI).
+
     Args:
         url: URL to analyze
         text: Pre-extracted text (alternative to URL)
@@ -179,10 +190,13 @@ def run_keyword_pipeline_v2(
         analyze_competitors: Whether to run competitor analysis (requires SERP API)
         generate_optimization: Whether to generate AI content optimization suggestions
         target_audience: Target audience description (e.g., "beginners", "experts")
+        target_region: Target geographic region (NA, EU, APAC, LATAM, MEA, GLOBAL).
+            Drives GEO/AEO scoring AND LLM expansion prompts.
         save_to_db: Whether to save results to database
-        
+
     Returns:
-        Enhanced result dict with ML analysis and AI-powered recommendations
+        Enhanced result dict with ML analysis, traffic forecasts, GEO/AEO scores,
+        and AI-powered recommendations.
     """
     
     # Step 1: Content Extraction
@@ -200,15 +214,15 @@ def run_keyword_pipeline_v2(
     if len(full_text.strip()) < 50:
         return {"error": "Not enough text content found on the page."}
     
-    # Step 2: Deep Content Analysis (NEW)
-    content_analysis_result = analyze_content(full_text, url)
-    
-    # Step 3: Get content embedding for ML models (moved before save)
+    # Step 2: Get content embedding for ML models (moved before analysis to reuse)
     content_embedding = None
     try:
         content_embedding = get_single_embedding(full_text[:1500])  # First 1500 chars
     except Exception as e:
         logger.warning(f"Could not generate content embedding: {e}")
+    
+    # Step 3: Deep Content Analysis (reuses embedding)
+    content_analysis_result = analyze_content(full_text, url, content_embedding=content_embedding)
     
     # Save to database (with embedding for pgvector)
     content_analysis_db = None
@@ -216,7 +230,13 @@ def run_keyword_pipeline_v2(
         try:
             content_analysis_db = save_content_analysis(url, meta, content_analysis_result, content_embedding)
         except Exception as e:
-            logger.warning(f"Failed to save content analysis: {e}")
+            error_msg = str(e)
+            if "column \"embedding\" is of type vector" in error_msg and "jsonb" in error_msg:
+                logger.warning(f"pgvector embedding type mismatch - saving without embedding field")
+                # Retry without embedding by setting it to None
+                content_analysis_db = save_content_analysis(url, meta, content_analysis_result, None)
+            else:
+                logger.warning(f"Failed to save content analysis: {e}")
     
     # Step 4: KeyBERT Extraction
     keybert_results = extract_keywords(full_text, top_n=20)
@@ -237,6 +257,100 @@ def run_keyword_pipeline_v2(
         )
     except Exception as e:
         logger.warning(f"Keyword generation failed: {e}")
+
+    # Step 6.5: Traffic Enrichment Layer (Phase 2.5) — NEW
+    # Single traffic enrichment call (was previously two separate calls with two TrafficEnricher instances)
+    traffic_enriched_suggestions = []
+    traffic_analysis = {}
+    try:
+        if generated_suggestions:
+            all_ml_keywords = [s["keyword"] for s in generated_suggestions]
+            traffic_analysis = enrich_with_traffic_signals(
+                keywords=all_ml_keywords,
+                page_topic=page_topic,
+                target_audience=target_audience
+            )
+            # Merge traffic signals back into suggestion dicts
+            traffic_by_kw = {
+                item["keyword"]: item
+                for item in traffic_analysis.get("traffic_prioritized_keywords", [])
+            }
+            traffic_enriched_suggestions = [
+                {**s, "traffic_signals": traffic_by_kw.get(s["keyword"], {})}
+                for s in generated_suggestions
+            ]
+            logger.info(f"Traffic enrichment: processed {len(all_ml_keywords)} keywords")
+    except Exception as e:
+        logger.warning(f"Traffic enrichment failed: {e}")
+        traffic_enriched_suggestions = generated_suggestions
+
+    # Step 6.6: GEO + AEO Analysis (Phase 2.6) — NEW v2.2
+    # Adds geographic scope and answer-engine-optimization signals to each keyword.
+    geo_aeo_results: List[Dict] = []
+    try:
+        keywords_for_geo_aeo = list({
+            *(s.get("keyword") for s in (traffic_enriched_suggestions or generated_suggestions) if s.get("keyword")),
+        })
+        if keywords_for_geo_aeo:
+            # Pull regional volumes from traffic_analysis if any provider returned them
+            traffic_by_kw = {
+                item["keyword"]: item
+                for item in traffic_analysis.get("traffic_prioritized_keywords", [])
+            }
+            regional_volume_data = {
+                kw: traffic_by_kw.get(kw, {}).get("regional_volumes", {})
+                for kw in keywords_for_geo_aeo
+            }
+            geo_aeo_results = analyze_geo_aeo_batch(
+                keywords=keywords_for_geo_aeo,
+                regional_volume_data=regional_volume_data,
+            )
+            logger.info(f"GEO/AEO: scored {len(geo_aeo_results)} keywords for region={target_region}")
+    except Exception as e:
+        logger.warning(f"GEO/AEO analysis failed: {e}")
+
+    # Step 6.7: CTR + Traffic Potential Forecast (Phase 2.7) — NEW v2.2
+    # Combines monthly volume, CTR curve, SGE impact, and seasonal adjustment.
+    traffic_potential_results: List[Dict] = []
+    try:
+        if traffic_analysis.get("traffic_prioritized_keywords"):
+            kw_items = traffic_analysis["traffic_prioritized_keywords"]
+
+            # Fetch real SERP features (AI Overview, featured snippet) via SerpAPI
+            # when a key is configured; otherwise has_ai_overview stays False.
+            _aggregator = KeywordDataAggregator()
+            _serp_features: Dict = {}
+            if _aggregator.serp_provider.enabled:
+                try:
+                    _kws_for_serp = [i.get("keyword") for i in kw_items if i.get("keyword")][:20]
+                    _serp_features = _aggregator.get_serp_features_bulk(_kws_for_serp)
+                    logger.info(f"SerpAPI: fetched real SERP features for {len(_serp_features)} keywords")
+                except Exception as _se:
+                    logger.warning(f"SerpAPI SERP feature fetch failed: {_se}")
+
+            batch_input = []
+            for item in kw_items:
+                kw = item.get("keyword")
+                real_serp = _serp_features.get(kw, {})
+                batch_input.append({
+                    "keyword": kw,
+                    "monthly_volume": item.get("monthly_volume"),
+                    "estimated_volume": item.get("estimated_volume"),
+                    "intent": item.get("intent", "informational"),
+                    # Real value from SerpAPI if available, else False
+                    "has_ai_overview": real_serp.get("has_ai_overview", False),
+                    "has_real_data": bool(item.get("data_source") and item["data_source"] != "estimated"),
+                    "serp_dominated_by_competitors": (item.get("competition_index") or 0) >= 0.7,
+                    "ctr_trend": item.get("ctr_trend", "stable"),
+                })
+            traffic_potential_results = analyze_traffic_potential_batch(batch_input)
+            logger.info(f"Traffic potential: forecast {len(traffic_potential_results)} keywords")
+    except Exception as e:
+        logger.warning(f"Traffic potential calc failed: {e}")
+
+    # Build a lookup for merging GEO/AEO + traffic potential into scored_keywords later
+    _geo_aeo_by_kw = {item["keyword"]: item for item in geo_aeo_results}
+    _traffic_potential_by_kw = {item["keyword"]: item for item in traffic_potential_results}
     
     # Step 7: Semantic Keyword Mapping (NEW - Phase 2)
     semantic_keywords = []
@@ -266,11 +380,18 @@ def run_keyword_pipeline_v2(
     competitor_data = None
     gap_analysis_result = None
 
+    # FIX: Pre-define target_keywords unconditionally so it's always safe to
+    # reference further down the pipeline (was previously only defined inside
+    # the `if analyze_competitors` block, leading to NameError in some paths).
+    target_keywords: List[str] = (
+        [page_topic] if page_topic
+        else ([meta.get("title", "")] if meta.get("title") else seed_keywords[:5])
+    )
+
     # Step 10: Competitor Analysis (OPTIONAL - runs BEFORE scoring so gap keywords
     # are available as input to the ML relevance scorer in step 11)
     if analyze_competitors and url:
         try:
-            target_keywords = [page_topic] if page_topic else [meta.get("title", "")]
             competitor_data = run_competitor_analysis(url, target_keywords, full_text)
             gap_analysis_result = competitor_data.get("gap_analysis", {})
 
@@ -317,6 +438,7 @@ def run_keyword_pipeline_v2(
             relevant_keywords = all_keywords
     
     # Step 12: RAG - Retrieve similar content for context augmentation
+    # NOW includes traffic signals as additional context for better LLM ranking
     rag_context = ""
     if content_embedding is not None and save_to_db:
         try:
@@ -330,9 +452,19 @@ def run_keyword_pipeline_v2(
         except Exception as e:
             logger.warning(f"RAG retrieval failed: {e}")
     
-    # Step 13: LLM Refinement with RAG Context
+    # Step 13: LLM Refinement with RAG Context + Traffic Signals
+    # Pass traffic-enriched context to LLM for real-number-based ranking
+    traffic_context = ""
+    if traffic_analysis.get("traffic_prioritized_keywords"):
+        top_traffic = traffic_analysis["traffic_prioritized_keywords"][:10]
+        traffic_context = "\n## Traffic Signal Context (Real-Time Data)\n"
+        for item in top_traffic:
+            traffic_context += f"- {item['keyword']}: {item['trend_status']}, Volume: {item['estimated_volume']}, Priority: {item['priority_score']}\n"
+    
+    combined_context = f"{rag_context}\n{traffic_context}" if traffic_context else rag_context
+    
     if use_llm and relevant_keywords:
-        llm_result = refine_keywords(relevant_keywords, page_topic=page_topic, context=rag_context)
+        llm_result = refine_keywords(relevant_keywords, page_topic=page_topic, context=combined_context)
     else:
         llm_result = {
             "groups": {"All": relevant_keywords},
@@ -346,13 +478,22 @@ def run_keyword_pipeline_v2(
     
     if use_advanced_ai and use_llm:
         try:
-            # Advanced keyword expansion with reasoning
+            # FIX 4: Pass business metadata to LLM for context grounding
+            page_metadata = {
+                "title": meta.get("title", ""),
+                "meta_description": meta.get("meta_description", ""),
+                "og_tags": meta.get("og_tags", {}),
+            }
+            
+            # Advanced keyword expansion with reasoning (GEO + year-aware)
             llm_expanded_suggestions = expand_keywords_with_llm(
                 content_text=full_text,
                 existing_keywords=relevant_keywords,
                 page_topic=page_topic,
                 target_audience=target_audience,
-                num_suggestions=15
+                num_suggestions=15,
+                page_metadata=page_metadata,
+                target_region=target_region,
             )
 
             # Question-based keyword generation
@@ -441,7 +582,7 @@ def run_keyword_pipeline_v2(
                     [
                         {
                             "keyword": s["keyword"],
-                            "relevance_score": s.get("suggestion_score", 50) / 100,
+                            "relevance_score": s.get("suggestion_score", 50),
                             "ai_reasoning": f"AI-generated: {s.get('type', 'suggestion')}"
                         }
                         for s in generated_suggestions[:20]
@@ -466,6 +607,26 @@ def run_keyword_pipeline_v2(
         except Exception as e:
             logger.warning(f"Failed to save keyword opportunities: {e}")
     
+    # Merge GEO/AEO + traffic potential into each scored keyword for downstream UI
+    try:
+        for item in scored:
+            kw = item.get("keyword")
+            if not kw:
+                continue
+            geo_aeo = _geo_aeo_by_kw.get(kw)
+            if geo_aeo:
+                item["geo_data"] = geo_aeo.get("geo_data", {})
+                item["aeo_signals"] = geo_aeo.get("aeo_signals", {})
+            tp = _traffic_potential_by_kw.get(kw)
+            if tp:
+                item["estimated_ctr"] = tp.get("estimated_ctr", {})
+                item["traffic_potential"] = tp.get("traffic_potential", {})
+                item["sge_impact"] = tp.get("sge_impact", {})
+                item["seasonal_adjustment"] = tp.get("seasonal_adjustment")
+                item["risk_flags"] = tp.get("risk_flags", [])
+    except Exception as e:
+        logger.warning(f"Failed to merge GEO/AEO + traffic potential into scored keywords: {e}")
+
     # Build enhanced response
     result = {
         # Original data
@@ -487,9 +648,19 @@ def run_keyword_pipeline_v2(
             "word_count": content_analysis_result.get("readability", {}).get("word_count", 0),
         },
         
-        # NEW: ML-Generated Keywords
-        "ml_generated_suggestions": generated_suggestions[:15],
+        # NEW: ML-Generated Keywords (Traffic-Enriched)
+        "ml_generated_suggestions": traffic_enriched_suggestions[:15] if traffic_enriched_suggestions else generated_suggestions[:15],
+        "traffic_analysis": traffic_analysis,
         "semantic_keywords": semantic_keywords[:15],
+
+        # NEW v2.2: GEO + AEO Signals (Phase 2.6)
+        "geo_aeo_analysis": {
+            "target_region": target_region,
+            "keywords": geo_aeo_results[:20],
+        },
+
+        # NEW v2.2: Traffic Potential Forecasts (Phase 2.7)
+        "traffic_potential_forecast": traffic_potential_results[:20],
         
         # NEW: TF-IDF Keywords
         "tfidf_keywords": tfidf_results[:10],
@@ -527,10 +698,33 @@ def run_keyword_pipeline_v2(
         "rag_context_preview": rag_context[:500] + "..." if len(rag_context) > 500 else rag_context,
         
         # Metadata
-        "pipeline_version": "2.1",
-        "phases_enabled": ["phase1_content_analysis", "phase2_ml_models", "phase3_ai_enhancement", "rag_retrieval"],
+        "pipeline_version": "2.2",
+        "phases_enabled": [
+            "phase1_content_analysis",
+            "phase2_ml_models",
+            "phase2.5_traffic_enrichment",
+            "phase2.6_geo_aeo",
+            "phase2.7_ctr_traffic_potential",
+            "phase3_ai_enhancement",
+            "rag_retrieval",
+        ],
+        "context": {
+            "target_region": target_region,
+            **build_year_context(),
+        },
     }
-    
+
+    # FIX 5: Decontaminate output - remove gambling/adult/pharma keywords
+    result = decontaminate_pipeline_output(result)
+    if result.get("blocked_keywords_count", 0) > 0:
+        logger.info(f"Decontamination removed {result['blocked_keywords_count']} blocked keywords")
+
+    # Final year injection pass — ensures no stale year references reach the UI
+    try:
+        result = inject_in_dict(result)
+    except Exception as e:
+        logger.warning(f"Final year injection failed: {e}")
+
     return result
 
 

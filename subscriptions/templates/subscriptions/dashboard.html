@@ -1,0 +1,249 @@
+{% extends 'base.html' %}
+{% load subscription_tags %}
+
+{% block title %}My Subscription - WebLift{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Quick Links</h5>
+                </div>
+                <div class="list-group list-group-flush">
+                    <a href="{% url 'subscriptions:pricing' %}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-tag"></i> Change Plan
+                    </a>
+                    <a href="{% url 'Home' %}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-search"></i> Run SEO Audit
+                    </a>
+                    <a href="{% url 'keyword_ai_suggestions' %}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-keyboard"></i> AI Keywords
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-md-8">
+            <!-- Current Plan Card -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">Current Plan</h4>
+                    {% if subscription.status == 'active' %}
+                    <span class="badge bg-success">Active</span>
+                    {% elif subscription.status == 'free_trial_used' %}
+                    <span class="badge bg-warning text-dark">Free Trial Available</span>
+                    {% else %}
+                    <span class="badge bg-secondary">{{ subscription.get_status_display }}</span>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h3>{{ subscription.tier.display_name }}</h3>
+                            <p class="text-muted">{{ subscription.tier.description }}</p>
+                            
+                            {% if subscription.is_active %}
+                            <p>
+                                <strong>Billing Period:</strong><br>
+                                {{ subscription.current_period_start|date:"M d, Y" }} - 
+                                {{ subscription.current_period_end|date:"M d, Y" }}
+                            </p>
+                            <p>
+                                <strong>Days Remaining:</strong> {{ usage.days_remaining }}
+                            </p>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 text-md-end">
+                            <h4>${{ subscription.tier.price_monthly }}<small class="text-muted">/month</small></h4>
+                            
+                            {% if subscription.status == 'active' %}
+                            <form method="post" action="{% url 'subscriptions:cancel' %}" 
+                                  onsubmit="return confirm('Are you sure you want to cancel? You\'ll keep access until the end of your billing period.');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-outline-danger btn-sm">
+                                    Cancel Subscription
+                                </button>
+                            </form>
+                            {% elif subscription.status == 'canceled' %}
+                            <a href="{% url 'subscriptions:pricing' %}" class="btn btn-primary">
+                                Reactivate Subscription
+                            </a>
+                            {% else %}
+                            <a href="{% url 'subscriptions:pricing' %}" class="btn btn-primary">
+                                Upgrade Now
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Usage Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">This Month's Usage</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>SEO Audits</span>
+                                <span class="fw-bold">{{ usage.usage.audits_used }} / {{ usage.usage.audits_limit }}</span>
+                            </div>
+                            <div class="progress">
+                                {% if usage.usage.audits_limit != 'Unlimited' %}
+                                <div class="progress-bar {% if usage.usage.audits_used >= usage.usage.audits_limit %}bg-danger{% elif usage.usage.audits_used > usage.usage.audits_limit|add:'-3' %}bg-warning{% else %}bg-success{% endif %}" 
+                                     role="progressbar" 
+                                     style="width: {% widthratio usage.usage.audits_used usage.usage.audits_limit 100 %}%">
+                                </div>
+                                {% else %}
+                                <div class="progress-bar bg-success" role="progressbar" style="width: 100%">
+                                    Unlimited
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Keywords Generated</span>
+                                <span class="fw-bold">{{ usage.usage.keywords_used }}</span>
+                            </div>
+                            <div class="progress">
+                                <div class="progress-bar bg-info" role="progressbar" style="width: 100%">
+                                    Up to {{ subscription.tier.max_keywords_per_analysis }} per analysis
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <h6>Available Features:</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <ul class="list-unstyled">
+                                        <li>
+                                            {% if usage.features.ai_suggestions %}
+                                            <i class="fas fa-check text-success"></i>
+                                            {% else %}
+                                            <i class="fas fa-times text-muted"></i>
+                                            {% endif %}
+                                            AI Suggestions
+                                        </li>
+                                        <li>
+                                            {% if usage.features.competitor_analysis %}
+                                            <i class="fas fa-check text-success"></i>
+                                            {% else %}
+                                            <i class="fas fa-times text-muted"></i>
+                                            {% endif %}
+                                            Competitor Analysis
+                                        </li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <ul class="list-unstyled">
+                                        <li>
+                                            {% if usage.features.pdf_export %}
+                                            <i class="fas fa-check text-success"></i>
+                                            {% else %}
+                                            <i class="fas fa-times text-muted"></i>
+                                            {% endif %}
+                                            PDF Export
+                                        </li>
+                                        <li>
+                                            {% if usage.features.api_access %}
+                                            <i class="fas fa-check text-success"></i>
+                                            {% else %}
+                                            <i class="fas fa-times text-muted"></i>
+                                            {% endif %}
+                                            API Access
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Payment Submissions -->
+            {% if manual_payments %}
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Payment Submissions</h5>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Plan</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for payment in manual_payments %}
+                            <tr>
+                                <td>{{ payment.created_at|date:"M d, Y" }}</td>
+                                <td>{{ payment.tier.display_name }}</td>
+                                <td>${{ payment.amount }}</td>
+                                <td>
+                                    {% if payment.status == 'verified' %}
+                                    <span class="badge bg-success">Verified</span>
+                                    {% elif payment.status == 'pending' %}
+                                    <span class="badge bg-warning text-dark">Pending Verification</span>
+                                    {% elif payment.status == 'rejected' %}
+                                    <span class="badge bg-danger">Rejected</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">{{ payment.get_status_display }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Bank Details Card -->
+            <div class="card mt-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-university"></i> Bank Transfer Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-borderless">
+                            <tbody>
+                                <tr>
+                                    <td class="fw-bold">Bank:</td>
+                                    <td>{{ bank_details.name }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">Account:</td>
+                                    <td>{{ bank_details.account_name }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">IBAN:</td>
+                                    <td class="font-monospace">{{ bank_details.iban }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="alert alert-info mb-0">
+                        <small>
+                            <i class="fas fa-info-circle"></i> 
+                            Always include your user ID in the payment reference when making bank transfers.
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,56 @@
+@startuml Keyword_Suggestions_Activity
+!theme plain
+skinparam backgroundColor #FEFEFE
+
+title WebLift - Keyword Suggestions Activity Diagram
+
+|User|
+start
+:Enter URL or Paste Content;
+:Select Options (AI Enhancement);
+:Submit Request;
+
+:Validate Input;
+
+if (Valid Input?) then (no)
+    :View Error;
+    stop
+else (yes)
+    :Check Subscription Limits;
+    
+    if (Within Keyword Limit?) then (no)
+        :View Upgrade Prompt;
+        stop
+    else (yes)
+        :Extract Content;
+        
+        fork
+            :TF-IDF Analysis;
+        fork again
+            :KeyBERT Extraction;
+        fork again
+            :Semantic Analysis;
+        end fork
+        
+        if (AI Enhancement Enabled?) then (yes)
+            :LLM Keyword Expansion;
+            :Generate AI Reasoning;
+        else (no)
+        endif
+        
+        :Score and Rank Keywords;
+        :Classify Search Intent;
+        :Store Results;
+        
+        :View Keyword Opportunities;
+        
+        if (Export Requested?) then (yes)
+            :Export CSV/JSON;
+        else (no)
+        endif
+        
+        stop
+    endif
+endif
+
+@enduml

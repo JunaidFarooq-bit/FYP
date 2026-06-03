@@ -1,0 +1,51 @@
+[run]
+source = .
+omit =
+    */migrations/*
+    */tests/*
+    */venv/*
+    */env/*
+    */__pycache__/*
+    manage.py
+    */settings*.py
+    */wsgi.py
+    */asgi.py
+    conftest.py
+    pytest.ini
+    run_tests.py
+    setup.py
+    tox.ini
+    .tox/*
+    htmlcov/*
+    .pytest_cache/*
+    test_*/
+    tests/
+    fixtures/
+    test_data/
+    test_media/
+    test_static/
+
+[report]
+precision = 2
+show_missing = True
+skip_covered = False
+sort = Cover
+
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    if self.debug:
+    if settings.DEBUG
+    raise AssertionError
+    raise NotImplementedError
+    if 0:
+    if __name__ == .__main__.:
+    class .*\bProtocol\):
+    @(abc\.)?abstractmethod
+
+[html]
+directory = htmlcov
+title = WebLift Test Coverage Report
+
+[xml]
+output = coverage.xml
