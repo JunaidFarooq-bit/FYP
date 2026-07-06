@@ -1,5 +1,5 @@
 # ============================================================
-# SEO Keyword Suggestion System — Python Dependencies
+# SEO Keyword Suggestion System - Python Dependencies
 # ============================================================
 # Install with:
 #   pip install -r requirements.txt
@@ -8,56 +8,58 @@
 #   pip install torch --index-url https://download.pytorch.org/whl/cu118
 # ============================================================
 
-# ── Django ───────────────────────────────────────────────────
+# -- Django --
 Django>=4.2,<5.0
+python-dotenv>=1.0.0           # Load local .env settings
 
-# ── Database (Production) ──────────────────────────────────
+# -- Database (Production) --
 psycopg2-binary>=2.9.0         # PostgreSQL adapter for production
 dj-database-url>=2.1.0         # Railway/Heroku DATABASE_URL parsing
 
-# ── ML / Embeddings ──────────────────────────────────────────
+# -- ML / Embeddings --
 sentence-transformers>=2.7.0   # SentenceTransformer + all-MiniLM-L6-v2
 torch>=2.0.0                   # PyTorch backend for sentence-transformers
 transformers>=4.35.0           # HuggingFace transformers (dep of sentence-transformers)
 
-# ── Vector Search ────────────────────────────────────────────
+# -- Vector Search --
 pinecone>=6.0.0              # Pinecone vector database for semantic search
 
-# ── Data Processing ──────────────────────────────────────────
+# -- Data Processing --
 pandas>=2.0.0
 numpy>=1.24.0
 scikit-learn>=1.3.0            # KMeans clustering
 weasyprint>=61.0               # Render themed HTML audit reports to PDF
 
-# ── HTTP Requests (data collection) ─────────────────────────
+# -- HTTP Requests (data collection) --
 requests>=2.31.0
 
-# ── Caching (production) ─────────────────────────────────────
+# -- Caching (production) --
 django-redis>=5.4.0
 redis>=5.0.0
+celery>=5.3.0                  # Background task support
 
-# ── Testing ──────────────────────────────────────────────────
+# -- Testing --
 pytest>=7.4.0
 pytest-django>=4.7.0
 
-# ── Development utilities ────────────────────────────────────
+# -- Development utilities --
 tqdm>=4.66.0                   # Progress bars during training
 
-# ── Production Server ─────────────────────────────────────────
+# -- Production Server --
 gunicorn>=21.0.0             # WSGI HTTP server
 whitenoise>=6.6.0              # Static file serving for production
 
-# ── Security ────────────────────────────────────────────────
+# -- Security --
 django-csp>=3.8                # Content Security Policy headers
 django-ratelimit>=4.1.0        # Rate limiting for API endpoints
 
-# ── Error Tracking & Monitoring ─────────────────────────────
+# -- Error Tracking & Monitoring --
 sentry-sdk[django]>=1.40.0     # Error tracking and performance monitoring
 
-# ── Real-Time Traffic Signals ────────────────────────────────
+# -- Real-Time Traffic Signals --
 pytrends>=4.9.0                # Google Trends API for real-time keyword data
 
-# ── Resilience & Performance ─────────────────────────────────
+# -- Resilience & Performance --
 pybreaker>=1.2.0               # Circuit breakers for external API calls
 cachetools>=5.3.0              # Bounded in-memory cache with TTL
 python-json-logger>=2.0.0      # Structured JSON logging for production
