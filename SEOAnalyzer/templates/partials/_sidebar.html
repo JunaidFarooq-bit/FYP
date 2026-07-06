@@ -232,6 +232,54 @@
 
   .analysis-section.features-section > .section-header .section-icon {
     display: none !important;
+  }
+  .sidebar-header {
+    gap: 10px !important;
+  }
+
+  .sidebar-logo {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+  }
+
+  .sidebar-logo h5 {
+    font-size: clamp(1.05rem, 6vw, 1.55rem) !important;
+    line-height: 1.05 !important;
+    overflow-wrap: anywhere !important;
+    white-space: normal !important;
+  }
+
+  .sidebar-close {
+    flex: 0 0 32px !important;
+    height: 32px !important;
+    margin-left: auto !important;
+    min-width: 32px !important;
+    width: 32px !important;
+  }
+
+  .sidebar-close i {
+    font-size: 0.95rem !important;
+  }
+
+  .sidebar-backdrop {
+    background: rgba(15, 23, 42, 0.46);
+    display: none;
+    inset: 0;
+    opacity: 0;
+    position: fixed;
+    transition: opacity 180ms ease;
+    z-index: 997;
+  }
+
+  .sidebar-backdrop.show {
+    display: block;
+    opacity: 1;
+  }
+
+  @media (min-width: 992px) {
+    .sidebar-backdrop {
+      display: none !important;
+    }
   }</style>
 {% comment %}
 Shared sidebar navigation. Pass `active_page` in context to highlight the current item.
@@ -266,3 +314,94 @@ Possible values: home, seo_metrics, mobiletest, sentiment_analysis, comparative_
     </a>
   </div>
 </div>
+<script>
+  (function() {
+    if (window._webLiftSidebarInit) return;
+    window._webLiftSidebarInit = true;
+
+    function getSidebar() {
+      return document.getElementById('sidebarMenu');
+    }
+
+    function getToggleButtons() {
+      return document.querySelectorAll('[aria-controls="sidebarMenu"]');
+    }
+
+    function getBackdrop() {
+      var backdrop = document.querySelector('.sidebar-backdrop');
+      if (!backdrop) {
+        backdrop = document.createElement('div');
+        backdrop.className = 'sidebar-backdrop';
+        backdrop.addEventListener('click', closeSidebar);
+        document.body.appendChild(backdrop);
+      }
+      return backdrop;
+    }
+
+    function setExpanded(isOpen) {
+      getToggleButtons().forEach(function(button) {
+        button.setAttribute('aria-expanded', String(isOpen));
+      });
+      getBackdrop().classList.toggle('show', isOpen && window.innerWidth < 992);
+      document.body.classList.toggle('sidebar-open', isOpen && window.innerWidth < 992);
+    }
+
+    function toggleSidebar() {
+      var sidebar = getSidebar();
+      if (!sidebar) return;
+      var isOpen = !sidebar.classList.contains('show');
+      sidebar.classList.toggle('show', isOpen);
+      setExpanded(isOpen);
+    }
+
+    function closeSidebar() {
+      var sidebar = getSidebar();
+      if (!sidebar) return;
+      sidebar.classList.remove('show');
+      setExpanded(false);
+    }
+
+    window.toggleSidebar = toggleSidebar;
+    window.closeSidebar = closeSidebar;
+    window.navbar = toggleSidebar;
+
+    document.addEventListener('click', function(event) {
+      var toggleButton = event.target.closest('[aria-controls="sidebarMenu"]');
+      if (!toggleButton) return;
+      event.preventDefault();
+      event.stopPropagation();
+      toggleSidebar();
+    }, true);
+
+    document.addEventListener('DOMContentLoaded', function() {
+      var header = document.querySelector('#sidebarMenu .sidebar-header');
+      if (header) {
+        var closeButton = header.querySelector('.sidebar-close, [aria-label="Close sidebar"]');
+        if (!closeButton) {
+          closeButton = document.createElement('button');
+          closeButton.innerHTML = '<i class="fas fa-times"></i>';
+          header.appendChild(closeButton);
+        }
+
+        closeButton.className = 'sidebar-close sidebar-close-generated';
+        closeButton.type = 'button';
+        closeButton.setAttribute('aria-label', 'Close sidebar');
+        closeButton.addEventListener('click', closeSidebar);
+      }
+
+      document.querySelectorAll('#sidebarMenu .sidebar-link').forEach(function(link) {
+        link.addEventListener('click', function() {
+          if (window.innerWidth < 992) closeSidebar();
+        });
+      });
+    });
+
+    document.addEventListener('keydown', function(event) {
+      if (event.key === 'Escape') closeSidebar();
+    });
+
+    window.addEventListener('resize', function() {
+      if (window.innerWidth >= 992) closeSidebar();
+    });
+  })();
+</script>

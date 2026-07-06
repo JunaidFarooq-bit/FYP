@@ -573,8 +573,18 @@ body.website-audit-tool-page .flow-summary p {
 }
 
 @media (max-width: 640px) {
+  body.website-audit-tool-page .navbar-page-context {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
   body.website-audit-tool-page .navbar-page-context strong {
-    display: none;
+    display: block;
+    font-size: clamp(0.78rem, 3.8vw, 0.95rem);
+    max-width: 34vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   body.website-audit-tool-page .audit-tool-form-card {

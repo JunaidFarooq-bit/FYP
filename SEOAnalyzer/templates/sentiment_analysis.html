@@ -361,7 +361,7 @@
             name="sentimentForm"
             id="sentimentForm"
             action="{% url 'analyze_sentiment' %}"
-            method="post"
+            method="post"`r`n            onsubmit="return submitForm(event)"
           >
             {% csrf_token %}
                     <div class="form-group">
@@ -389,7 +389,7 @@
             <div class="form-actions">
               <button
                 id="analyzeBtn"
-                onclick="submitForm()"
+                
                 class="btn btn-primary"
                 type="submit"
               >
@@ -506,18 +506,18 @@
       }
 
       // Form Submission with Loader
-      function submitForm() {
-        var url = document.getElementById("id_url").value;
+      function submitForm(event) {
+        var url = document.getElementById("url").value;
         var urlRegex = /^(https?|ftp):\/\/[^\s/$.?#].[^\s]*$/i;
 
         if (url.trim() === "") {
           alert("Please enter a valid URL.");
-          event.preventDefault();
+          if (event) event.preventDefault();
           return false;
         }
         if (!urlRegex.test(url)) {
           alert("Please enter a valid URL format (must include https://).");
-          event.preventDefault();
+          if (event) event.preventDefault();
           return false;
         }
 

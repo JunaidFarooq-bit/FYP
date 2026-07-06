@@ -1082,3 +1082,92 @@ body.keyword-system-page .analysis-section.features-section > .section-header .s
 body.keyword-system-page .analysis-section.features-section > .section-header .section-icon {
   display: none !important;
 }
+/* Responsive containment for sidebar tool pages. */
+.keyword-system-page .main-content,
+.keyword-system-page .content-wrapper,
+.keyword-system-page .stitch-page,
+.keyword-system-page .tool-hero,
+.keyword-system-page .comparative-hero,
+.keyword-system-page .audit-hero,
+.keyword-system-page .tool-form-card,
+.keyword-system-page .analysis-section,
+.keyword-system-page .results-section,
+.keyword-system-page .result-section {
+  box-sizing: border-box !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+}
+
+.keyword-system-page .content-wrapper,
+.keyword-system-page .stitch-page {
+  width: 100% !important;
+}
+
+.keyword-system-page .tool-hero h1,
+.keyword-system-page .tool-hero h2,
+.keyword-system-page .comparative-hero .hero-title,
+.keyword-system-page .audit-hero h1,
+.keyword-system-page .compare-hero h1,
+.keyword-system-page .tool-hero p,
+.keyword-system-page .comparative-hero .hero-subtitle,
+.keyword-system-page .audit-hero p,
+.keyword-system-page .compare-hero p {
+  max-width: 100% !important;
+  overflow-wrap: anywhere !important;
+}
+
+.keyword-system-page .tool-form-card form,
+.keyword-system-page .tool-form-card .form-group,
+.keyword-system-page .tool-form-card .input-wrap,
+.keyword-system-page .tool-form-card input,
+.keyword-system-page .tool-form-card textarea,
+.keyword-system-page .tool-form-card select {
+  box-sizing: border-box !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+}
+
+@media (max-width: 575px) {
+  .keyword-system-page .content-wrapper,
+  .keyword-system-page .stitch-page {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+
+  .keyword-system-page .tool-hero,
+  .keyword-system-page .comparative-hero,
+  .keyword-system-page .audit-hero,
+  .keyword-system-page .compare-hero .hero-band {
+    padding: 24px 20px !important;
+    border-radius: 20px !important;
+  }
+
+  .keyword-system-page .tool-hero h1,
+  .keyword-system-page .tool-hero h2,
+  .keyword-system-page .comparative-hero .hero-title,
+  .keyword-system-page .audit-hero h1,
+  .keyword-system-page .compare-hero h1 {
+    font-size: clamp(1.45rem, 8vw, 2rem) !important;
+    line-height: 1.12 !important;
+  }
+
+  .keyword-system-page .tool-hero p,
+  .keyword-system-page .comparative-hero .hero-subtitle,
+  .keyword-system-page .audit-hero p,
+  .keyword-system-page .compare-hero p {
+    font-size: .92rem !important;
+    line-height: 1.6 !important;
+  }
+
+  .keyword-system-page .tool-form-card .form-actions,
+  .keyword-system-page .tool-form-card .form-actions-center {
+    width: 100% !important;
+  }
+
+  .keyword-system-page .tool-form-card .form-actions .btn,
+  .keyword-system-page .tool-form-card .form-actions-center .btn {
+    width: 100% !important;
+    min-width: 0 !important;
+    justify-content: center !important;
+  }
+}

@@ -1,3 +1,82 @@
+<style id="profile-dropdown-mobile-fix">
+  .profile-dropdown-wrapper {
+    position: relative;
+    display: inline-block;
+  }
+
+  .profile-avatar-btn {
+    border-radius: 50% !important;
+    flex: 0 0 38px !important;
+    aspect-ratio: 1 / 1 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    height: 38px !important;
+    line-height: 1 !important;
+    min-height: 38px !important;
+    min-width: 38px !important;
+    max-height: 38px !important;
+    max-width: 38px !important;
+    padding: 0 !important;
+    width: 38px !important;
+  }
+
+  #profileDropdownMenu {
+    box-sizing: border-box;
+    max-width: min(320px, calc(100vw - 24px)) !important;
+    min-width: 260px !important;
+    width: max-content;
+  }
+
+  .profile-dropdown-user-row,
+  .profile-dropdown-plan-row,
+  .profile-dropdown-usage-row,
+  .profile-dropdown-link {
+    min-width: 0;
+  }
+
+  .profile-dropdown-user-meta {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .profile-dropdown-name,
+  .profile-dropdown-email,
+  .profile-dropdown-plan-name {
+    display: block;
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .profile-dropdown-status {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  @media (max-width: 768px) {
+    .profile-dropdown-wrapper {
+      position: static !important;
+    }
+
+    #profileDropdownMenu {
+      left: 12px !important;
+      max-height: calc(100dvh - 76px);
+      min-width: 0 !important;
+      overflow-y: auto !important;
+      position: fixed !important;
+      right: 12px !important;
+      top: 62px !important;
+      width: auto !important;
+    }
+
+    .profile-dropdown-user-row {
+      align-items: flex-start !important;
+    }
+  }
+</style>
 <div class="profile-dropdown-wrapper" style="position:relative;display:inline-block;">
   <button class="btn btn-primary profile-avatar-btn" id="profileDropdownBtn" type="button"
     onclick="toggleProfileDropdown()" aria-haspopup="true" aria-expanded="false"
@@ -6,35 +85,35 @@
   </button>
   <div id="profileDropdownMenu" style="display:none;position:absolute;right:0;top:calc(100% + 8px);min-width:260px;background:#fff;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.18);z-index:9999;overflow:hidden;">
     <div style="background:#023761;padding:16px 18px;color:#fff;">
-      <div style="display:flex;align-items:center;gap:10px;">
+      <div class="profile-dropdown-user-row" style="display:flex;align-items:center;gap:10px;">
         <div style="width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:1.2rem;font-weight:700;">
           {{ request.user.username|first|upper }}
         </div>
-        <div>
-          <div style="font-weight:600;font-size:0.95rem;">{{ request.user.username }}</div>
-          <div style="font-size:0.78rem;opacity:0.85;">{{ request.user.email }}</div>
+        <div class="profile-dropdown-user-meta">
+          <div class="profile-dropdown-name" style="font-weight:600;font-size:0.95rem;">{{ request.user.username }}</div>
+          <div class="profile-dropdown-email" style="font-size:0.78rem;opacity:0.85;">{{ request.user.email }}</div>
         </div>
       </div>
     </div>
     {% if nav_subscription %}
-    <div style="padding:12px 18px;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;justify-content:space-between;">
+    <div class="profile-dropdown-plan-row" style="padding:12px 18px;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;justify-content:space-between;gap:12px;">
       <div>
         <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:.05em;color:#888 !important;margin-bottom:2px;">Current Plan</div>
-        <div style="font-weight:600;color:#023761 !important;">{{ nav_subscription.tier.display_name }}</div>
+        <div class="profile-dropdown-plan-name" style="font-weight:600;color:#023761 !important;">{{ nav_subscription.tier.display_name }}</div>
       </div>
       {% if nav_subscription.is_active %}
-        <span style="background:#d4edda;color:#155724 !important;padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:600;">Active</span>
+        <span class="profile-dropdown-status" style="background:#d4edda;color:#155724 !important;padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:600;">Active</span>
       {% elif nav_subscription.status == 'free_trial_used' %}
         {% if not nav_subscription.usage.free_audit_used %}
-          <span style="background:#fff3cd;color:#856404 !important;padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:600;">Free Trial</span>
+          <span class="profile-dropdown-status" style="background:#fff3cd;color:#856404 !important;padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:600;">Free Trial</span>
         {% else %}
-          <span style="background:#f8d7da;color:#721c24 !important;padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:600;">Trial Used</span>
+          <span class="profile-dropdown-status" style="background:#f8d7da;color:#721c24 !important;padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:600;">Trial Used</span>
         {% endif %}
       {% else %}
-        <span style="background:#e2e3e5;color:#383d41 !important;padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:600;">{{ nav_subscription.status|title }}</span>
+        <span class="profile-dropdown-status" style="background:#e2e3e5;color:#383d41 !important;padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:600;">{{ nav_subscription.status|title }}</span>
       {% endif %}
     </div>
-    <div style="padding:12px 18px;border-bottom:1px solid #f0f0f0;">
+    <div class="profile-dropdown-usage-row" style="padding:12px 18px;border-bottom:1px solid #f0f0f0;">
       <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:.05em;color:#888 !important;margin-bottom:8px;">Usage This Month</div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
         <span style="font-size:0.85rem;color:#555 !important;">SEO Audits</span>
@@ -50,14 +129,14 @@
     </div>
     {% endif %}
     <div style="padding:6px 0;background:#fff;">
-      <a href="{% url 'subscriptions:dashboard' %}" style="display:flex;align-items:center;gap:10px;padding:9px 18px;color:#333 !important;text-decoration:none !important;font-size:0.875rem;" onmouseover="this.style.background='#f5f7fa'" onmouseout="this.style.background='transparent'">
+      <a class="profile-dropdown-link" href="{% url 'subscriptions:dashboard' %}" style="display:flex;align-items:center;gap:10px;padding:9px 18px;color:#333 !important;text-decoration:none !important;font-size:0.875rem;" onmouseover="this.style.background='#f5f7fa'" onmouseout="this.style.background='transparent'">
         <i class="fas fa-crown" style="color:#f4a422;width:16px;"></i> My Subscription
       </a>
-      <a href="{% url 'subscriptions:pricing' %}" style="display:flex;align-items:center;gap:10px;padding:9px 18px;color:#333 !important;text-decoration:none !important;font-size:0.875rem;" onmouseover="this.style.background='#f5f7fa'" onmouseout="this.style.background='transparent'">
+      <a class="profile-dropdown-link" href="{% url 'subscriptions:pricing' %}" style="display:flex;align-items:center;gap:10px;padding:9px 18px;color:#333 !important;text-decoration:none !important;font-size:0.875rem;" onmouseover="this.style.background='#f5f7fa'" onmouseout="this.style.background='transparent'">
         <i class="fas fa-tags" style="color:#0275d8;width:16px;"></i> Pricing &amp; Plans
       </a>
       <div style="border-top:1px solid #f0f0f0;margin:4px 0;"></div>
-      <a href="{% url 'logout' %}" style="display:flex;align-items:center;gap:10px;padding:9px 18px;color:#dc3545 !important;text-decoration:none !important;font-size:0.875rem;" onmouseover="this.style.background='#fff5f5'" onmouseout="this.style.background='transparent'">
+      <a class="profile-dropdown-link" href="{% url 'logout' %}" style="display:flex;align-items:center;gap:10px;padding:9px 18px;color:#dc3545 !important;text-decoration:none !important;font-size:0.875rem;" onmouseover="this.style.background='#fff5f5'" onmouseout="this.style.background='transparent'">
         <i class="fas fa-sign-out-alt" style="width:16px;"></i> Logout
       </a>
     </div>

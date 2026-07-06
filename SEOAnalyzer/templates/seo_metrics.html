@@ -367,6 +367,7 @@
           </form>
         </div>
 
+        {% if not url %}
         <section class="analysis-section features-section">
           <div class="section-header">
             <div class="section-title">
@@ -417,6 +418,7 @@
             </div>
           </div>
         </section>
+        {% endif %}
 
         <!-- Results (conditional) -->
         {% if url %}

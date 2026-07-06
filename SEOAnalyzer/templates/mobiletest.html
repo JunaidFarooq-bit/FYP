@@ -38,7 +38,7 @@
 
     <style>
       /* ================================================
-         Mobile Friendly Test — page-specific styles
+         Mobile Friendly Test - page-specific styles
          ================================================ */
 
       /* Hero intro box */
@@ -397,7 +397,7 @@
           <button
             class="navbar-toggler"
             id="navbar-toggle"
-            type="submit"
+            type="button"
             aria-controls="sidebarMenu"
             aria-expanded="false"
             aria-label="Toggle navigation"
@@ -465,7 +465,7 @@
             name="myForm"
             id="myForm"
             action="{% url 'mobiletest' %}"
-            method="post"
+            method="post"`r`n            onsubmit="return submitForm(event)"
           >
             {% csrf_token %}
             <div class="form-group">
@@ -497,6 +497,7 @@
           </form>
         </div>
 
+        {% if not final_verdict %}
         <section class="analysis-section features-section">
           <div class="section-header">
             <div class="section-title">
@@ -548,6 +549,7 @@
             </div>
           </div>
         </section>
+        {% endif %}
 
         <!-- Results (conditional) -->
         {% if final_verdict %}
@@ -815,7 +817,7 @@
       }
 
       // Form validation and submission
-      function submitForm() {
+      function submitForm(event) {
         const url = document.getElementById("url").value;
         var urlRegex = /^(https?|ftp):\/\/[^\s/$.?#].[^\s]*$/i;
 

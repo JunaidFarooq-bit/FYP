@@ -102,6 +102,37 @@
       }
     </style>
     <link rel="stylesheet" href="{% static 'keyword-page-system.css' %}?v=20260706-heading-lock" />
+    <style id="audit-mobile-header-lock">
+      @media (max-width: 642px) {
+        body.website-audit-tool-page.keyword-system-page #main-navbar .navbar-container {
+          display: flex !important;
+          flex-wrap: nowrap !important;
+          align-items: center !important;
+          gap: 8px !important;
+        }
+
+        body.website-audit-tool-page.keyword-system-page #main-navbar .navbar-page-context {
+          display: flex !important;
+          flex: 1 1 auto !important;
+          min-width: 0 !important;
+          max-width: none !important;
+          overflow: visible !important;
+        }
+
+        body.website-audit-tool-page.keyword-system-page #main-navbar .navbar-page-context strong {
+          display: block !important;
+          visibility: visible !important;
+          opacity: 1 !important;
+          color: #0f172a !important;
+          font: 700 clamp(0.72rem, 3.6vw, 0.9rem)/1.15 "Outfit", sans-serif !important;
+          max-width: calc(100vw - 132px) !important;
+          min-width: 0 !important;
+          overflow: hidden !important;
+          text-overflow: ellipsis !important;
+          white-space: nowrap !important;
+        }
+      }
+    </style>
   </head>
 
   <body class="website-audit-tool-page keyword-system-page">
@@ -124,7 +155,7 @@
             <img src="{% static 'logo.png'%}" alt="WEB LIFT Logo" />
             <h5>WEB LIFT</h5>
           </div>
-          <!-- ✅ CLOSE BUTTON - Only visible on mobile -->
+          <!-- Close button - only visible on mobile -->
           <button
             class="sidebar-close"
             id="sidebar-close"
@@ -247,7 +278,7 @@
           <label class="form-label" for="url"
             >Enter a URL to run a website audit</label
           >
-          <form name="myForm" id="myForm" action="/show/" method="post">
+          <form name="myForm" id="myForm" action="/show/" method="post" onsubmit="myFunction()">
             {% csrf_token %}
             <div class="form-group">
               <div class="input-wrap">
@@ -1175,7 +1206,7 @@
     ></script>
 
     <script>
-      // ✅ Toggle Sidebar - Opens and closes
+      // Toggle Sidebar - opens and closes
       function toggleSidebar() {
         const sidebar = document.getElementById("sidebarMenu");
         const toggler = document.getElementById("navbar-toggle");
@@ -1187,7 +1218,7 @@
         toggler.setAttribute("aria-expanded", isExpanded);
       }
 
-      // ✅ Close Sidebar - Only closes
+      // Close Sidebar - only closes
       function closeSidebar() {
         const sidebar = document.getElementById("sidebarMenu");
         const toggler = document.getElementById("navbar-toggle");
@@ -1196,7 +1227,7 @@
         toggler.setAttribute("aria-expanded", "false");
       }
 
-      // ✅ Close sidebar when clicking outside (mobile only)
+      // Close sidebar when clicking outside (mobile only)
       document.addEventListener("click", function (event) {
         const sidebar = document.getElementById("sidebarMenu");
         const toggler = document.getElementById("navbar-toggle");
