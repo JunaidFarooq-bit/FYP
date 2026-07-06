@@ -29,12 +29,25 @@ pandas>=2.0.0
 numpy>=1.24.0
 scikit-learn>=1.3.0            # KMeans clustering
 weasyprint>=61.0               # Render themed HTML audit reports to PDF
+reportlab>=4.0.0               # PDF report generation
+plotly>=5.18.0                 # Interactive charts in audit views
+vaderSentiment>=3.3.2          # Sentiment analysis
+openai>=1.0.0                  # OpenAI-compatible API client
+keybert>=0.8.0                 # Keyword extraction
+pgvector>=0.2.0                # Django vector field migrations
 
 # -- HTTP Requests (data collection) --
 requests>=2.31.0
 beautifulsoup4>=4.12.0        # HTML parsing for SEO extraction
 googlesearch-python>=1.2.0    # Google search helper used by views
 validators>=0.22.0            # URL/domain validation helpers
+py_w3c>=0.3.1                # W3C HTML validation helper
+aiohttp>=3.9.0                 # Async HTTP client
+favicon>=0.7.0                # Website favicon detection
+csscompressor>=0.9.5          # CSS minification checks
+jsmin>=3.0.1                  # JavaScript minification checks
+geocoder>=1.38.1              # IP/location lookup
+python-whois>=0.8.0           # Domain WHOIS lookup
 
 # -- Caching (production) --
 django-redis>=5.4.0
