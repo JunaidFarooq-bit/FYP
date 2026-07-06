@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+import logging
+import os
 from typing import Dict, Iterable, List
 
 import numpy as np
 
 from .embeddings import get_embeddings
 from .model_manager import get_reranker_model
+
+logger = logging.getLogger(__name__)
 
 
 _SOURCE_BONUS = {
@@ -35,9 +39,12 @@ def rank_evidence_candidates(
     candidates: Iterable[Dict],
     top_k: int = 30,
     dense_shortlist: int = 60,
-    use_cross_encoder: bool = True,
+    use_cross_encoder: bool = None,
 ) -> List[Dict]:
     """Rank only candidates discovered from this page, its SERPs, or competitors."""
+    if use_cross_encoder is None:
+        use_cross_encoder = os.getenv("KEYWORD_USE_CROSS_ENCODER", "false").lower() == "true"
+
     deduplicated: Dict[str, Dict] = {}
     for item in candidates:
         keyword = " ".join(str(item.get("keyword", "")).lower().split())
@@ -72,7 +79,8 @@ def rank_evidence_candidates(
                 dtype=np.float32,
             ).reshape(-1)
             ranking_method = "cross_encoder"
-        except Exception:
+        except Exception as exc:
+            logger.warning("Keyword cross-encoder reranking disabled after failure: %s", exc)
             cross_raw = None
 
     dense_normalized = _normalize_scores(shortlisted_dense)
