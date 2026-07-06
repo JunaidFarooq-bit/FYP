@@ -6,6 +6,7 @@ from django.db import migrations, models, connection
 def vector_to_jsonb(apps, schema_editor):
     if connection.vendor != 'postgresql':
         return
+    schema_editor.execute('DROP INDEX IF EXISTS contentanalysis_embedding_idx;')
     schema_editor.execute(
         '''
         ALTER TABLE keyword_ai_contentanalysis
@@ -30,6 +31,14 @@ def jsonb_to_vector(apps, schema_editor):
             WHEN embedding IS NULL THEN NULL
             ELSE embedding::text::vector
         END;
+        '''
+    )
+    schema_editor.execute(
+        '''
+        CREATE INDEX IF NOT EXISTS contentanalysis_embedding_idx
+        ON keyword_ai_contentanalysis
+        USING hnsw (embedding vector_cosine_ops)
+        WITH (m = 16, ef_construction = 64);
         '''
     )
 

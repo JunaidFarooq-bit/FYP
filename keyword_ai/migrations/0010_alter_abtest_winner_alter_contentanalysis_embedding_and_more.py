@@ -18,11 +18,20 @@ def jsonb_to_vector(apps, schema_editor):
         END;
         '''
     )
+    schema_editor.execute(
+        '''
+        CREATE INDEX IF NOT EXISTS contentanalysis_embedding_idx
+        ON keyword_ai_contentanalysis
+        USING hnsw (embedding vector_cosine_ops)
+        WITH (m = 16, ef_construction = 64);
+        '''
+    )
 
 
 def vector_to_jsonb(apps, schema_editor):
     if connection.vendor != 'postgresql':
         return
+    schema_editor.execute('DROP INDEX IF EXISTS contentanalysis_embedding_idx;')
     schema_editor.execute(
         '''
         ALTER TABLE keyword_ai_contentanalysis
