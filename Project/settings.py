@@ -87,7 +87,7 @@ TEMPLATES = [
 WSGI_APPLICATION = 'Project.wsgi.application'
 
 
-# Database Configuration — Supports SQLite (dev), PostgreSQL, and Railway DATABASE_URL
+# Database Configuration Ã¢â‚¬â€ Supports SQLite (dev), PostgreSQL, and Railway DATABASE_URL
 DATABASE_URL = os.getenv('DATABASE_URL')
 USE_SQLITE = os.getenv('USE_SQLITE', 'true').lower() == 'true' if not DATABASE_URL else False
 
@@ -101,7 +101,7 @@ if DATABASE_URL:
         )
     }
 elif USE_SQLITE:
-    # SQLite — Development only
+    # SQLite Ã¢â‚¬â€ Development only
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
@@ -112,7 +112,7 @@ elif USE_SQLITE:
         }
     }
 else:
-    # PostgreSQL — Production (manual configuration)
+    # PostgreSQL Ã¢â‚¬â€ Production (manual configuration)
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
@@ -204,6 +204,8 @@ X_FRAME_OPTIONS = 'DENY'
 
 # SSL redirect (disable for localhost/127.0.0.1 to avoid cert errors)
 SECURE_SSL_REDIRECT = not DEBUG
+SECURE_REDIRECT_EXEMPT = [r'^live/$', r'^health/$', r'^ready/$']
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 if SECURE_SSL_REDIRECT and ('localhost' in ALLOWED_HOSTS or '127.0.0.1' in ALLOWED_HOSTS):
     # Don't redirect to HTTPS on localhost (no SSL cert)
     SECURE_SSL_REDIRECT = False
@@ -288,7 +290,6 @@ if os.getenv('USE_REDIS_CACHE', 'false').lower() == 'true':
         )
 
 
-
 LOG_DIR = BASE_DIR / "logs"
 LOG_DIR.mkdir(exist_ok=True)
 
@@ -362,9 +363,7 @@ CELERY_BEAT_SCHEDULE = {
 }
 
 
-# ═══════════════════════════════════════════════════════════════
 # BANK TRANSFER CONFIGURATION (Manual Payment)
-# ═══════════════════════════════════════════════════════════════
 # Set these in your .env file to receive payments directly to your account
 BANK_NAME = os.getenv('BANK_NAME', 'Your Bank Name')
 BANK_ACCOUNT_NAME = os.getenv('BANK_ACCOUNT_NAME', 'WebLift Inc.')
@@ -377,27 +376,21 @@ BANK_COUNTRY = os.getenv('BANK_COUNTRY', 'Your Country')
 # Free trial configuration
 FREE_TRIAL_AUDITS = int(os.getenv('FREE_TRIAL_AUDITS', '1'))  # Number of free audits for new users
 
-# ═══════════════════════════════════════════════════════════════
 # SENTRY ERROR TRACKING (Production)
-# ═══════════════════════════════════════════════════════════════
 SENTRY_DSN = os.getenv('SENTRY_DSN', '')
 if SENTRY_DSN and not DEBUG:
     import sentry_sdk
     from sentry_sdk.integrations.django import DjangoIntegration
     from sentry_sdk.integrations.celery import CeleryIntegration
-    
+
     sentry_sdk.init(
         dsn=SENTRY_DSN,
         integrations=[
             DjangoIntegration(),
             CeleryIntegration(),
         ],
-        # Performance monitoring
         traces_sample_rate=float(os.getenv('SENTRY_TRACES_SAMPLE_RATE', '0.1')),
-        # Profiling (sentry-sdk 1.40+ required)
         profiles_sample_rate=float(os.getenv('SENTRY_PROFILES_SAMPLE_RATE', '0.1')),
-        # Environment
         environment=os.getenv('SENTRY_ENVIRONMENT', 'production'),
-        # Release version (optional, for tracking deployments)
         release=os.getenv('SENTRY_RELEASE', None),
     )
