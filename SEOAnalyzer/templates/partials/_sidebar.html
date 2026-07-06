@@ -1,4 +1,238 @@
 {% load static %}
+<style id="unified-sidebar-header-style">
+  #main-navbar {
+    height: 70px !important;
+    min-height: 70px !important;
+    max-height: 70px !important;
+    padding: 0 !important;
+  }
+
+  #main-navbar .navbar-container {
+    height: 70px !important;
+    min-height: 70px !important;
+    max-height: 70px !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+  }
+
+  #main-navbar .navbar-page-context {
+    gap: 0 !important;
+  }
+
+  #main-navbar .navbar-page-context strong {
+    margin: 0 !important;
+  }
+
+  /* unified-feature-panel-style */
+  .analysis-section.features-section {
+    background: #fff !important;
+    border: 0 !important;
+    border-radius: 16px !important;
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.1) !important;
+    margin-bottom: 32px !important;
+    overflow: hidden !important;
+  }
+
+  .analysis-section.features-section .section-header {
+    background: #02569b !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    cursor: default !important;
+    min-height: 62px !important;
+    padding: 18px 38px !important;
+  }
+
+  .analysis-section.features-section .section-title h2 {
+    color: #fff !important;
+    font-size: 1.25rem !important;
+    font-weight: 700 !important;
+    margin: 0 !important;
+  }
+
+  .analysis-section.features-section .section-icon {
+    color: #fff !important;
+    font-size: 1.1rem !important;
+  }
+
+  .analysis-section.features-section .section-content {
+    background: #fff !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    padding: 26px !important;
+  }
+
+  .analysis-section.features-section .features-grid {
+    display: grid !important;
+    gap: 18px !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  }
+
+  .analysis-section.features-section .feature-card {
+    align-items: center !important;
+    animation: none !important;
+    background: #fff !important;
+    border: 1px solid #dce2ea !important;
+    border-radius: 12px !important;
+    box-shadow: none !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-start !important;
+    min-height: 210px !important;
+    opacity: 1 !important;
+    overflow: hidden !important;
+    padding: 26px 20px !important;
+    text-align: center !important;
+    transform: none !important;
+  }
+
+  .analysis-section.features-section .feature-card::before {
+    display: none !important;
+  }
+
+  .analysis-section.features-section .feature-card:hover {
+    border-color: #b9c6d8 !important;
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08) !important;
+    transform: translateY(-3px) !important;
+  }
+
+  .analysis-section.features-section .feature-icon {
+    align-items: center !important;
+    border-radius: 12px !important;
+    display: flex !important;
+    height: 56px !important;
+    justify-content: center !important;
+    margin: 0 auto 20px !important;
+    transform: none !important;
+    width: 56px !important;
+  }
+
+  .analysis-section.features-section .feature-icon i {
+    font-size: 1.6rem !important;
+  }
+
+  .analysis-section.features-section .feature-title {
+    color: #111827 !important;
+    font-size: 1rem !important;
+    font-weight: 700 !important;
+    margin: 0 0 8px !important;
+  }
+
+  .analysis-section.features-section .feature-description {
+    color: #4b5563 !important;
+    font-size: 0.8rem !important;
+    line-height: 1.55 !important;
+    margin: 0 !important;
+    max-width: 220px;
+  }
+
+  .analysis-section.features-section .intent-icon { background: linear-gradient(135deg, #fef3c7, #fde68a) !important; }
+  .analysis-section.features-section .intent-icon i { color: #d97706 !important; }
+  .analysis-section.features-section .onpage-icon { background: linear-gradient(135deg, #dbeafe, #bfdbfe) !important; }
+  .analysis-section.features-section .onpage-icon i { color: #2563eb !important; }
+  .analysis-section.features-section .technical-icon { background: linear-gradient(135deg, #d1fae5, #a7f3d0) !important; }
+  .analysis-section.features-section .technical-icon i { color: #059669 !important; }
+  .analysis-section.features-section .authority-icon { background: linear-gradient(135deg, #fce7f3, #fbcfe8) !important; }
+  .analysis-section.features-section .authority-icon i { color: #db2777 !important; }
+  .analysis-section.features-section .content-icon { background: linear-gradient(135deg, #e0e7ff, #c7d2fe) !important; }
+  .analysis-section.features-section .content-icon i { color: #6366f1 !important; }
+  .analysis-section.features-section .ux-icon { background: linear-gradient(135deg, #fed7aa, #fdba74) !important; }
+  .analysis-section.features-section .ux-icon i { color: #ea580c !important; }
+
+  @media (max-width: 1100px) {
+    .analysis-section.features-section .features-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .analysis-section.features-section .section-header { padding: 16px 20px !important; }
+    .analysis-section.features-section .section-content { padding: 18px !important; }
+    .analysis-section.features-section .features-grid { grid-template-columns: 1fr !important; }
+    .analysis-section.features-section .feature-card { min-height: 0 !important; }
+  }
+
+  /* generated-report-label-cleanup */
+  .section-title::before,
+  .content-wrapper > .analysis-card.full-width > .card-header h3::before,
+  .analysis-section .analysis-card.full-width > .card-header h3::before {
+    content: none !important;
+    display: none !important;
+  }
+
+  /* Match Keyword Suggestions typography on every sidebar page. */
+  .sidebar,
+  .sidebar-content,
+  .sidebar-link,
+  .sidebar-link span {
+    font-family: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+    font-stretch: normal !important;
+    font-style: normal !important;
+    letter-spacing: 0 !important;
+    text-transform: none !important;
+  }
+
+  .sidebar-link {
+    font-size: 0.95rem !important;
+    font-weight: 700 !important;
+    line-height: 1.35 !important;
+  }
+
+  .sidebar-logo h5,
+  .nav-section-title {
+    font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+    font-stretch: normal !important;
+  }
+
+  .sidebar-logo h5 {
+    font-size: 1.55rem !important;
+    font-weight: 800 !important;
+    letter-spacing: 0 !important;
+  }
+
+  .nav-section-title {
+    font-size: 0.72rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.08em !important;
+    text-transform: uppercase !important;
+  }
+  /* feature-heading-visibility-lock */
+  .analysis-section.features-section > .section-header,
+  .analysis-section.features-section > .section-header .section-title,
+  .analysis-section.features-section > .section-header .section-title h2 {
+    opacity: 1 !important;
+    visibility: visible !important;
+  }
+
+  .analysis-section.features-section > .section-header {
+    display: flex !important;
+    min-height: 62px !important;
+  }
+
+  .analysis-section.features-section > .section-header .section-title {
+    align-items: center !important;
+    display: flex !important;
+    min-width: 0 !important;
+  }
+
+  .analysis-section.features-section > .section-header .section-title h2 {
+    color: #fff !important;
+    display: block !important;
+    font-family: "Outfit", sans-serif !important;
+    font-size: 1.25rem !important;
+    font-weight: 700 !important;
+    height: auto !important;
+    line-height: 1.3 !important;
+    margin: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    position: relative !important;
+    width: auto !important;
+    z-index: 2 !important;
+  }
+
+  .analysis-section.features-section > .section-header .section-icon {
+    display: none !important;
+  }</style>
 {% comment %}
 Shared sidebar navigation. Pass `active_page` in context to highlight the current item.
 Possible values: home, seo_metrics, mobiletest, sentiment_analysis, comparative_analysis, keyword_suggestions

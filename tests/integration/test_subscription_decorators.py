@@ -95,6 +95,19 @@ class TestRequireFeatureDecorator:
         response = my_view(request)
         assert response.status_code in (302, 403)
 
+    def test_blocked_feature_does_not_redirect_to_external_referer(self, test_user, free_subscription):
+        factory = RequestFactory()
+        request = _add_session(factory.get('/', HTTP_REFERER='https://evil.example/phish'))
+        request.user = test_user
+
+        @require_feature('pdf_export')
+        def my_view(request):
+            return Mock(status_code=200)
+
+        response = my_view(request)
+        assert response.status_code == 302
+        assert response['Location'] != 'https://evil.example/phish'
+
     def test_pdf_export_allowed_for_basic_user(self, test_user, basic_subscription):
         factory = RequestFactory()
         request = _add_session(factory.get('/'))

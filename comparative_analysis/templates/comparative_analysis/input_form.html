@@ -34,10 +34,11 @@
     />
 
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="{% static 'css/styles.css'%}" />
+    <link rel="stylesheet" href="{% static 'css/styles.css'%}?v=20260618" />
+      <link rel="stylesheet" href="{% static 'keyword-page-system.css' %}?v=20260706-heading-lock" />
   </head>
 
-  <body>
+  <body class="keyword-system-page">
     <!-- Loader -->
     <div id="loader">
       <div class="loader-animation">
@@ -86,18 +87,11 @@
             <i class="fas fa-bars"></i>
           </button>
 
-          <!-- Desktop Logo -->
-          <div class="navbar-logo" id="mylogo">
-            <img src="{% static 'logo.png'%}" alt="WEB LIFT Logo" />
-            <h4>WEB LIFT</h4>
+          <div class="navbar-page-context">
+            <strong>Comparative Analysis</strong>
           </div>
 
-          <!-- Actions -->
           <div class="navbar-actions">
-            <a href="{% url 'Home' %}" class="btn btn-outline" id="try">
-              <i class="fas fa-home"></i>
-              <span>Home</span>
-            </a>
             {% include 'partials/_profile_dropdown.html' %}
           </div>
         </div>
@@ -230,7 +224,7 @@
         </section>
 
         <!-- Features Section -->
-        <section class="analysis-section">
+        <section class="analysis-section features-section">
           <div class="section-header">
             <div class="section-title">
               <i class="fas fa-sparkles section-icon"></i>
@@ -256,9 +250,9 @@
                 <div class="feature-icon onpage-icon">
                   <i class="fas fa-file-alt"></i>
                 </div>
-                <h3 class="feature-title">On-Page SEO</h3>
+                <h3 class="feature-title">On-Page &amp; Content</h3>
                 <p class="feature-description">
-                  Title tags, headings, keywords, and content quality analysis
+                  Titles, headings, keyword placement, content depth, and quality
                 </p>
               </div>
 
@@ -267,9 +261,9 @@
                 <div class="feature-icon technical-icon">
                   <i class="fas fa-tachometer-alt"></i>
                 </div>
-                <h3 class="feature-title">Technical SEO</h3>
+                <h3 class="feature-title">Technical &amp; UX</h3>
                 <p class="feature-description">
-                  Speed, mobile-friendliness, and structured data evaluation
+                  Speed, mobile usability, accessibility, and structured data
                 </p>
               </div>
 
@@ -284,27 +278,7 @@
                 </p>
               </div>
 
-              <!-- Feature 5 -->
-              <div class="feature-card">
-                <div class="feature-icon content-icon">
-                  <i class="fas fa-book-open"></i>
-                </div>
-                <h3 class="feature-title">Content Depth</h3>
-                <p class="feature-description">
-                  Word count, topic coverage, and multimedia usage analysis
-                </p>
-              </div>
 
-              <!-- Feature 6 -->
-              <div class="feature-card">
-                <div class="feature-icon ux-icon">
-                  <i class="fas fa-users"></i>
-                </div>
-                <h3 class="feature-title">User Experience</h3>
-                <p class="feature-description">
-                  Readability, structure, and formatting evaluation
-                </p>
-              </div>
             </div>
           </div>
         </section>

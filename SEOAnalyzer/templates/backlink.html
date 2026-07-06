@@ -34,7 +34,7 @@
 
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{% static 'fyp.css'%}" />
-    <link rel="stylesheet" href="{% static 'modern-style.css'%}" />
+    <link rel="stylesheet" href="{% static 'modern-style.css'%}?v=20260618" />
 
     <style>
       /* ================================================
@@ -215,6 +215,7 @@
         }
       }
     </style>
+    <link rel="stylesheet" href="{% static 'sidebar-tool-theme.css' %}?v=20260618" />
   </head>
 
   <body>
@@ -277,8 +278,11 @@
             <h4>WEBLIFT</h4> 
           </div> {% endcomment %}
 
-          <!-- Spacer -->
-          <div style="flex: 1"></div>
+          <div class="navbar-page-context">
+            <span class="navbar-eyebrow">Workspace</span>
+            <i class="fas fa-chevron-right navbar-crumb-icon"></i>
+            <strong>Backlink Checker</strong>
+          </div>
 
           <!-- Navbar actions (right side) -->
           <div class="navbar-actions">
@@ -357,6 +361,39 @@
             </div>
           </form>
         </div>
+
+        <section class="analysis-section features-section">
+          <div class="section-header">
+            <div class="section-title">
+              <i class="fas fa-sparkles section-icon"></i>
+              <h2>What We Analyze</h2>
+            </div>
+          </div>
+          <div class="section-content">
+            <div class="features-grid">
+              <div class="feature-card">
+                <div class="feature-icon"><i class="fas fa-link"></i></div>
+                <h3 class="feature-title">Backlink Volume</h3>
+                <p class="feature-description">Total links pointing to your site and the scale of link equity.</p>
+              </div>
+              <div class="feature-card">
+                <div class="feature-icon"><i class="fas fa-sitemap"></i></div>
+                <h3 class="feature-title">Root Domains</h3>
+                <p class="feature-description">Unique linking domains that reveal how broad your authority footprint is.</p>
+              </div>
+              <div class="feature-card">
+                <div class="feature-icon"><i class="fas fa-award"></i></div>
+                <h3 class="feature-title">Authority Scores</h3>
+                <p class="feature-description">Moz DA and PA indicators for domain and page-level strength.</p>
+              </div>
+              <div class="feature-card">
+                <div class="feature-icon"><i class="fas fa-chart-bar"></i></div>
+                <h3 class="feature-title">Link Quality</h3>
+                <p class="feature-description">Summary metrics that help separate useful links from weak signals.</p>
+              </div>
+            </div>
+          </div>
+        </section>
 
         <!-- Results (conditional) -->
         {% if url %}

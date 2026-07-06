@@ -1,11 +1,11 @@
 <div class="profile-dropdown-wrapper" style="position:relative;display:inline-block;">
   <button class="btn btn-primary profile-avatar-btn" id="profileDropdownBtn" type="button"
     onclick="toggleProfileDropdown()" aria-haspopup="true" aria-expanded="false"
-    style="border-radius:50%;width:38px;height:38px;padding:0;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:1rem;background:linear-gradient(135deg,#023761,#0275d8);border:2px solid rgba(255,255,255,0.3);">
+    style="border-radius:50%;width:38px;height:38px;padding:0;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:1rem;background:#02569b;border:2px solid rgba(255,255,255,0.3);">
     {{ request.user.username|first|upper }}
   </button>
   <div id="profileDropdownMenu" style="display:none;position:absolute;right:0;top:calc(100% + 8px);min-width:260px;background:#fff;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.18);z-index:9999;overflow:hidden;">
-    <div style="background:linear-gradient(135deg,#023761,#0275d8);padding:16px 18px;color:#fff;">
+    <div style="background:#023761;padding:16px 18px;color:#fff;">
       <div style="display:flex;align-items:center;gap:10px;">
         <div style="width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:1.2rem;font-weight:700;">
           {{ request.user.username|first|upper }}

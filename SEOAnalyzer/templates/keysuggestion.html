@@ -82,8 +82,8 @@
                         />
                     </div>
                     <div class="form-group text-center">
-                        <button class="btn btn-primary" onclick="myFunction()" style="background-image: linear-gradient(to bottom,#2670ac,#023761)  !important;" type="submit">Submit</button>
-                        <button onclick="trynewurl()" class="btn btn-secondary" style="background-image: linear-gradient(to bottom,#2670ac,#023761)  !important;" type="submit"><a style=" color:white;text-decoration:none;" href="{% url 'keysuggestion' %}" >Try New URL!</a></button>
+                        <button class="btn btn-primary" onclick="myFunction()" style="background-color: #02569b !important;" type="submit">Submit</button>
+                        <button onclick="trynewurl()" class="btn btn-secondary" style="background-color: #02569b !important;" type="submit"><a style=" color:white;text-decoration:none;" href="{% url 'keysuggestion' %}" >Try New URL!</a></button>
                     </div>
                 </form>
             </div>
@@ -112,7 +112,7 @@
 
 
         <!-- Sidebar -->
-<nav id="sidebarMenu" class="collapse d-lg-block sidebar collapse bg-primary" style="background-image: linear-gradient(to bottom,#023761,#02569b,#80aacd)  !important;">
+<nav id="sidebarMenu" class="collapse d-lg-block sidebar collapse bg-primary" style="background-color: #023761 !important;">
   <div class="position-sticky">
     <div class="list-group list-group-flush mx-3 mt-4">
       {% include 'partials/_sidebar_legacy.html' with active_page='keyword_suggestions' %}
@@ -121,7 +121,7 @@
 </nav>
 
        <!-- Navbar -->
-        <nav id="main-navbar" class="navbar navbar-expand-lg navbar-light bg-white fixed-top" style="background-image: linear-gradient(to right,#023761,#02569b,#80aacd)  !important;">
+        <nav id="main-navbar" class="navbar navbar-expand-lg navbar-light bg-white fixed-top" style="background-color: #023761 !important;">
           <!-- Container wrapper -->
           <button class="navbar-toggler" id="navbar-toggle" type="button" data-mdb-toggle="collapse" data-mdb-target="#sidebarMenu" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle navigation" style="color: white; margin: 0px;" onclick="navbar()">
                         <i class="fas fa-bars"></i>

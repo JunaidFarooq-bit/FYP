@@ -24,13 +24,14 @@
 
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{% static 'fyp.css'%}" />
-    <link rel="stylesheet" href="{% static 'modern-style.css'%}" />
+    <link rel="stylesheet" href="{% static 'modern-style.css'%}?v=20260618" />
     <link rel="stylesheet" href="{% static 'dashboard.css'%}" />
     <link rel="stylesheet" href="{% static 'dashboard-responsive.css'%}" />
     <link rel="stylesheet" href="{% static 'stitch-theme.css'%}" />
+      <link rel="stylesheet" href="{% static 'keyword-page-system.css' %}?v=20260706-heading-lock" />
   </head>
 
-  <body class="stitch-shell">
+  <body class="stitch-shell keyword-system-page">
     <!-- Loader -->
     <div id="loader">
       <div class="loader-animation">
@@ -88,11 +89,18 @@
           <form name="myForm" id="myForm" action="/show/" method="post" class="audit-url-form">
             {% csrf_token %}
             <label for="id_url">Enter URL for analysis</label>
-            <div class="audit-form-fields">
-              <div class="input-pill">
-                <i class="fas fa-search"></i>
-                <input placeholder="https://example.com" name="fname" type="search" id="id_url" value="{{url|default:''}}" required />
+            <div class="form-group">
+              <div class="input-wrap">
+                <i class="fas fa-globe"></i>
+                <input
+                  type="url"
+                  name="url"
+                  id="url"
+                  placeholder="https://example.com"
+                  value="{{ url|default:'' }}"
+                />
               </div>
+            </div>
               <button id="analyzeBtn" class="btn btn-primary" type="submit">
                 <i class="fas fa-rocket"></i>
                 <span>Analyze</span>
@@ -477,7 +485,7 @@
         // FIX: safe keyword data parse
         let keywordData = [];
         try {
-          keywordData = {{ chart_keywords|safe|default:"[]" }};
+          keywordData = JSON.parse('{{ chart_keywords|escapejs|default:"[]" }}');
           if (!Array.isArray(keywordData)) keywordData = [];
         } catch(e) {
           keywordData = [];

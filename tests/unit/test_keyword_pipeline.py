@@ -12,6 +12,34 @@ from unittest.mock import Mock, patch, MagicMock
 
 from keyword_ai.models import ContentAnalysis, KeywordOpportunity
 
+@pytest.fixture(autouse=True)
+def stub_dynamic_candidate_ranker(monkeypatch):
+    def ranker(**kwargs):
+        return [
+            {
+                "keyword": item["keyword"],
+                "relevance_score": 80.0,
+                "sources": [item.get("source", "test")],
+            }
+            for item in kwargs.get("candidates", [])[:30]
+        ]
+
+    class DisabledSerpProvider:
+        enabled = False
+
+    class DisabledAggregator:
+        serp_provider = DisabledSerpProvider()
+
+    monkeypatch.setattr("keyword_ai.pipeline_v2.rank_evidence_candidates", ranker)
+    monkeypatch.setattr("keyword_ai.pipeline_v2.KeywordDataAggregator", DisabledAggregator)
+    monkeypatch.setattr(
+        "keyword_ai.pipeline_v2.generate_keyword_suggestions", lambda **kwargs: []
+    )
+    monkeypatch.setattr(
+        "keyword_ai.pipeline_v2.enrich_with_traffic_signals",
+        lambda **kwargs: {"traffic_prioritized_keywords": []},
+    )
+
 
 # ---------------------------------------------------------------------------
 # Pipeline V2 — basic flow
@@ -22,7 +50,7 @@ from keyword_ai.models import ContentAnalysis, KeywordOpportunity
 class TestKeywordPipelineV2:
 
     @patch('keyword_ai.pipeline_v2.extract_content')
-    @patch('keyword_ai.pipeline_v2.get_single_embedding')
+    @patch('keyword_ai.pipeline_v2.build_page_embedding')
     @patch('keyword_ai.pipeline_v2.extract_keywords')
     @patch('keyword_ai.pipeline_v2.score_keywords_v2')
     def test_pipeline_returns_relevant_keywords(
@@ -35,7 +63,7 @@ class TestKeywordPipelineV2:
             'meta_description': 'Learn Python',
             'full_text': 'Python is a versatile language for web development and data science automation.',
         }
-        mock_embed.return_value = np.random.rand(384)
+        mock_embed.return_value = (np.random.rand(384), {"version": "test"})
         mock_extract_kw.return_value = [
             {'keyword': 'python tutorial', 'score': 0.9},
             {'keyword': 'data science', 'score': 0.8},
@@ -67,7 +95,7 @@ class TestKeywordPipelineV2:
         assert 'error' in result or 'relevant_keywords' in result
 
     @patch('keyword_ai.pipeline_v2.extract_content')
-    @patch('keyword_ai.pipeline_v2.get_single_embedding')
+    @patch('keyword_ai.pipeline_v2.build_page_embedding')
     def test_pipeline_persists_to_db(self, mock_embed, mock_extract, db):
         from keyword_ai.pipeline_v2 import run_keyword_pipeline_v2
         mock_extract.return_value = {
@@ -76,7 +104,7 @@ class TestKeywordPipelineV2:
             'meta_description': 'Testing persistence',
             'full_text': 'This content tests whether the pipeline saves results to the database correctly.',
         }
-        mock_embed.return_value = np.random.rand(384)
+        mock_embed.return_value = (np.random.rand(384), {"version": "test"})
         run_keyword_pipeline_v2(url='https://persist-test.com', save_to_db=True, use_llm=False)
         analysis = ContentAnalysis.objects.filter(url='https://persist-test.com').first()
         if analysis:
@@ -94,7 +122,7 @@ class TestKeywordPipelineV2:
             assert 'Network timeout' in str(exc) or True  # acceptable — pipeline raised
 
     @patch('keyword_ai.pipeline_v2.extract_content')
-    @patch('keyword_ai.pipeline_v2.get_single_embedding')
+    @patch('keyword_ai.pipeline_v2.build_page_embedding')
     @patch('keyword_ai.pipeline_v2.extract_keywords')
     @patch('keyword_ai.pipeline_v2.score_keywords_v2')
     def test_pipeline_without_llm_still_returns_keywords(
@@ -107,7 +135,7 @@ class TestKeywordPipelineV2:
             'meta_description': 'No LLM',
             'full_text': 'Testing pipeline without LLM integration for keyword suggestion.',
         }
-        mock_embed.return_value = np.random.rand(384)
+        mock_embed.return_value = (np.random.rand(384), {"version": "test"})
         mock_extract_kw.return_value = [{'keyword': 'no llm test', 'score': 0.85}]
         mock_score.return_value = [{'keyword': 'no llm test', 'relevance_score': 85.0, 'type': 'ml'}]
         result = run_keyword_pipeline_v2(url='https://no-llm.com', use_llm=False)

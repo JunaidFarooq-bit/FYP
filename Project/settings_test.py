@@ -52,6 +52,7 @@ CACHES = {
 # Media and Static Files for Tests
 MEDIA_ROOT = BASE_DIR / 'test_media'
 STATIC_ROOT = BASE_DIR / 'test_static'
+STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
 
 # Email Backend for Tests
 EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'

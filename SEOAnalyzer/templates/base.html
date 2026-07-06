@@ -20,7 +20,7 @@
 
   <!-- Custom CSS -->
   <link rel="stylesheet" href="{% static 'fyp.css' %}" />
-  <link rel="stylesheet" href="{% static 'modern-style.css' %}" />
+  <link rel="stylesheet" href="{% static 'modern-style.css' %}?v=20260618" />
   <link rel="stylesheet" href="{% static 'dashboard-integrated.css' %}" />
 
   {% block extra_css %}{% endblock %}
@@ -48,29 +48,33 @@
           <i class="fas fa-bars"></i>
         </button>
 
-        <form name="myForm" id="myForm" action="/show/" method="post" class="navbar-search">
-          {% csrf_token %}
-          <div class="search-wrapper">
-            <div class="search-input-group">
-              <i class="fas fa-search search-icon"></i>
-              <input placeholder="Enter website URL to analyze..." name="fname"
-                autocomplete="on" type="search" id="id_url" class="search-input"
-                aria-label="Website URL" />
-            </div>
-            <div class="navbar-actions">
-              <button id="analyzeBtn" onclick="myFunction()" class="btn btn-primary" type="submit">
-                <i class="fas fa-search-plus"></i>
-                <span>Analyze</span>
-              </button>
-              <a class="btn btn-primary" href="{% url 'Home' %}">
-                <i class="fas fa-redo"></i>
-                <span>New URL</span>
-              </a>
-              <!-- Profile Dropdown -->
-              {% include 'partials/_profile_dropdown.html' %}
-            </div>
+        <nav
+        id="main-navbar"
+        class="navbar navbar-expand-lg fixed-top"
+        role="navigation"
+      >
+        <div class="navbar-container">
+          <button
+            class="navbar-toggler"
+            id="navbar-toggle"
+            type="button"
+            aria-controls="sidebarMenu"
+            aria-expanded="false"
+            aria-label="Toggle navigation"
+            onclick="toggleSidebar()"
+          >
+            <i class="fas fa-bars"></i>
+          </button>
+
+          <div class="navbar-page-context">
+            <strong>Subscription</strong>
           </div>
-        </form>
+
+          <div class="navbar-actions" style="margin-left: auto">
+            {% include 'partials/_profile_dropdown.html' %}
+          </div>
+        </div>
+      </nav>
       </div>
     </nav>
   </header>

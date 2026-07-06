@@ -206,7 +206,7 @@ def estimate_keywords_batch_llm(
     Estimate traffic for multiple keywords in a single LLM call (cheaper/faster).
     
     Args:
-        keywords: List of keywords to estimate (max 10 for best results)
+        keywords: List of keywords to estimate (max 30)
         page_topic: Context about the page
         target_region: Target geographic region
     
@@ -216,8 +216,8 @@ def estimate_keywords_batch_llm(
     if not keywords:
         return {}
     
-    # Limit batch size for quality
-    keywords = keywords[:10]
+    # Bound prompt and response size while covering one analysis in one request.
+    keywords = list(dict.fromkeys(keywords))[:30]
     
     client = get_client()
     if client is None:
@@ -303,7 +303,7 @@ Respond with ONLY a JSON array where each element matches this format:
             model=get_model(),
             messages=[{"role": "user", "content": prompt}],
             temperature=0.3,
-            max_tokens=1200,
+            max_tokens=3000,
         )
         raw_text = response.choices[0].message.content.strip()
         

@@ -15,11 +15,9 @@ from .services.competitor_analyzer import run_competitor_analysis
 from .services.keybert_extractor import extract_keywords
 from .services.similarity_search import expand_keywords
 from .services.relevance_scorer import score_keywords as score_keywords_v1
-from .services.llm_refiner import refine_keywords
 from .services.llm_expander import (
     expand_keywords_with_llm,
     analyze_competitor_gaps_with_llm,
-    generate_question_keywords,
     get_keyword_clusters_with_llm,
 )
 from .services.content_optimizer import (
@@ -35,12 +33,14 @@ from .services.intent_classifier import (
 )
 from .ml_models.relevance_scorer_v2 import score_keywords_v2, predict_search_intent
 from .ml_models.suggestion_generator import generate_keyword_suggestions
-from .ml_models.semantic_mapper import find_semantic_keywords, SemanticKeywordMapper
+
 from .models import ContentAnalysis, KeywordOpportunity, GapAnalysis
-from .services.embeddings import get_single_embedding
+from .services.embeddings import build_page_embedding, EMBEDDING_VERSION
+from .services.candidate_ranker import rank_evidence_candidates
 from .services.rag_retriever import retrieve_similar_analyses, format_rag_context
 from .services.keyword_filter import decontaminate_pipeline_output
-from .services.traffic_enrichment import enrich_with_traffic_signals
+from .services.traffic_enrichment import enrich_with_traffic_signals, apply_serp_evidence
+from .services.candidate_quality import filter_candidates
 from .services.traffic_data_providers import KeywordDataAggregator
 from .services.geo_aeo_analyzer import analyze_geo_aeo, analyze_keywords_batch as analyze_geo_aeo_batch
 from .services.traffic_potential_analyzer import (
@@ -57,7 +57,13 @@ def get_content_hash(text: str) -> str:
     return hashlib.md5(text.encode('utf-8')).hexdigest()
 
 
-def save_content_analysis(url: str, meta: dict, analysis: dict, content_embedding: np.ndarray = None) -> ContentAnalysis:
+def save_content_analysis(
+    url: str,
+    meta: dict,
+    analysis: dict,
+    content_embedding: np.ndarray = None,
+    embedding_metadata: dict = None,
+) -> ContentAnalysis:
     """
     Save or update content analysis in database.
     
@@ -73,7 +79,11 @@ def save_content_analysis(url: str, meta: dict, analysis: dict, content_embeddin
     content_hash = get_content_hash(meta.get("full_text", ""))
     
     # Prepare structure data
-    structure = analysis.get("structure", {})
+    structure = dict(analysis.get("structure", {}) or {})
+    structure["_embedding"] = {
+        "version": EMBEDDING_VERSION,
+        **(embedding_metadata or {}),
+    }
     
     # Prepare entities
     entities = analysis.get("entities", {})
@@ -216,8 +226,14 @@ def run_keyword_pipeline_v2(
     
     # Step 2: Get content embedding for ML models (moved before analysis to reuse)
     content_embedding = None
+    embedding_metadata = {}
     try:
-        content_embedding = get_single_embedding(full_text[:1500])  # First 1500 chars
+        content_embedding, embedding_metadata = build_page_embedding(
+            full_text=full_text,
+            title=meta.get("title", ""),
+            meta_description=meta.get("meta_description", ""),
+            page_signals=meta.get("page_signals", {}),
+        )
     except Exception as e:
         logger.warning(f"Could not generate content embedding: {e}")
     
@@ -228,13 +244,17 @@ def run_keyword_pipeline_v2(
     content_analysis_db = None
     if save_to_db and url:
         try:
-            content_analysis_db = save_content_analysis(url, meta, content_analysis_result, content_embedding)
+            content_analysis_db = save_content_analysis(
+                url, meta, content_analysis_result, content_embedding, embedding_metadata
+            )
         except Exception as e:
             error_msg = str(e)
             if "column \"embedding\" is of type vector" in error_msg and "jsonb" in error_msg:
                 logger.warning(f"pgvector embedding type mismatch - saving without embedding field")
                 # Retry without embedding by setting it to None
-                content_analysis_db = save_content_analysis(url, meta, content_analysis_result, None)
+                content_analysis_db = save_content_analysis(
+                    url, meta, content_analysis_result, None, embedding_metadata
+                )
             else:
                 logger.warning(f"Failed to save content analysis: {e}")
     
@@ -242,9 +262,10 @@ def run_keyword_pipeline_v2(
     keybert_results = extract_keywords(full_text, top_n=20)
     seed_keywords = [item["keyword"] for item in keybert_results]
     
-    # Step 5: Similarity Expansion
-    expanded = expand_keywords(seed_keywords, top_k=20)
-    expanded_keywords = [item["keyword"] for item in expanded]
+    # Step 5: Expansion is populated later from observed SERP queries.
+    # Modifier-template expansion is intentionally excluded from production output.
+    expanded = []
+    expanded_keywords = []
     
     # Step 6: ML-Powered Keyword Suggestions (NEW - Phase 2)
     generated_suggestions = []
@@ -258,155 +279,287 @@ def run_keyword_pipeline_v2(
     except Exception as e:
         logger.warning(f"Keyword generation failed: {e}")
 
-    # Step 6.5: Traffic Enrichment Layer (Phase 2.5) — NEW
-    # Single traffic enrichment call (was previously two separate calls with two TrafficEnricher instances)
+    # Keep only suggestions extracted from the analyzed page. Synthetic
+    # question/modifier templates are not treated as keyword evidence.
+    generated_suggestions = [
+        suggestion
+        for suggestion in generated_suggestions
+        if suggestion.get("type") in {"lsi", "question_extracted"}
+    ]
+
+    # Step 6.5: Build a small page-derived discovery set. Traffic estimation
+    # is intentionally delayed until after dynamic reranking.
     traffic_enriched_suggestions = []
     traffic_analysis = {}
-    try:
-        if generated_suggestions:
-            all_ml_keywords = [s["keyword"] for s in generated_suggestions]
-            traffic_analysis = enrich_with_traffic_signals(
-                keywords=all_ml_keywords,
-                page_topic=page_topic,
-                target_audience=target_audience
-            )
-            # Merge traffic signals back into suggestion dicts
-            traffic_by_kw = {
-                item["keyword"]: item
-                for item in traffic_analysis.get("traffic_prioritized_keywords", [])
-            }
-            traffic_enriched_suggestions = [
-                {**s, "traffic_signals": traffic_by_kw.get(s["keyword"], {})}
-                for s in generated_suggestions
-            ]
-            logger.info(f"Traffic enrichment: processed {len(all_ml_keywords)} keywords")
-    except Exception as e:
-        logger.warning(f"Traffic enrichment failed: {e}")
-        traffic_enriched_suggestions = generated_suggestions
-
-    # Step 6.6: GEO + AEO Analysis (Phase 2.6) — NEW v2.2
-    # Adds geographic scope and answer-engine-optimization signals to each keyword.
+    candidate_diagnostics: List[Dict] = []
+    raw_candidates = list(dict.fromkeys(
+        seed_keywords
+        + [
+            item.get("keyword")
+            for item in content_analysis_result.get("tfidf_keywords", [])
+            if item.get("keyword")
+        ]
+        + [
+            item.get("keyword")
+            for item in generated_suggestions
+            if item.get("keyword")
+        ]
+    ))
+    grounded_traffic_keywords, candidate_diagnostics = filter_candidates(
+        raw_candidates,
+        page_text=full_text,
+        limit=15,
+    )
+    traffic_enriched_suggestions = [
+        {
+            "keyword": keyword,
+            "type": "page_derived",
+            "provenance": "observed_page",
+        }
+        for keyword in grounded_traffic_keywords
+    ]
+    # Steps 6.6-6.7 share one location-aware live SERP fetch. This keeps
+    # readiness evidence and traffic forecasts based on the same observation.
     geo_aeo_results: List[Dict] = []
+    _serp_features: Dict[str, Dict] = {}
+    _trend_evidence: Dict[str, Dict] = {}
+    _region_locations = {
+        "NA": "United States", "EU": "United Kingdom",
+        "APAC": "Singapore", "LATAM": "Brazil",
+        "MEA": "United Arab Emirates", "GLOBAL": "United States",
+    }
+    _region_geo = {
+        "NA": "US", "EU": "GB", "APAC": "SG",
+        "LATAM": "BR", "MEA": "AE", "GLOBAL": "",
+    }
+    keywords_for_geo_aeo = list(dict.fromkeys(
+        s.get("keyword")
+        for s in (traffic_enriched_suggestions or generated_suggestions)
+        if s.get("keyword")
+    ))
     try:
-        keywords_for_geo_aeo = list({
-            *(s.get("keyword") for s in (traffic_enriched_suggestions or generated_suggestions) if s.get("keyword")),
-        })
         if keywords_for_geo_aeo:
-            # Pull regional volumes from traffic_analysis if any provider returned them
-            traffic_by_kw = {
-                item["keyword"]: item
-                for item in traffic_analysis.get("traffic_prioritized_keywords", [])
-            }
-            regional_volume_data = {
-                kw: traffic_by_kw.get(kw, {}).get("regional_volumes", {})
-                for kw in keywords_for_geo_aeo
-            }
-            geo_aeo_results = analyze_geo_aeo_batch(
-                keywords=keywords_for_geo_aeo,
-                regional_volume_data=regional_volume_data,
-            )
-            logger.info(f"GEO/AEO: scored {len(geo_aeo_results)} keywords for region={target_region}")
-    except Exception as e:
-        logger.warning(f"GEO/AEO analysis failed: {e}")
 
-    # Step 6.7: CTR + Traffic Potential Forecast (Phase 2.7) — NEW v2.2
-    # Combines monthly volume, CTR curve, SGE impact, and seasonal adjustment.
-    traffic_potential_results: List[Dict] = []
-    try:
-        if traffic_analysis.get("traffic_prioritized_keywords"):
-            kw_items = traffic_analysis["traffic_prioritized_keywords"]
-
-            # Fetch real SERP features (AI Overview, featured snippet) via SerpAPI
-            # when a key is configured; otherwise has_ai_overview stays False.
             _aggregator = KeywordDataAggregator()
-            _serp_features: Dict = {}
             if _aggregator.serp_provider.enabled:
                 try:
-                    _kws_for_serp = [i.get("keyword") for i in kw_items if i.get("keyword")][:20]
-                    _serp_features = _aggregator.get_serp_features_bulk(_kws_for_serp)
-                    logger.info(f"SerpAPI: fetched real SERP features for {len(_serp_features)} keywords")
+                    _serp_features = _aggregator.get_serp_features_bulk(
+                        keywords_for_geo_aeo[:3],
+                        location=_region_locations.get((target_region or "GLOBAL").upper(), "United States"),
+                    )
+                    logger.info(
+                        "SerpAPI: fetched evidence for %s keywords in region=%s",
+                        len(_serp_features),
+                        target_region,
+                    )
                 except Exception as _se:
                     logger.warning(f"SerpAPI SERP feature fetch failed: {_se}")
 
-            batch_input = []
-            for item in kw_items:
-                kw = item.get("keyword")
-                real_serp = _serp_features.get(kw, {})
-                batch_input.append({
-                    "keyword": kw,
-                    "monthly_volume": item.get("monthly_volume"),
-                    "estimated_volume": item.get("estimated_volume"),
-                    "intent": item.get("intent", "informational"),
-                    # Real value from SerpAPI if available, else False
-                    "has_ai_overview": real_serp.get("has_ai_overview", False),
-                    "has_real_data": bool(item.get("data_source") and item["data_source"] != "estimated"),
-                    "serp_dominated_by_competitors": (item.get("competition_index") or 0) >= 0.7,
-                    "ctr_trend": item.get("ctr_trend", "stable"),
-                })
-            traffic_potential_results = analyze_traffic_potential_batch(batch_input)
-            logger.info(f"Traffic potential: forecast {len(traffic_potential_results)} keywords")
     except Exception as e:
-        logger.warning(f"Traffic potential calc failed: {e}")
+        logger.warning(f"GEO/AEO analysis failed: {e}")
 
-    # Build a lookup for merging GEO/AEO + traffic potential into scored_keywords later
-    _geo_aeo_by_kw = {item["keyword"]: item for item in geo_aeo_results}
-    _traffic_potential_by_kw = {item["keyword"]: item for item in traffic_potential_results}
-    
-    # Step 7: Semantic Keyword Mapping (NEW - Phase 2)
-    semantic_keywords = []
-    try:
-        semantic_keywords = find_semantic_keywords(
-            content_text=full_text,
-            top_k=20,
-            use_cached_index=True
+    traffic_potential_results: List[Dict] = []
+    _geo_aeo_by_kw: Dict[str, Dict] = {}
+    _traffic_potential_by_kw: Dict[str, Dict] = {}
+
+    # Observed query candidates from live related searches and PAA.
+    observed_serp_keywords = list(dict.fromkeys(
+        candidate
+        for serp in _serp_features.values()
+        for candidate in (
+            (serp.get("related_searches") or [])
+            + (serp.get("people_also_ask") or [])
         )
-    except Exception as e:
-        logger.warning(f"Semantic mapping failed: {e}")
-    
-    # Step 8: TF-IDF Analysis
+        if candidate
+    ))
+
+    expanded = [
+        {
+            "keyword": keyword,
+            "similarity_score": None,
+            "source": "serpapi",
+            "provenance": "observed_serp",
+        }
+        for keyword in observed_serp_keywords
+    ]
+    expanded_keywords = observed_serp_keywords
+
+    # Step 7: Build one domain-specific candidate pool. The old static
+    # SEO vocabulary is intentionally excluded from production.
     tfidf_results = content_analysis_result.get("tfidf_keywords", [])
     tfidf_keywords = [item["keyword"] for item in tfidf_results[:15]]
-    
-    # Step 9: Combine all keywords from different sources
-    all_keywords = list(dict.fromkeys(
-        seed_keywords + 
-        expanded_keywords + 
-        tfidf_keywords +
-        [s["keyword"] for s in generated_suggestions] +
-        [s["keyword"] for s in semantic_keywords]
-    ))
-    
-    # Competitor analysis variables (populated in step 10, used in step 11)
+
     competitor_data = None
     gap_analysis_result = None
-
-    # FIX: Pre-define target_keywords unconditionally so it's always safe to
-    # reference further down the pipeline (was previously only defined inside
-    # the `if analyze_competitors` block, leading to NameError in some paths).
+    # Pre-define target_keywords unconditionally for competitor analysis.
     target_keywords: List[str] = (
         [page_topic] if page_topic
         else ([meta.get("title", "")] if meta.get("title") else seed_keywords[:5])
     )
 
-    # Step 10: Competitor Analysis (OPTIONAL - runs BEFORE scoring so gap keywords
-    # are available as input to the ML relevance scorer in step 11)
-    if analyze_competitors and url:
+    if url and _serp_features:
         try:
-            competitor_data = run_competitor_analysis(url, target_keywords, full_text)
+            observed_targets = [
+                keyword for keyword in keywords_for_geo_aeo[:3]
+                if keyword in _serp_features
+            ]
+            competitor_data = run_competitor_analysis(
+                url,
+                observed_targets or target_keywords,
+                full_text,
+                serp_features=_serp_features,
+            )
             gap_analysis_result = competitor_data.get("gap_analysis", {})
-
-            # Save gap keywords as opportunities
             if content_analysis_db:
                 gap_keywords_list = gap_analysis_result.get("gap_keywords", [])
                 save_keyword_opportunities(
                     content_analysis_db,
                     gap_keywords_list,
                     "gap",
-                    {kw: 75 for kw in gap_keywords_list}
+                    {kw: 75 for kw in gap_keywords_list},
                 )
         except Exception as e:
-            logger.warning(f"Competitor analysis failed: {e}")
+            logger.warning("Competitor analysis failed: %s", e)
 
+    evidence_candidates = []
+
+    def _add_candidates(values, source):
+        for value in values:
+            keyword = value.get("keyword") if isinstance(value, dict) else value
+            if keyword:
+                evidence_candidates.append({"keyword": keyword, "source": source})
+
+    _add_candidates(seed_keywords, "keybert")
+    _add_candidates(tfidf_keywords, "tfidf")
+    _add_candidates(observed_serp_keywords, "observed_serp")
+    _add_candidates(
+        [item.get("keyword") for item in generated_suggestions],
+        "observed_page",
+    )
+
+    page_signals = meta.get("page_signals", {}) or {}
+    _add_candidates([
+        heading.get("text", "") if isinstance(heading, dict) else heading
+        for heading in (page_signals.get("headings", []) or [])
+    ], "observed_page")
+
+    if competitor_data:
+        for competitor in competitor_data.get("competitors", []):
+            _add_candidates([
+                heading.get("text", "")
+                for heading in competitor.get("headings", [])
+                if isinstance(heading, dict)
+            ], "competitor_heading")
+            _add_candidates(
+                competitor.get("top_content_keywords", []),
+                "competitor_content",
+            )
+
+    page_summary = "\n".join(filter(None, [
+        meta.get("title", ""),
+        meta.get("meta_description", ""),
+        full_text[:6000],
+    ]))
+    semantic_keywords = []
+    try:
+        semantic_keywords = rank_evidence_candidates(
+            page_summary=page_summary,
+            content_embedding=content_embedding,
+            candidates=evidence_candidates,
+            top_k=30,
+        )
+    except Exception as e:
+        logger.warning("Dynamic candidate ranking failed: %s", e)
+
+    ranked_candidates = [item["keyword"] for item in semantic_keywords]
+    if not ranked_candidates:
+        ranked_candidates = [item["keyword"] for item in evidence_candidates]
+    all_keywords, final_candidate_diagnostics = filter_candidates(
+        ranked_candidates,
+        page_text=full_text,
+        limit=30,
+    )
+    candidate_diagnostics.extend(final_candidate_diagnostics)
+
+    # Validate only the final top ten. Discovery queries are cached and reused.
+    final_serp_keywords = all_keywords[:10]
+    try:
+        final_aggregator = KeywordDataAggregator()
+        if final_serp_keywords and final_aggregator.serp_provider.enabled:
+            final_serp = final_aggregator.get_serp_features_bulk(
+                final_serp_keywords,
+                location=_region_locations.get(
+                    (target_region or "GLOBAL").upper(), "United States"
+                ),
+            )
+            final_trends = final_aggregator.serp_provider.get_trends_scores_bulk(
+                final_serp_keywords,
+                geo=_region_geo.get((target_region or "GLOBAL").upper(), ""),
+            )
+            _serp_features.update(final_serp)
+            _trend_evidence.update(final_trends)
+
+        traffic_analysis = enrich_with_traffic_signals(
+            keywords=all_keywords[:15],
+            page_topic=page_topic,
+            target_audience=target_audience,
+        )
+        traffic_analysis = apply_serp_evidence(
+            traffic_analysis, _serp_features, _trend_evidence
+        )
+        traffic_enriched_suggestions = [
+            {
+                "keyword": item["keyword"],
+                "type": "evidence_ranked",
+                "provenance": item.get("provenance", "insufficient_evidence"),
+                "traffic_signals": item,
+            }
+            for item in traffic_analysis.get("traffic_prioritized_keywords", [])
+        ]
+        traffic_by_kw = {
+            item["keyword"]: item
+            for item in traffic_analysis.get("traffic_prioritized_keywords", [])
+        }
+        geo_aeo_results = analyze_geo_aeo_batch(
+            keywords=all_keywords[:15],
+            regional_volume_data={
+                kw: traffic_by_kw.get(kw, {}).get("regional_volumes", {})
+                for kw in all_keywords[:15]
+            },
+            page_signals=page_signals,
+            page_text=full_text,
+            target_region=target_region,
+            serp_data_by_keyword=_serp_features,
+            page_url=url or "",
+        )
+        _geo_aeo_by_kw = {item["keyword"]: item for item in geo_aeo_results}
+        logger.info(
+            "GEO/AEO evidence audit: analyzed %s final-ranked keywords for region=%s",
+            len(geo_aeo_results),
+            target_region,
+        )
+
+        measured_forecasts = []
+        for item in traffic_analysis.get("traffic_prioritized_keywords", []):
+            if item.get("provenance") != "measured":
+                continue
+            keyword = item.get("keyword")
+            serp = _serp_features.get(keyword, {})
+            measured_forecasts.append({
+                "keyword": keyword,
+                "monthly_volume": item.get("monthly_volume"),
+                "intent": item.get("intent", "informational"),
+                "has_ai_overview": serp.get("has_ai_overview", False),
+                "has_real_data": True,
+                "serp_dominated_by_competitors": (item.get("competition_index") or 0) >= 0.7,
+                "ctr_trend": item.get("ctr_trend", "stable"),
+            })
+        traffic_potential_results = analyze_traffic_potential_batch(measured_forecasts)
+        _traffic_potential_by_kw = {
+            item["keyword"]: item for item in traffic_potential_results
+        }
+    except Exception as e:
+        logger.warning("Final live-evidence enrichment failed: %s", e)
     # Step 11: Multi-Factor ML Relevance Scoring (NEW - Phase 2)
     # Gap keywords from step 10 are now available for scoring.
     try:
@@ -440,12 +593,27 @@ def run_keyword_pipeline_v2(
     # Step 12: RAG - Retrieve similar content for context augmentation
     # NOW includes traffic signals as additional context for better LLM ranking
     rag_context = ""
+    has_rag_history = False
     if content_embedding is not None and save_to_db:
+        try:
+            history_query = KeywordOpportunity.objects.filter(
+                is_accepted=True,
+                content_analysis__structure_data___embedding__version=EMBEDDING_VERSION,
+            )
+            if url:
+                history_query = history_query.exclude(content_analysis__url=url)
+            has_rag_history = history_query.exists()
+        except Exception as e:
+            logger.debug("RAG eligibility check failed: %s", e)
+
+    if content_embedding is not None and save_to_db and has_rag_history:
         try:
             similar_analyses = retrieve_similar_analyses(
                 content_embedding,
                 top_k=3,
-                min_quality_score=60.0
+                min_quality_score=60.0,
+                exclude_url=url,
+                embedding_version=EMBEDDING_VERSION,
             )
             rag_context = format_rag_context(similar_analyses, max_context_length=1500)
             logger.info(f"RAG: Retrieved {len(similar_analyses)} similar analyses for context")
@@ -457,20 +625,25 @@ def run_keyword_pipeline_v2(
     traffic_context = ""
     if traffic_analysis.get("traffic_prioritized_keywords"):
         top_traffic = traffic_analysis["traffic_prioritized_keywords"][:10]
-        traffic_context = "\n## Traffic Signal Context (Real-Time Data)\n"
+        traffic_context = "\n## Keyword Opportunity Context (source-aware)\n"
         for item in top_traffic:
-            traffic_context += f"- {item['keyword']}: {item['trend_status']}, Volume: {item['estimated_volume']}, Priority: {item['priority_score']}\n"
+            traffic_context += f"- {item['keyword']}: Demand band: {item['demand_level']}, Source: {item['provenance']}, Priority: {item['priority_score']}\n"
     
     combined_context = f"{rag_context}\n{traffic_context}" if traffic_context else rag_context
     
-    if use_llm and relevant_keywords:
-        llm_result = refine_keywords(relevant_keywords, page_topic=page_topic, context=combined_context)
-    else:
-        llm_result = {
-            "groups": {"All": relevant_keywords},
-            "focus_keywords": relevant_keywords[:5],
-        }
-    
+    # Intent grouping is deterministic and already available from the local
+    # relevance scorer; no extra LLM round trip is needed.
+    intent_groups: Dict[str, List[str]] = {}
+    score_by_keyword = {item.get("keyword"): item for item in scored}
+    for keyword in relevant_keywords:
+        intent = score_by_keyword.get(keyword, {}).get("search_intent", "informational")
+        intent_groups.setdefault(str(intent).title(), []).append(keyword)
+    llm_result = {
+        "groups": intent_groups or {"All": relevant_keywords},
+        "focus_keywords": relevant_keywords[:5],
+        "raw": relevant_keywords,
+        "provenance": "local_intent_classifier",
+    }
     # Step 14: Phase 3 AI - Advanced LLM Keyword Expansion (NEW)
     llm_expanded_suggestions = []
     question_keywords = []
@@ -496,13 +669,36 @@ def run_keyword_pipeline_v2(
                 target_region=target_region,
             )
 
-            # Question-based keyword generation
-            question_keywords = generate_question_keywords(
-                content_text=full_text,
-                page_topic=page_topic,
-                num_questions=10
-            )
-
+            # Prefer observed PAA and visible page questions over invented
+            # question metrics or snippet answers.
+            observed_questions = list(dict.fromkeys(
+                question
+                for serp in _serp_features.values()
+                for question in (serp.get("people_also_ask") or [])
+                if question
+            ))
+            page_questions = meta.get("page_signals", {}).get("question_headings", [])
+            question_keywords = [
+                {
+                    "question": question,
+                    "type": question.split()[0].title() if question.split() else "Question",
+                    "search_volume": None,
+                    "answer": None,
+                    "format": None,
+                    "source": (
+                        "observed_serp"
+                        if question in observed_questions
+                        else "observed_page"
+                    ),
+                    "keyword_type": "question",
+                    "provenance": (
+                        "observed_serp"
+                        if question in observed_questions
+                        else "observed_page"
+                    ),
+                }
+                for question in list(dict.fromkeys(observed_questions + page_questions))[:10]
+            ]
             # AI-powered gap analysis if competitor data available
             if gap_analysis_result and gap_analysis_result.get("high_priority_gaps"):
                 ai_gap_analysis = analyze_competitor_gaps_with_llm(
@@ -651,6 +847,20 @@ def run_keyword_pipeline_v2(
         # NEW: ML-Generated Keywords (Traffic-Enriched)
         "ml_generated_suggestions": traffic_enriched_suggestions[:15] if traffic_enriched_suggestions else generated_suggestions[:15],
         "traffic_analysis": traffic_analysis,
+        "candidate_quality": {
+            "accepted": len([item for item in candidate_diagnostics if item.get("accepted")]),
+            "rejected": len([item for item in candidate_diagnostics if not item.get("accepted")]),
+            "diagnostics": candidate_diagnostics,
+        },
+        "traffic_methodology": {
+            "measured_values_require_provider": True,
+            "modeled_values_are_ranges": True,
+            "offline_dataset_version": "2026-07",
+            "provenance_types": [
+                "measured", "observed_serp", "dataset_modeled",
+                "llm_estimated", "heuristic_fallback",
+            ],
+        },
         "semantic_keywords": semantic_keywords[:15],
 
         # NEW v2.2: GEO + AEO Signals (Phase 2.6)

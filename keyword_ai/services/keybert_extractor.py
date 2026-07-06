@@ -1,4 +1,5 @@
 from keybert import KeyBERT
+from .embeddings import get_model as get_embedding_model
 
 # Model loads once and is reused — avoids reloading on every request
 _kw_model = None
@@ -7,8 +8,7 @@ _kw_model = None
 def get_model() -> KeyBERT:
     global _kw_model
     if _kw_model is None:
-        # Uses all-MiniLM-L6-v2 under the hood (lightweight, CPU-friendly)
-        _kw_model = KeyBERT(model="all-MiniLM-L6-v2")
+        _kw_model = KeyBERT(model=get_embedding_model())
     return _kw_model
 
 

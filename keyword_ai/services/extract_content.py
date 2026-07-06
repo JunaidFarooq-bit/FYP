@@ -3,6 +3,7 @@ Content extraction service for web pages.
 Extracts title, meta description, OG tags, and clean body text from URLs.
 """
 
+import json
 import re
 import requests
 from bs4 import BeautifulSoup, Comment
@@ -93,6 +94,204 @@ def _extract_og_tags(soup: BeautifulSoup) -> dict:
     return og_tags
 
 
+def _extract_page_signals(soup: BeautifulSoup, page_url: str) -> dict:
+    """Extract verifiable page signals for per-query GEO/AEO audits."""
+    parsed_page = urlparse(page_url)
+    headings = []
+    question_headings = []
+    question_answer_pairs = []
+
+    heading_nodes = soup.find_all(["h1", "h2", "h3", "h4", "h5", "h6"])
+    for node in heading_nodes:
+        heading_text = " ".join(node.get_text(" ", strip=True).split())
+        if not heading_text:
+            continue
+        headings.append({"level": node.name, "text": heading_text[:300]})
+        is_question = bool(
+            heading_text.endswith("?")
+            or re.match(
+                r"^(what|how|why|when|where|who|which|can|is|are|should|do|does)",
+                heading_text,
+                re.I,
+            )
+        )
+        if not is_question:
+            continue
+        question_headings.append(heading_text[:300])
+        answer_parts = []
+        sibling = node.find_next_sibling()
+        while sibling and len(answer_parts) < 3:
+            if getattr(sibling, "name", "") in {"h1", "h2", "h3", "h4", "h5", "h6"}:
+                break
+            if getattr(sibling, "name", "") in {"p", "ol", "ul", "table"}:
+                value = " ".join(sibling.get_text(" ", strip=True).split())
+                if value:
+                    answer_parts.append(value)
+            sibling = sibling.find_next_sibling()
+        answer = " ".join(answer_parts)
+        if answer:
+            question_answer_pairs.append({
+                "question": heading_text[:300],
+                "answer": answer[:1200],
+                "answer_word_count": len(answer.split()),
+            })
+
+    concise_answers = []
+    for node in soup.find_all("p"):
+        value = " ".join(node.get_text(" ", strip=True).split())
+        word_count = len(value.split())
+        if 20 <= word_count <= 80:
+            concise_answers.append(value[:600])
+        if len(concise_answers) >= 10:
+            break
+
+    schema_types = set()
+    schema_addresses = []
+    service_areas = []
+    valid_json_ld_blocks = 0
+    invalid_json_ld_blocks = 0
+
+    for script in soup.find_all("script", attrs={"type": "application/ld+json"}):
+        raw = script.string or script.get_text(strip=True)
+        if not raw:
+            continue
+        try:
+            payload = json.loads(raw)
+            valid_json_ld_blocks += 1
+        except (TypeError, ValueError, json.JSONDecodeError):
+            invalid_json_ld_blocks += 1
+            continue
+
+        stack = payload if isinstance(payload, list) else [payload]
+        while stack:
+            item = stack.pop()
+            if isinstance(item, list):
+                stack.extend(item)
+                continue
+            if not isinstance(item, dict):
+                continue
+
+            item_type = item.get("@type")
+            if isinstance(item_type, list):
+                schema_types.update(str(value) for value in item_type)
+            elif item_type:
+                schema_types.add(str(item_type))
+
+            address = item.get("address")
+            if isinstance(address, str) and address.strip():
+                schema_addresses.append(address.strip()[:400])
+            elif isinstance(address, dict):
+                parts = [
+                    address.get("streetAddress"),
+                    address.get("addressLocality"),
+                    address.get("addressRegion"),
+                    address.get("postalCode"),
+                    address.get("addressCountry"),
+                ]
+                rendered = ", ".join(str(part).strip() for part in parts if part)
+                if rendered:
+                    schema_addresses.append(rendered[:400])
+
+            area = item.get("areaServed") or item.get("serviceArea")
+            if isinstance(area, str) and area.strip():
+                service_areas.append(area.strip()[:300])
+            elif isinstance(area, dict):
+                rendered = area.get("name") or area.get("addressLocality")
+                if rendered:
+                    service_areas.append(str(rendered)[:300])
+            elif isinstance(area, list):
+                for value in area:
+                    if isinstance(value, str) and value.strip():
+                        service_areas.append(value.strip()[:300])
+                    elif isinstance(value, dict) and value.get("name"):
+                        service_areas.append(str(value["name"])[:300])
+
+            graph = item.get("@graph")
+            if graph:
+                stack.append(graph)
+
+    def meta_value(*names):
+        for name in names:
+            node = soup.find("meta", attrs={"name": name}) or soup.find(
+                "meta", attrs={"property": name}
+            )
+            if node and node.get("content"):
+                return node.get("content", "").strip()
+        return ""
+
+    author = meta_value("author", "article:author")
+    publisher = meta_value("publisher", "og:site_name")
+    published_at = meta_value("article:published_time", "datePublished", "date")
+    modified_at = meta_value("article:modified_time", "dateModified", "last-modified")
+    og_locale = meta_value("og:locale")
+
+    external_citations = []
+    for anchor_node in soup.find_all("a", href=True):
+        href = anchor_node.get("href", "").strip()
+        parsed = urlparse(href)
+        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+            continue
+        if parsed.netloc.lower() == parsed_page.netloc.lower():
+            continue
+        external_citations.append({
+            "url": href[:500],
+            "domain": parsed.netloc.lower().removeprefix("www."),
+            "text": " ".join(anchor_node.get_text(" ", strip=True).split())[:160],
+        })
+        if len(external_citations) >= 20:
+            break
+
+    html_tag = soup.find("html")
+    language = (html_tag.get("lang") or "").strip() if html_tag else ""
+    hreflang = []
+    for link in soup.find_all("link", href=True):
+        rel = {str(value).lower() for value in (link.get("rel") or [])}
+        if "alternate" in rel and link.get("hreflang"):
+            hreflang.append({
+                "language": str(link.get("hreflang")).strip(),
+                "url": link.get("href", "")[:500],
+            })
+
+    canonical_node = soup.find("link", rel=lambda value: value and "canonical" in value)
+    canonical_url = canonical_node.get("href", "").strip() if canonical_node else ""
+
+    address_texts = []
+    for address in soup.find_all("address"):
+        value = " ".join(address.get_text(" ", strip=True).split())
+        if value:
+            address_texts.append(value[:300])
+
+    local_schema_types = {
+        "LocalBusiness", "Place", "PostalAddress", "Store", "Restaurant",
+        "ProfessionalService", "MedicalBusiness", "HomeAndConstructionBusiness",
+    }
+    return {
+        "headings": headings[:40],
+        "question_headings": question_headings[:20],
+        "question_answer_pairs": question_answer_pairs[:20],
+        "concise_answers": concise_answers,
+        "ordered_lists": len(soup.find_all("ol")),
+        "unordered_lists": len(soup.find_all("ul")),
+        "tables": len(soup.find_all("table")),
+        "schema_types": sorted(schema_types),
+        "valid_json_ld_blocks": valid_json_ld_blocks,
+        "invalid_json_ld_blocks": invalid_json_ld_blocks,
+        "has_faq_schema": "FAQPage" in schema_types,
+        "has_howto_schema": "HowTo" in schema_types,
+        "has_local_schema": bool(schema_types.intersection(local_schema_types)),
+        "author": author,
+        "publisher": publisher,
+        "published_at": published_at,
+        "modified_at": modified_at,
+        "external_citations": external_citations,
+        "language": language,
+        "og_locale": og_locale,
+        "hreflang": hreflang[:30],
+        "canonical_url": canonical_url[:500],
+        "addresses": list(dict.fromkeys(address_texts + schema_addresses))[:10],
+        "service_areas": list(dict.fromkeys(service_areas))[:10],
+    }
+
 def extract_content(url: str, timeout: int = 10) -> dict:
     """
     Extract content from a URL with aggressive HTML cleaning.
@@ -131,8 +330,9 @@ def extract_content(url: str, timeout: int = 10) -> dict:
         if meta_desc_tag:
             meta_description = meta_desc_tag.get("content", "").strip()
         
-        # Extract OG tags
+        # Extract OG tags and evidence before destructive cleaning.
         og_tags = _extract_og_tags(soup)
+        page_signals = _extract_page_signals(soup, url)
 
         # AGGRESSIVE CLEANING: Remove junk before extracting text
         _clean_soup(soup)
@@ -173,6 +373,7 @@ def extract_content(url: str, timeout: int = 10) -> dict:
             "meta_description": meta_description,
             "full_text": full_text,
             "og_tags": og_tags,
+            "page_signals": page_signals,
             "url": url,
         }
 

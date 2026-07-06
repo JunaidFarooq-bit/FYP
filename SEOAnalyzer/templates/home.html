@@ -35,14 +35,144 @@
 
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{% static 'fyp.css'%}" />
-    <link rel="stylesheet" href="{% static 'modern-style.css'%}" />
+    <link rel="stylesheet" href="{% static 'modern-style.css'%}?v=20260618" />
     <link rel="stylesheet" href="{% static 'dashboard-integrated.css'%}" />
+    <link rel="stylesheet" href="{% static 'audit-results-theme.css'%}?v=20260618" />
+    <link rel="stylesheet" href="{% static 'audit-redesign.css'%}?v=20260618" />
     
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style id="audit-results-spacing-fix">
+
+      body.audit-redesign {
+        --audit-card-space: 24px;
+        --audit-content-gap: 16px;
+      }
+
+      body.audit-redesign .audit-results-input-card form {
+        align-items: center !important;
+      }
+
+      body.audit-redesign .audit-results-input-card .search-input-group {
+        align-items: center !important;
+        display: flex !important;
+        gap: 12px !important;
+        padding: 0 18px !important;
+      }
+
+      body.audit-redesign .audit-results-input-card .search-icon {
+        align-items: center !important;
+        display: inline-flex !important;
+        flex: 0 0 20px !important;
+        height: 20px !important;
+        justify-content: center !important;
+        left: auto !important;
+        margin: 0 !important;
+        position: static !important;
+        top: auto !important;
+        transform: none !important;
+        width: 20px !important;
+      }
+
+      body.audit-redesign .audit-results-input-card .search-input {
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
+        padding: 0 !important;
+        width: auto !important;
+      }
+
+      body.audit-redesign .audit-results-input-card .btn {
+        height: 58px !important;
+      }
+
+      body.audit-redesign .analysis-section > .section-header {
+        padding: 20px var(--audit-card-space) !important;
+      }
+
+      body.audit-redesign .analysis-section > .section-content {
+        padding: var(--audit-card-space) !important;
+      }
+
+      body.audit-redesign .analysis-section > .section-content > .analysis-grid,
+      body.audit-redesign .analysis-section .analysis-grid {
+        gap: var(--audit-card-space) !important;
+      }
+
+      body.audit-redesign .analysis-card:not(.audit-results-hero) > .card-header {
+        min-height: 0 !important;
+        padding: var(--audit-card-space) !important;
+      }
+
+      body.audit-redesign .analysis-card:not(.audit-results-hero) > .card-body {
+        gap: var(--audit-content-gap) !important;
+        padding: var(--audit-card-space) !important;
+      }
+
+      body.audit-redesign .analysis-card:not(.audit-results-hero) > .card-body > * {
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
+      }
+
+      body.audit-redesign .issues-container,
+      body.audit-redesign .recommendations-container,
+      body.audit-redesign .eeat-signals,
+      body.audit-redesign .eeat-breakdown-section,
+      body.audit-redesign .optimization-status,
+      body.audit-redesign .heading-structure {
+        padding: var(--audit-content-gap) !important;
+      }
+
+      body.audit-redesign .issues-list,
+      body.audit-redesign .recommendations-list,
+      body.audit-redesign .signals-list {
+        margin: 0 !important;
+      }
+
+      @media (max-width: 767px) {
+        body.audit-redesign { --audit-card-space: 18px; --audit-content-gap: 14px; }
+        body.audit-redesign .audit-results-input-card { padding: 20px !important; }
+      }
+    </style>
+    <style id="audit-card-header-icon-fix">
+      .input-wrap {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: var(--surface);
+        border: 1.5px solid var(--border);
+        border-radius: var(--r-md);
+        padding: 0 14px;
+        transition: border-color .2s, box-shadow .2s;
+    }
+    .input-wrap:focus-within {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+    .input-wrap i { color: var(--ink-muted); font-size: .9rem; }
+    .input-wrap input, .input-wrap select {
+        border: none;
+        background: transparent;
+        width: 100%;
+        padding: 11px 0;
+        font-family: var(--font-body);
+        font-size: .9rem;
+        color: var(--ink);
+        outline: none;
+    }
+      body.audit-redesign .analysis-card:not(.audit-results-hero) > .card-header h3 {
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
+      }
+
+      body.audit-redesign .analysis-card:not(.audit-results-hero) > .card-header > .card-icon {
+        flex: 0 0 46px !important;
+        margin-left: auto !important;
+      }
+    </style>
+    <link rel="stylesheet" href="{% static 'result-page-system.css' %}?v=20260706" />
   </head>
 
-  <body>
+  <body class="audit-redesign result-system-page">
     <!-- Loader -->
     <div id="loader">
       <div class="loader-animation">
@@ -99,57 +229,13 @@
           </div>
           {% endcomment %}
 
-          <!-- Search Form -->
-          <form
-            name="myForm"
-            id="myForm"
-            action="/show/"
-            method="post"
-            class="navbar-search"
-          >
-            {% csrf_token %}
-            <div class="search-wrapper">
-              <div class="search-input-group">
-                <i class="fas fa-search search-icon"></i>
-                <input
-                  placeholder="Enter website URL to analyze..."
-                  name="fname"
-                  autocomplete="on"
-                  type="search"
-                  id="id_url"
-                  class="search-input"
-                  aria-label="Website URL"
-                  {% if url %}value="{{url}}"
-                  {% endif %}
-                />
-              </div>
+          <div class="navbar-page-context">
+            <strong>Website Audit Results</strong>
+          </div>
 
-              <div class="navbar-actions">
-                <button
-                  id="analyzeBtn"
-                  onclick="myFunction()"
-                  class="btn btn-primary"
-                  type="submit"
-                >
-                  <i class="fas fa-search-plus"></i>
-                  <span>Analyze</span>
-                </button>
-
-                <a
-                  class="btn btn-primary"
-                  href="{% url 'Home' %}"
-                  class="btn btn-outline"
-                  id="try"
-                >
-                  <i class="fas fa-redo"></i>
-                  <span>New URL</span>
-                </a>
-
-                <!-- Profile Dropdown -->
-                {% include 'partials/_profile_dropdown.html' %}
-              </div>
-            </div>
-          </form>
+          <div class="navbar-actions audit-navbar-actions">
+            {% include 'partials/_profile_dropdown.html' %}
+          </div>
         </div>
       </nav>
     </header>
@@ -172,13 +258,77 @@
       {% endfor %} {% endif %}
 
       <div class="container-fluid content-wrapper">
+        <section class="audit-results-tool-hero">
+          <div class="audit-hero-content">
+            <div class="hero-icon">
+              <i class="fas fa-tachometer-alt"></i>
+            </div>
+            <h1>Website Audit</h1>
+            <p>
+              Review technical health, content quality, structured data, security,
+              social signals, and page speed from one focused audit.
+            </p>
+            <div class="audit-hero-pills" aria-label="Audit coverage">
+              <span><i class="fas fa-file-alt"></i> Content</span>
+              <span><i class="fas fa-shield-alt"></i> Security</span>
+              <span><i class="fas fa-bolt"></i> Speed</span>
+            </div>
+          </div>
+          <div class="audit-hero-visual" aria-hidden="true">
+            <div class="audit-arc arc-one"></div>
+            <div class="audit-arc arc-two"></div>
+            <div class="audit-arc arc-three"></div>
+            <span class="audit-arc-dot dot-one"></span>
+            <span class="audit-arc-dot dot-two"></span>
+            <span class="audit-arc-dot dot-three"></span>
+          </div>
+        </section>
+
+        <section class="audit-results-input-card">
+          <label class="form-label" for="id_url">Enter a URL to run a website audit</label>
+          <form
+            name="myForm"
+            id="myForm"
+            action="/show/"
+            method="post"
+          >
+            {% csrf_token %}
+            <div class="form-group">
+              <div class="input-wrap">
+                <i class="fas fa-globe"></i>
+                <input
+                  type="url"
+                  name="url"
+                  id="url"
+                  placeholder="https://example.com"
+                  value="{{ url|default:'' }}"
+                />
+              </div>
+            </div>
+            <div class="form-actions">
+              <button
+                id="analyzeBtn"
+                onclick="myFunction()"
+                class="btn btn-primary"
+                type="submit"
+              >
+                <i class="fas fa-search-plus"></i>
+                <span>Analyze</span>
+              </button>
+              <a href="{% url 'Home' %}" class="btn btn-outline" id="try">
+                <i class="fas fa-redo"></i>
+                <span>Try New URL</span>
+              </a>
+            </div>
+          </form>
+        </section>
         
         <!-- ========================================
              DASHBOARD HEADER - Clean Score Overview
              ======================================== -->
         <div class="row mb-4">
           <div class="col-12">
-            <div class="analysis-card featured-card dashboard-header-wrapper">
+            <div class="analysis-card featured-card dashboard-header-wrapper audit-results-hero">
               <div class="card-body">
                 <div class="row align-items-center">
                   <div class="col-md-8">
@@ -195,6 +345,7 @@
                   </div>
                   <div class="col-md-4 text-center mt-3 mt-md-0">
                     <div class="score-box">
+                      <span class="score-box-kicker">Overall Health</span>
                       <div class="score-ring-container header-score-ring">
                         <svg class="score-ring" viewBox="0 0 140 140">
                           <circle class="score-ring-bg" cx="70" cy="70" r="60"></circle>
@@ -217,6 +368,7 @@
                       <div class="score-verdict {{ score_class|default:'good' }}">
                         {{ overall_verdict|default:"Good" }}
                       </div>
+                      <p class="score-box-note">Composite audit score from content, technical, authority, and accessibility checks.</p>
                     </div>
                   </div>
                 </div>
@@ -224,7 +376,7 @@
             </div>
           </div>
         </div>
-        
+
         <!-- ========================================
              KPI CARDS - Bootstrap Grid
              ======================================== -->
@@ -232,73 +384,70 @@
           {% include 'partials/_kpi_cards_bootstrap.html' %}
         </div>
         
-        <!-- ========================================
-             RADAR CHART - Score Breakdown
-             ======================================== -->
-        <div class="row mb-4">
-          <div class="col-12">
-            <div class="analysis-card">
-              <div class="card-header" data-toggle="collapse" data-target="#collapseRadar" style="cursor: pointer; background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
-                <div class="d-flex justify-content-between align-items-center">
-                  <h3 class="mb-0" style="font-size: 1.125rem; font-weight: 600; color: #1e293b;">
-                    <i class="fas fa-chart-radar mr-2" style="color: #02569b;"></i>SEO Score Breakdown
-                  </h3>
-                  <i class="fas fa-chevron-down" style="color: #94a3b8; transition: transform 0.3s;"></i>
-                </div>
-              </div>
-              <div id="collapseRadar" class="collapse show">
-                <div class="card-body">
-                  <div class="row">
-                    <div class="col-lg-8">
-                      <div style="height: 350px; position: relative;">
-                        <canvas id="scoreRadarChart"></canvas>
-                      </div>
-                    </div>
-                    <div class="col-lg-4">
-                      <div style="background: #f8fafc; border-radius: 8px; padding: 1rem;">
-                        <div class="d-flex align-items-center mb-3">
-                          <div style="width: 12px; height: 12px; background: #02569b; border-radius: 2px; margin-right: 0.75rem;"></div>
-                          <div>
-                            <div style="font-weight: 600; color: #374151; font-size: 0.875rem;">On-Page SEO</div>
-                            <small style="color: #64748b;">{{ onPage_score|default:75 }}/100</small>
-                          </div>
-                        </div>
-                        <div class="d-flex align-items-center mb-3">
-                          <div style="width: 12px; height: 12px; background: #3b82f6; border-radius: 2px; margin-right: 0.75rem;"></div>
-                          <div>
-                            <div style="font-weight: 600; color: #374151; font-size: 0.875rem;">Content Quality</div>
-                            <small style="color: #64748b;">{{ content_score|default:80 }}/100</small>
-                          </div>
-                        </div>
-                        <div class="d-flex align-items-center mb-3">
-                          <div style="width: 12px; height: 12px; background: #60a5fa; border-radius: 2px; margin-right: 0.75rem;"></div>
-                          <div>
-                            <div style="font-weight: 600; color: #374151; font-size: 0.875rem;">Technical Health</div>
-                            <small style="color: #64748b;">{{ technical_score|default:70 }}/100</small>
-                          </div>
-                        </div>
-                        <div class="d-flex align-items-center mb-3">
-                          <div style="width: 12px; height: 12px; background: #93c5fd; border-radius: 2px; margin-right: 0.75rem;"></div>
-                          <div>
-                            <div style="font-weight: 600; color: #374151; font-size: 0.875rem;">Authority</div>
-                            <small style="color: #64748b;">{{ authority_score|default:65 }}/100</small>
-                          </div>
-                        </div>
-                        <div class="d-flex align-items-center">
-                          <div style="width: 12px; height: 12px; background: #bfdbfe; border-radius: 2px; margin-right: 0.75rem;"></div>
-                          <div>
-                            <div style="font-weight: 600; color: #374151; font-size: 0.875rem;">Accessibility</div>
-                            <small style="color: #64748b;">{{ accessibility_score|default:72 }}/100</small>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+        <section class="audit-visual-grid" aria-label="Audit visual summary">
+          <article class="audit-visual-card tall">
+            <div class="audit-card-heading">
+              <div>
+                <h3>SEO Health Profile</h3>
+                <p>Balanced view of on-page, content, technical, authority, and accessibility signals.</p>
               </div>
             </div>
-          </div>
-        </div>
+            <div class="audit-chart-frame">
+              <canvas id="scoreRadarChart"></canvas>
+            </div>
+            <div class="audit-mini-score-list">
+              <div class="audit-score-row">
+                <span>On-page</span>
+                <div class="audit-score-track"><span class="audit-score-fill" style="width: {{ onPage_score|default:75 }}%"></span></div>
+                <strong>{{ onPage_score|default:75 }}</strong>
+              </div>
+              <div class="audit-score-row">
+                <span>Content</span>
+                <div class="audit-score-track"><span class="audit-score-fill" style="width: {{ content_score|default:80 }}%"></span></div>
+                <strong>{{ content_score|default:80 }}</strong>
+              </div>
+              <div class="audit-score-row">
+                <span>Technical</span>
+                <div class="audit-score-track"><span class="audit-score-fill" style="width: {{ technical_score|default:70 }}%"></span></div>
+                <strong>{{ technical_score|default:70 }}</strong>
+              </div>
+              <div class="audit-score-row">
+                <span>Authority</span>
+                <div class="audit-score-track"><span class="audit-score-fill" style="width: {{ authority_score|default:65 }}%"></span></div>
+                <strong>{{ authority_score|default:65 }}</strong>
+              </div>
+              <div class="audit-score-row">
+                <span>Access</span>
+                <div class="audit-score-track"><span class="audit-score-fill" style="width: {{ accessibility_score|default:72 }}%"></span></div>
+                <strong>{{ accessibility_score|default:72 }}</strong>
+              </div>
+            </div>
+          </article>
+
+          <article class="audit-visual-card">
+            <div class="audit-card-heading">
+              <div>
+                <h3>Issue Mix</h3>
+                <p>Prioritized actions grouped by severity.</p>
+              </div>
+            </div>
+            <div class="audit-chart-frame compact">
+              <canvas id="issueMixChart"></canvas>
+            </div>
+          </article>
+
+          <article class="audit-visual-card">
+            <div class="audit-card-heading">
+              <div>
+                <h3>Keyword Density</h3>
+                <p>Top terms found in the crawled page copy.</p>
+              </div>
+            </div>
+            <div class="audit-chart-frame compact">
+              <canvas id="keywordPreviewChart"></canvas>
+            </div>
+          </article>
+        </section>
 
         <!-- Content Analysis Section -->
         <!-- ========================================
@@ -306,7 +455,7 @@
      Displays all E-E-A-T data from the enhanced backend
      ======================================== -->
 
-<section class="analysis-section" aria-labelledby="content-analysis-heading">
+<section class="analysis-section content-analysis-section" aria-labelledby="content-analysis-heading">
   <!-- Collapsible Header -->
   <div
     class="section-header"
@@ -326,12 +475,12 @@
 
   <!-- Content Section -->
   <div id="collapseOne" class="collapse show section-content">
-    <div class="analysis-grid">
+    <div class="analysis-grid content-analysis-grid">
       
       <!-- ========================================
            META TITLE CARD - Enhanced with E-E-A-T
            ======================================== -->
-      <article class="analysis-card" aria-labelledby="meta-title-heading">
+      <article class="analysis-card content-audit-card" aria-labelledby="meta-title-heading">
         <header class="card-header">
           <h3 id="meta-title-heading">
             <i class="fas fa-heading" aria-hidden="true"></i>
@@ -346,6 +495,27 @@
         <div class="card-body">
           <!-- Title Text -->
           <p class="result-text">{{title}}</p>
+
+          <div class="content-visual-metrics">
+            <div class="visual-meter">
+              <div class="visual-meter-head">
+                <span>Title Length</span>
+                <strong>{{title_length|default:0}} / 60</strong>
+              </div>
+              <div class="visual-meter-track">
+                <span class="visual-meter-fill" style="width: {% widthratio title_length|default:0 60 100 %}%"></span>
+              </div>
+            </div>
+            <div class="visual-meter">
+              <div class="visual-meter-head">
+                <span>SEO Score</span>
+                <strong>{{title_score|default:0}} / 100</strong>
+              </div>
+              <div class="visual-meter-track">
+                <span class="visual-meter-fill score-fill" style="width: {{title_score|default:0}}%"></span>
+              </div>
+            </div>
+          </div>
           
           <!-- Length Info -->
           <div class="meta-info">
@@ -408,7 +578,7 @@
       <!-- ========================================
            META DESCRIPTION CARD - Enhanced with E-E-A-T
            ======================================== -->
-      <article class="analysis-card" aria-labelledby="meta-desc-heading">
+      <article class="analysis-card content-audit-card" aria-labelledby="meta-desc-heading">
         <header class="card-header">
           <h3 id="meta-desc-heading">
             <i class="fas fa-align-left" aria-hidden="true"></i>
@@ -423,6 +593,27 @@
         <div class="card-body">
           <!-- Description Text -->
           <p class="result-text">{{description}}</p>
+
+          <div class="content-visual-metrics">
+            <div class="visual-meter">
+              <div class="visual-meter-head">
+                <span>Description Length</span>
+                <strong>{{desc_length|default:0}} / 160</strong>
+              </div>
+              <div class="visual-meter-track">
+                <span class="visual-meter-fill" style="width: {% widthratio desc_length|default:0 160 100 %}%"></span>
+              </div>
+            </div>
+            <div class="visual-meter">
+              <div class="visual-meter-head">
+                <span>SEO Score</span>
+                <strong>{{desc_score|default:0}} / 100</strong>
+              </div>
+              <div class="visual-meter-track">
+                <span class="visual-meter-fill score-fill" style="width: {{desc_score|default:0}}%"></span>
+              </div>
+            </div>
+          </div>
           
           <!-- Length Info -->
           <div class="meta-info">
@@ -485,7 +676,7 @@
       <!-- ========================================
            HEADINGS STRUCTURE CARD - Enhanced with E-E-A-T
            ======================================== -->
-      <article class="analysis-card" aria-labelledby="headings-heading">
+      <article class="analysis-card content-audit-card" aria-labelledby="headings-heading">
         <header class="card-header">
           <h3 id="headings-heading">
             <i class="fas fa-list-ol" aria-hidden="true"></i>
@@ -502,6 +693,24 @@
           <p class="result-text">
             <strong>{{heading_type}}:</strong> {{heading}}
           </p>
+
+          <div class="heading-mini-chart" aria-label="Heading count chart">
+            <div class="heading-chart-row">
+              <span>H1</span>
+              <div class="heading-chart-track"><span style="width: {% widthratio h1_count|default:0 6 100 %}%"></span></div>
+              <strong>{{h1_count|default:0}}</strong>
+            </div>
+            <div class="heading-chart-row">
+              <span>H2</span>
+              <div class="heading-chart-track"><span style="width: {% widthratio h2_count|default:0 10 100 %}%"></span></div>
+              <strong>{{h2_count|default:0}}</strong>
+            </div>
+            <div class="heading-chart-row">
+              <span>H3</span>
+              <div class="heading-chart-track"><span style="width: {% widthratio h3_count|default:0 10 100 %}%"></span></div>
+              <strong>{{h3_count|default:0}}</strong>
+            </div>
+          </div>
           
           <!-- ✅ NEW: Heading Count Breakdown -->
           <div class="heading-structure">
@@ -586,7 +795,7 @@
       <!-- ========================================
            GOOGLE PREVIEW SCORE - Full Width Card
            ======================================== -->
-      <article class="analysis-card featured-card full-width" aria-labelledby="google-preview-heading">
+      <article class="analysis-card full-width audit-serp-card" aria-labelledby="google-preview-heading">
         <header class="card-header">
           <h3 id="google-preview-heading">
             <i class="fab fa-google" aria-hidden="true"></i>
@@ -600,8 +809,8 @@
         <div class="card-body">
           <!-- Main Verdict -->
           <div class="google-verdict-display">
-            <span class="verdict-badge verdict-large">{{google_verdict}}</span>
-            <span class="optimization-level">{{optimization_level}}</span>
+            <span class="verdict-badge verdict-large">{{google_verdict|default:"SERP review ready"}}</span>
+            <span class="optimization-level">{{optimization_level|default:"Optimization score available"}}</span>
           </div>
           
           <!-- ✅ NEW: E-E-A-T Breakdown -->
@@ -615,33 +824,33 @@
               <div class="eeat-metric">
                 <span class="metric-label">Title E-E-A-T</span>
                 <div class="metric-bar">
-                  <div class="metric-fill" style="width: {{eeat_breakdown.title_eeat}}%"></div>
+                  <div class="metric-fill" style="width: {{eeat_breakdown.title_eeat|default:0}}%"></div>
                 </div>
-                <span class="metric-value">{{eeat_breakdown.title_eeat}}/100</span>
+                <span class="metric-value">{{eeat_breakdown.title_eeat|default:"--"}}/100</span>
               </div>
               
               <div class="eeat-metric">
                 <span class="metric-label">Description E-E-A-T</span>
                 <div class="metric-bar">
-                  <div class="metric-fill" style="width: {{eeat_breakdown.description_eeat}}%"></div>
+                  <div class="metric-fill" style="width: {{eeat_breakdown.description_eeat|default:0}}%"></div>
                 </div>
-                <span class="metric-value">{{eeat_breakdown.description_eeat}}/100</span>
+                <span class="metric-value">{{eeat_breakdown.description_eeat|default:"--"}}/100</span>
               </div>
               
               <div class="eeat-metric">
                 <span class="metric-label">Heading E-E-A-T</span>
                 <div class="metric-bar">
-                  <div class="metric-fill" style="width: {{eeat_breakdown.heading_eeat}}%"></div>
+                  <div class="metric-fill" style="width: {{eeat_breakdown.heading_eeat|default:0}}%"></div>
                 </div>
-                <span class="metric-value">{{eeat_breakdown.heading_eeat}}/100</span>
+                <span class="metric-value">{{eeat_breakdown.heading_eeat|default:"--"}}/100</span>
               </div>
               
               <div class="eeat-metric average-metric">
                 <span class="metric-label">Average E-E-A-T</span>
                 <div class="metric-bar">
-                  <div class="metric-fill" style="width: {{eeat_breakdown.average_eeat}}%"></div>
+                  <div class="metric-fill" style="width: {{eeat_breakdown.average_eeat|default:0}}%"></div>
                 </div>
-                <span class="metric-value">{{eeat_breakdown.average_eeat}}/100</span>
+                <span class="metric-value">{{eeat_breakdown.average_eeat|default:"--"}}/100</span>
               </div>
             </div>
             
@@ -649,7 +858,7 @@
             <div class="trust-level-display">
               <span class="trust-badge trust-{{eeat_breakdown.trust_level}}">
                 <i class="fas fa-certificate" aria-hidden="true"></i>
-                Trust Level: {{eeat_breakdown.trust_level|upper}}
+                Trust Level: {{eeat_breakdown.trust_level|default:"review"|upper}}
               </span>
               
               {% if eeat_breakdown.helpful_content_ready %}
@@ -741,7 +950,7 @@
           <div class="progress" style="height: 25px;">
             <div class="progress-bar {% if grammar_score >= 90 %}bg-success{% elif grammar_score >= 75 %}bg-info{% elif grammar_score >= 60 %}bg-warning{% else %}bg-danger{% endif %}" 
                  role="progressbar" 
-                 style="width: {{ grammar_score }}%;" 
+                 style="width: {{ grammar_score|default:0 }}%;" 
                  aria-valuenow="{{ grammar_score }}" 
                  aria-valuemin="0" 
                  aria-valuemax="100">
@@ -1094,11 +1303,6 @@
                 <div class="card-header">
                   <h3>
                     Image Alt Attributes
-                    <i
-                      class=""
-                      data-toggle="popover"
-                      data-content="Alt attribute is an HTML attribute applied to image tags to provide a text alternative when image is not loaded for search engines."
-                    ></i>
                   </h3>
                   <i class="fas fa-image card-icon"></i>
                 </div>
@@ -1276,6 +1480,7 @@
           </div>
         </section>
 
+        <div class="container-fluid content-wrapper audit-sections-wrapper">
         <!-- Structured Analysis Section -->
         <section class="analysis-section">
           <div
@@ -1297,11 +1502,6 @@
                 <div class="card-header">
                   <h3>
                     Robot.txt
-                    <i
-                      class=""
-                      data-toggle="popover"
-                      data-content="The robots.txt file tells web robots which pages on your site to crawl and which pages not to crawl."
-                    ></i>
                   </h3>
                   <i class="fas fa-robot card-icon"></i>
                 </div>
@@ -1344,11 +1544,6 @@
                 <div class="card-header">
                   <h3>
                     XML Sitemap
-                    <i
-                      class=""
-                      data-toggle="popover"
-                      data-content="XML sitemap is a list of your website's URLs. It acts as a roadmap to tell search engines what content is available."
-                    ></i>
                   </h3>
                   <i class="fas fa-map card-icon"></i>
                 </div>
@@ -1529,11 +1724,6 @@
                 <div class="card-header">
                   <h3>
                     Schema Markup
-                    <i
-                      class=""
-                      data-toggle="popover"
-                      data-content="Schema markup helps search engines return more informative results for users."
-                    ></i>
                   </h3>
                   <i class="fas fa-code card-icon"></i>
                 </div>
@@ -1594,11 +1784,6 @@
                 <div class="card-header">
                   <h3>
                     Open Graph Protocol
-                    <i
-                      class=""
-                      data-toggle="popover"
-                      data-content="Open Graph Protocol helps increase website visibility and engagement on social media platforms."
-                    ></i>
                   </h3>
                   <i class="fas fa-share-alt card-icon"></i>
                 </div>
@@ -1814,11 +1999,6 @@
                 <div class="card-header">
                   <h3>
                     Google Analytics
-                    <i
-                      class=""
-                      data-toggle="popover"
-                      data-content="Analytics helps track and analyze your marketing data to grow organic traffic."
-                    ></i>
                   </h3>
                   <i class="fas fa-chart-line card-icon"></i>
                 </div>
@@ -1843,11 +2023,6 @@
                 <div class="card-header">
                   <h3>
                     Character Encoding
-                    <i
-                      class=""
-                      data-toggle="popover"
-                      data-content="Character encoding ensures content is properly displayed across different browsers and devices."
-                    ></i>
                   </h3>
                   <i class="fas fa-font card-icon"></i>
                 </div>
@@ -1861,11 +2036,6 @@
                 <div class="card-header">
                   <h3>
                     W3C Validation
-                    <i
-                      class=""
-                      data-toggle="popover"
-                      data-content="W3C validation checks if your code follows correct formatting standards for better performance."
-                    ></i>
                   </h3>
                   <i class="fas fa-check-circle card-icon"></i>
                 </div>
@@ -1931,11 +2101,6 @@
                 <div class="card-header">
                   <h3>
                     HTTPS Redirection
-                    <i
-                      class=""
-                      data-toggle="popover"
-                      data-content="HTTPS redirection ensures data transmitted between users and your website is encrypted and protected."
-                    ></i>
                   </h3>
                   <i class="fas fa-exchange-alt card-icon"></i>
                 </div>
@@ -1949,11 +2114,6 @@
                 <div class="card-header">
                   <h3>
                     DMCA Protection
-                    <i
-                      class=""
-                      data-toggle="popover"
-                      data-content="The Digital Millennium Copyright Act is one of the most important laws affecting the Internet."
-                    ></i>
                   </h3>
                   <i class="fas fa-copyright card-icon"></i>
                 </div>
@@ -1981,11 +2141,6 @@
                 <div class="card-header">
                   <h3>
                     HTTPS Security
-                    <i
-                      class=""
-                      data-toggle="popover"
-                      data-content="HTTPS encryption is essential for SEO rankings and user trust."
-                    ></i>
                   </h3>
                   <i class="fas fa-shield-check card-icon"></i>
                 </div>
@@ -2000,11 +2155,6 @@
                 <div class="card-header">
                   <h3>
                     Mixed Content Check
-                    <i
-                      class=""
-                      data-toggle="popover"
-                      data-content="Mixed content (HTTP resources on HTTPS pages) can trigger browser warnings and hurt SEO."
-                    ></i>
                   </h3>
                   <i class="fas fa-exclamation-triangle card-icon"></i>
                 </div>
@@ -2244,17 +2394,19 @@
               {% endcomment %}
 
               <div class="analysis-grid">
-                <div class="analysis-card featured-card">
+                <div class="analysis-card vital-card server-response-card">
                   <div class="card-header">
                     <h3>Server Response Time</h3>
                     <i class="fas fa-server card-icon"></i>
                   </div>
                   <div class="card-body">
-                    <div class="speed-metric">
-                      <span class="speed-value">{{website_speed}}s</span>
-                      <span class="speed-range">(Target: <1.0s>)</span>
+                    <div class="vital-metric">
+                      <span class="metric-value {% if website_speed <= 1 %}vital-good{% elif website_speed <= 2.5 %}vital-fair{% else %}vital-poor{% endif %}">
+                        {{ website_speed|default:"0.00" }}s
+                      </span>
+                      <span class="metric-label">Target: &lt;1.0s</span>
                     </div>
-                    <span class="verdict-badge">{{speed_verdict}}</span>
+                    <span class="verdict-badge">{{ speed_verdict|default:"Server response time available after analysis." }}</span>
                   </div>
                 </div>
                 <!-- LCP -->
@@ -2262,11 +2414,6 @@
                   <div class="card-header">
                     <h3>
                       Largest Contentful Paint (LCP)
-                      <i
-                        class=""
-                        data-toggle="popover"
-                        data-content="Measures loading performance. Good: ≤2.5s, Needs work: 2.5-4s, Poor: >4s"
-                      ></i>
                     </h3>
                     <i class="fas fa-image card-icon"></i>
                   </div>
@@ -2287,11 +2434,6 @@
                   <div class="card-header">
                     <h3>
                       Cumulative Layout Shift (CLS)
-                      <i
-                        class=""
-                        data-toggle="popover"
-                        data-content="Measures visual stability. Good: ≤0.1, Needs work: 0.1-0.25, Poor: >0.25"
-                      ></i>
                     </h3>
                     <i class="fas fa-arrows-alt card-icon"></i>
                   </div>
@@ -2313,11 +2455,6 @@
                   <div class="card-header">
                     <h3>
                       First Contentful Paint (FCP)
-                      <i
-                        class=""
-                        data-toggle="popover"
-                        data-content="Time until first content appears. Good: ≤1.8s, Needs work: 1.8-3s, Poor: >3s"
-                      ></i>
                     </h3>
                     <i class="fas fa-paint-brush card-icon"></i>
                   </div>
@@ -2340,11 +2477,6 @@
                   <div class="card-header">
                     <h3>
                       Interaction to Next Paint (INP)
-                      <i
-                        class=""
-                        data-toggle="popover"
-                        data-content="Measures responsiveness. Good: ≤200ms, Needs work: 200-500ms, Poor: >500ms"
-                      ></i>
                     </h3>
                     <i class="fas fa-hand-pointer card-icon"></i>
                   </div>
@@ -2363,11 +2495,6 @@
                   <div class="card-header">
                     <h3>
                       Time to Interactive (TTI)
-                      <i
-                        class=""
-                        data-toggle="popover"
-                        data-content="Time until page is fully interactive. Lower is better."
-                      ></i>
                     </h3>
                     <i class="fas fa-mouse-pointer card-icon"></i>
                   </div>
@@ -2383,11 +2510,6 @@
                   <div class="card-header">
                     <h3>
                       Total Blocking Time (TBT)
-                      <i
-                        class=""
-                        data-toggle="popover"
-                        data-content="Total time the page is blocked from responding. Lower is better."
-                      ></i>
                     </h3>
                     <i class="fas fa-stopwatch card-icon"></i>
                   </div>
@@ -2402,13 +2524,8 @@
                   <div class="card-header">
                     <h3>
                       Speed Index
-                      <i
-                        class=""
-                        data-toggle="popover"
-                        data-content="How quickly content is visually displayed. Lower is better."
-                      ></i>
                     </h3>
-                    <i class="fas fa-gauge card-icon"></i>
+                    <i class="fas fa-tachometer-alt card-icon" aria-hidden="true"></i>
                   </div>
                   <div class="card-body">
                     <p class="metric-value">{{full_page_load}}s</p>
@@ -2420,11 +2537,6 @@
                   <div class="card-header">
                     <h3>
                       CSS Minification
-                      <i
-                        class=""
-                        data-toggle="popover"
-                        data-content="Minifying CSS files reduces file sizes by removing comments, white spaces, and redundant code."
-                      ></i>
                     </h3>
                     <i class="fab fa-css3-alt card-icon"></i>
                   </div>
@@ -2448,11 +2560,6 @@
                   <div class="card-header">
                     <h3>
                       JavaScript Minification
-                      <i
-                        class=""
-                        data-toggle="popover"
-                        data-content="Minifying JS files decreases page load time, providing a better user experience."
-                      ></i>
                     </h3>
                     <i class="fab fa-js-square card-icon"></i>
                   </div>
@@ -2483,11 +2590,6 @@
                   <div class="card-header">
                     <h3>
                       Performance Optimizations
-                      <i
-                        class=""
-                        data-toggle="popover"
-                        data-content="Modern optimization techniques like preload, prefetch, lazy loading, and async scripts improve page speed."
-                      ></i>
                     </h3>
                     <i class="fas fa-rocket card-icon"></i>
                   </div>
@@ -2804,6 +2906,92 @@ function getCookie(name) {
         // Initialize Radar Chart
         if (document.getElementById('scoreRadarChart') && typeof DashboardCharts !== 'undefined') {
           DashboardCharts.initScoreRadarChart('scoreRadarChart', chartScores);
+        }
+
+        let keywordData = [];
+        try {
+          keywordData = JSON.parse('{{ chart_keywords|escapejs|default:"[]" }}');
+          if (!Array.isArray(keywordData)) keywordData = [];
+        } catch(e) {
+          keywordData = [];
+        }
+
+        const chartFont = "'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+        Chart.defaults.font.family = chartFont;
+        Chart.defaults.color = '#64748b';
+
+        const issueChartEl = document.getElementById('issueMixChart');
+        if (issueChartEl) {
+          const issueCounts = [
+            {{ critical_count|default:0 }},
+            {{ warning_count|default:0 }},
+            {{ info_count|default:0 }}
+          ];
+          const hasIssues = issueCounts.some(count => count > 0);
+          new Chart(issueChartEl, {
+            type: 'doughnut',
+            data: {
+              labels: hasIssues ? ['Critical', 'Warnings', 'Info'] : ['No open issues'],
+              datasets: [{
+                data: hasIssues ? issueCounts : [1],
+                backgroundColor: hasIssues ? ['#ef4444', '#f59e0b', '#3b82f6'] : ['#22c55e'],
+                borderWidth: 0,
+                hoverOffset: 6
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              cutout: '68%',
+              plugins: {
+                legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8 } },
+                tooltip: { enabled: hasIssues }
+              }
+            }
+          });
+        }
+
+        const keywordPreviewEl = document.getElementById('keywordPreviewChart');
+        if (keywordPreviewEl) {
+          const topKeywords = keywordData.slice(0, 6);
+          if (topKeywords.length) {
+            new Chart(keywordPreviewEl, {
+              type: 'bar',
+              data: {
+                labels: topKeywords.map(item => item.word),
+                datasets: [{
+                  label: 'Density %',
+                  data: topKeywords.map(item => item.density),
+                  backgroundColor: topKeywords.map(item => {
+                    if (item.status === 'optimal') return '#22c55e';
+                    if (item.status === 'danger') return '#ef4444';
+                    return '#f59e0b';
+                  }),
+                  borderRadius: 8,
+                  barThickness: 18
+                }]
+              },
+              options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                  x: {
+                    beginAtZero: true,
+                    grid: { color: 'rgba(100, 116, 139, 0.12)' },
+                    ticks: { callback: value => value + '%' }
+                  },
+                  y: { grid: { display: false } }
+                }
+              }
+            });
+          } else {
+            const empty = document.createElement('div');
+            empty.className = 'chart-empty-state';
+            empty.textContent = 'No keyword density data available for this URL yet.';
+            keywordPreviewEl.replaceWith(empty);
+          }
         }
         
         // Animate score ring

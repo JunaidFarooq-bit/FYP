@@ -95,6 +95,10 @@ class TestPaymentInstructionsView:
             'billing_cycle': 'monthly',
         }, follow=True)
         assert response.status_code == 200
+        subscription = Subscription.objects.get(user=test_user)
+        assert subscription.tier.name == 'free'
+        assert subscription.status == 'free_trial_used'
+        assert subscription.is_active() is False
 
 
 @pytest.mark.integration

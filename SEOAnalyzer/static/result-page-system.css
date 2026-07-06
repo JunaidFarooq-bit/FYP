@@ -1,0 +1,394 @@
+/* Shared visual system for analyzed-result pages. Loaded after legacy page CSS. */
+body.result-system-page {
+  --result-bg: #f3f6fc;
+  --result-surface: #ffffff;
+  --result-surface-soft: #f8faff;
+  --result-ink: #0f172a;
+  --result-muted: #64748b;
+  --result-border: #dbe4ef;
+  --result-blue: #02569b;
+  --result-navy: #023761;
+  --result-green: #059669;
+  --result-amber: #d97706;
+  --result-red: #dc2626;
+  --result-radius: 8px;
+  background: var(--result-bg) !important;
+  color: var(--result-ink);
+  font-family: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  letter-spacing: 0;
+}
+
+body.result-system-page h1,
+body.result-system-page h2,
+body.result-system-page h3,
+body.result-system-page h4,
+body.result-system-page h5,
+body.result-system-page .metric-value,
+body.result-system-page .score-cell {
+  font-family: "Outfit", "DM Sans", sans-serif !important;
+  letter-spacing: 0 !important;
+}
+
+body.result-system-page .main-content {
+  background: var(--result-bg) !important;
+}
+
+body.result-system-page .content-wrapper {
+  display: grid;
+  gap: 16px;
+  max-width: 1280px !important;
+  padding: 22px 24px 56px !important;
+}
+
+body.result-system-page .row {
+  margin-left: -8px;
+  margin-right: -8px;
+}
+
+body.result-system-page [class*="col-"] {
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+body.result-system-page .mb-4 {
+  margin-bottom: 0 !important;
+}
+
+/* Primary result containers */
+body.result-system-page .analysis-section,
+body.result-system-page .analysis-card:not(.audit-results-hero),
+body.result-system-page .dashboard-card,
+body.result-system-page .section-card,
+body.result-system-page .results-header,
+body.result-system-page .results-card,
+body.result-system-page .metric-card,
+body.result-system-page .audit-visual-card,
+body.result-system-page .gap-explanation-box,
+body.result-system-page .score-display-card,
+body.result-system-page .comparison-card,
+body.result-system-page .technical-card,
+body.result-system-page .authority-card {
+  background: var(--result-surface) !important;
+  border: 1px solid var(--result-border) !important;
+  border-radius: var(--result-radius) !important;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.055) !important;
+}
+
+body.result-system-page .analysis-section {
+  margin: 0 !important;
+  overflow: hidden;
+}
+
+body.result-system-page .analysis-section > .section-header,
+body.result-system-page .analysis-card:not(.audit-results-hero) > .card-header {
+  align-items: center;
+  background: var(--result-surface) !important;
+  border-bottom: 1px solid var(--result-border) !important;
+  display: flex !important;
+  min-height: 52px !important;
+  padding: 14px 18px !important;
+}
+
+body.result-system-page .section-header .section-title {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  min-width: 0;
+}
+
+body.result-system-page .section-header h2,
+body.result-system-page .section-header h3,
+body.result-system-page .analysis-card .card-header h3 {
+  color: var(--result-ink) !important;
+  font-size: 1rem !important;
+  font-weight: 700 !important;
+  line-height: 1.3;
+  margin: 0 !important;
+}
+
+body.result-system-page .section-header .section-icon,
+body.result-system-page .analysis-card .card-header > .card-icon {
+  align-items: center;
+  background: #eaf3fb !important;
+  border: 0 !important;
+  border-radius: 6px !important;
+  color: var(--result-blue) !important;
+  display: inline-flex;
+  flex: 0 0 32px !important;
+  height: 32px !important;
+  justify-content: center;
+  margin: 0 !important;
+  width: 32px !important;
+}
+
+body.result-system-page .analysis-section > .section-content,
+body.result-system-page .analysis-card:not(.audit-results-hero) > .card-body {
+  background: var(--result-surface) !important;
+  padding: 18px !important;
+}
+
+body.result-system-page .analysis-grid,
+body.result-system-page .metrics-grid,
+body.result-system-page .overall-scores-grid,
+body.result-system-page .comparison-grid {
+  gap: 14px !important;
+}
+
+body.result-system-page .analysis-card:not(.audit-results-hero) {
+  min-width: 0;
+  overflow: hidden;
+}
+
+body.result-system-page .analysis-card:not(.audit-results-hero) > .card-body {
+  gap: 12px !important;
+}
+
+/* Compact cards and readable content */
+body.result-system-page .metric-card,
+body.result-system-page .audit-visual-card,
+body.result-system-page .score-display-card {
+  padding: 18px !important;
+}
+
+body.result-system-page .metric-card {
+  min-height: 118px !important;
+  text-align: left !important;
+}
+
+body.result-system-page .metric-card:hover,
+body.result-system-page .analysis-card:hover,
+body.result-system-page .audit-visual-card:hover {
+  transform: none !important;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.055) !important;
+}
+
+body.result-system-page .metric-value {
+  color: var(--result-ink) !important;
+  font-size: 1.65rem !important;
+  font-weight: 700 !important;
+}
+
+body.result-system-page .metric-label,
+body.result-system-page p,
+body.result-system-page .result-text,
+body.result-system-page .card-description {
+  color: var(--result-muted);
+  line-height: 1.55;
+}
+
+body.result-system-page .result-text,
+body.result-system-page .domain-name,
+body.result-system-page .results-url,
+body.result-system-page td {
+  overflow-wrap: anywhere;
+}
+
+body.result-system-page table {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+}
+
+body.result-system-page thead th {
+  background: var(--result-navy) !important;
+  border: 0 !important;
+  color: #fff !important;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 12px 14px !important;
+  text-transform: uppercase;
+}
+
+body.result-system-page tbody td {
+  background: #fff;
+  border-bottom: 1px solid var(--result-border) !important;
+  color: #334155;
+  font-size: 0.82rem;
+  padding: 12px 14px !important;
+  vertical-align: middle;
+}
+
+body.result-system-page tbody tr:last-child td {
+  border-bottom: 0 !important;
+}
+
+body.result-system-page .table-responsive,
+body.result-system-page .comparison-table-wrapper {
+  border: 1px solid var(--result-border);
+  border-radius: 6px;
+  overflow: auto;
+}
+
+/* Audit results */
+body.audit-redesign.result-system-page {
+  --audit-radius: 8px;
+  --audit-card-radius: 8px;
+  --audit-shadow: 0 6px 18px rgba(15, 23, 42, 0.07);
+  --audit-card-shadow: 0 4px 14px rgba(15, 23, 42, 0.055);
+}
+
+body.audit-redesign.result-system-page .audit-results-tool-hero,
+body.audit-redesign.result-system-page .audit-results-hero {
+  border-radius: 8px !important;
+  box-shadow: 0 8px 24px rgba(15, 35, 95, 0.16) !important;
+}
+
+body.audit-redesign.result-system-page .audit-results-tool-hero {
+  min-height: 230px !important;
+  padding: 30px 38px !important;
+}
+
+body.audit-redesign.result-system-page .audit-results-tool-hero h1 {
+  font-size: 2.25rem !important;
+}
+
+body.audit-redesign.result-system-page .audit-results-input-card {
+  border: 1px solid var(--result-border) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.055) !important;
+  padding: 18px !important;
+}
+
+body.audit-redesign.result-system-page .audit-results-input-card .btn {
+  height: 42px !important;
+}
+
+body.audit-redesign.result-system-page .audit-results-hero {
+  padding: 22px !important;
+}
+
+body.audit-redesign.result-system-page .audit-results-hero .score-box {
+  border-radius: 8px !important;
+  max-width: 220px;
+  padding: 14px !important;
+}
+
+body.audit-redesign.result-system-page .audit-visual-grid {
+  gap: 14px !important;
+  margin: 0 !important;
+}
+
+body.audit-redesign.result-system-page .audit-visual-grid::before {
+  display: none;
+}
+
+body.audit-redesign.result-system-page .audit-chart-frame {
+  height: 250px;
+}
+
+body.audit-redesign.result-system-page .audit-chart-frame.compact {
+  height: 180px;
+}
+
+/* Small report pages */
+body.result-system-page .results-section {
+  display: grid;
+  gap: 16px;
+  margin-top: 16px !important;
+}
+
+body.result-system-page .results-header {
+  margin: 0 !important;
+  padding: 18px 20px !important;
+  text-align: left !important;
+}
+
+body.result-system-page .results-header h3 {
+  color: var(--result-ink) !important;
+  font-size: 1.1rem !important;
+  margin: 0 0 5px !important;
+}
+
+body.result-system-page .results-url {
+  color: var(--result-blue) !important;
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+/* Comparative report */
+body.compare-shell.result-system-page .compare-hero,
+body.compare-shell.result-system-page .hero-band {
+  border-radius: 8px !important;
+}
+
+body.compare-shell.result-system-page .analysis-section {
+  margin-bottom: 0 !important;
+}
+
+body.compare-shell.result-system-page .gap-explanation-box {
+  margin: 0 !important;
+  padding: 18px !important;
+}
+
+body.compare-shell.result-system-page .radar-chart-container {
+  min-height: 280px;
+}
+
+/* Sentiment results */
+body.result-system-page .sentiment-hero,
+body.result-system-page .result-hero {
+  border-radius: 8px !important;
+}
+
+body.result-system-page .recommendation-card,
+body.result-system-page .insight-card,
+body.result-system-page .tone-card {
+  border: 1px solid var(--result-border) !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
+}
+
+/* Responsive layout */
+@media (max-width: 991px) {
+  body.result-system-page .content-wrapper {
+    padding: 18px 16px 44px !important;
+  }
+
+  body.audit-redesign.result-system-page .audit-results-tool-hero {
+    grid-template-columns: 1fr !important;
+    min-height: 0 !important;
+    padding: 26px !important;
+  }
+
+  body.audit-redesign.result-system-page .audit-hero-visual {
+    display: none;
+  }
+
+  body.audit-redesign.result-system-page .audit-visual-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  body.audit-redesign.result-system-page .audit-visual-card.tall {
+    grid-row: auto;
+  }
+}
+
+@media (max-width: 767px) {
+  body.result-system-page .content-wrapper {
+    gap: 12px;
+    padding: 14px 12px 36px !important;
+  }
+
+  body.result-system-page .analysis-section > .section-header,
+  body.result-system-page .analysis-card:not(.audit-results-hero) > .card-header,
+  body.result-system-page .analysis-section > .section-content,
+  body.result-system-page .analysis-card:not(.audit-results-hero) > .card-body {
+    padding: 14px !important;
+  }
+
+  body.result-system-page .metric-card,
+  body.result-system-page .audit-visual-card,
+  body.result-system-page .score-display-card {
+    padding: 14px !important;
+  }
+
+  body.audit-redesign.result-system-page .audit-results-tool-hero h1 {
+    font-size: 1.8rem !important;
+  }
+
+  body.result-system-page thead th,
+  body.result-system-page tbody td {
+    white-space: nowrap;
+  }
+}
+

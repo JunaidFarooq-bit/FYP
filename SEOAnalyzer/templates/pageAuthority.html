@@ -34,7 +34,7 @@
 
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{% static 'fyp.css'%}" />
-    <link rel="stylesheet" href="{% static 'modern-style.css'%}" />
+    <link rel="stylesheet" href="{% static 'modern-style.css'%}?v=20260618" />
 
     <style>
       /* ================================================
@@ -253,6 +253,7 @@
         }
       }
     </style>
+    <link rel="stylesheet" href="{% static 'sidebar-tool-theme.css' %}?v=20260618" />
   </head>
 
   <body>
@@ -315,15 +316,14 @@
             <h4>WEBLIFT</h4> 
           </div> {% endcomment %}
 
-          <!-- Spacer -->
-          <div style="flex: 1"></div>
+          <div class="navbar-page-context">
+            <span class="navbar-eyebrow">Workspace</span>
+            <i class="fas fa-chevron-right navbar-crumb-icon"></i>
+            <strong>Page Authority</strong>
+          </div>
 
-          <!-- Navbar actions (right side) -->
           <div class="navbar-actions">
-            <a href="{% url 'logout' %}" class="btn btn-primary">
-              <i class="fas fa-sign-out-alt"></i>
-              <span>Logout</span>
-            </a>
+            {% include 'partials/_profile_dropdown.html' %}
           </div>
         </div>
       </nav>
@@ -399,6 +399,39 @@
             </div>
           </form>
         </div>
+
+        <section class="analysis-section features-section">
+          <div class="section-header">
+            <div class="section-title">
+              <i class="fas fa-sparkles section-icon"></i>
+              <h2>What We Analyze</h2>
+            </div>
+          </div>
+          <div class="section-content">
+            <div class="features-grid">
+              <div class="feature-card">
+                <div class="feature-icon"><i class="fas fa-file-alt"></i></div>
+                <h3 class="feature-title">Page Strength</h3>
+                <p class="feature-description">A Moz page authority score for the exact URL you submit.</p>
+              </div>
+              <div class="feature-card">
+                <div class="feature-icon"><i class="fas fa-link"></i></div>
+                <h3 class="feature-title">Inbound Signals</h3>
+                <p class="feature-description">Page-level link signals that influence ranking strength.</p>
+              </div>
+              <div class="feature-card">
+                <div class="feature-icon"><i class="fas fa-search"></i></div>
+                <h3 class="feature-title">SERP Potential</h3>
+                <p class="feature-description">A quick estimate of how strongly the page may perform in search.</p>
+              </div>
+              <div class="feature-card">
+                <div class="feature-icon"><i class="fas fa-balance-scale"></i></div>
+                <h3 class="feature-title">Competitive Context</h3>
+                <p class="feature-description">Use the score to compare specific pages across your niche or competitors.</p>
+              </div>
+            </div>
+          </div>
+        </section>
 
         <!-- Results (conditional) -->
         {% if pa %}

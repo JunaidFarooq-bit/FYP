@@ -6,9 +6,10 @@ Analyzes top SERP results to identify keyword gaps and opportunities.
 import requests
 import time
 from typing import List, Dict, Set
-from urllib.parse import quote_plus
+from urllib.parse import quote_plus, urlparse
 from bs4 import BeautifulSoup
 from collections import Counter
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
 # Simple search API using Bing or can be extended for Google Custom Search
@@ -16,26 +17,29 @@ from collections import Counter
 
 
 def get_serp_results(query: str, num_results: int = 10) -> List[Dict]:
-    """
-    Get top SERP results for a query.
-    
-    NOTE: This is a placeholder implementation.
-    For production, integrate with:
-    - Google Custom Search API
-    - SerpAPI (serpapi.com)
-    - DataForSEO
-    - BrightData
-    
-    Args:
-        query: Search query
-        num_results: Number of results to fetch
-        
-    Returns:
-        List of result dicts with url, title, snippet
-    """
-    # Placeholder - returns empty list
-    # Implement actual SERP API integration here
-    return []
+    """Return observed organic results from the configured SerpAPI account."""
+    from .traffic_data_providers import SerpAPIProvider
+
+    provider = SerpAPIProvider()
+    if not provider.enabled:
+        return []
+
+    result = provider.get_serp_features(query)
+    if not result:
+        return []
+
+    return [
+        {
+            "url": item.get("link", ""),
+            "title": item.get("title", ""),
+            "position": item.get("position"),
+            "domain": item.get("domain", ""),
+            "source": "serpapi",
+            "provenance": "observed_serp",
+        }
+        for item in result.get("organic_results", [])[:num_results]
+        if item.get("link")
+    ]
 
 
 def extract_competitor_keywords(url: str, timeout: int = 10) -> Dict:
@@ -174,7 +178,7 @@ def analyze_competitor_gap(user_content: str, competitors: List[Dict]) -> Dict:
     }
 
 
-def run_competitor_analysis(user_url: str, target_keywords: List[str], user_content: str) -> Dict:
+def run_competitor_analysis(user_url: str, target_keywords: List[str], user_content: str, serp_features: Dict[str, Dict] = None) -> Dict:
     """
     Full competitor analysis pipeline.
     
@@ -186,16 +190,58 @@ def run_competitor_analysis(user_url: str, target_keywords: List[str], user_cont
     Returns:
         Comprehensive competitor analysis
     """
-    # Step 1: Find competitor URLs (placeholder - integrate SERP API)
-    competitor_urls = []
-    
-    # Step 2: Analyze each competitor
+    # Step 1: Reuse observed organic SERPs when supplied by the main pipeline.
+    user_domain = urlparse(user_url).netloc.lower().removeprefix("www.")
+    observed_results = []
+    seen_urls = set()
+    serp_features = serp_features or {}
+
+    for keyword in target_keywords[:3]:
+        cached_serp = serp_features.get(keyword, {})
+        source_results = [
+            {
+                "url": item.get("link", ""),
+                "title": item.get("title", ""),
+                "position": item.get("position"),
+                "domain": item.get("domain", ""),
+                "source": "serpapi",
+                "provenance": "observed_serp",
+            }
+            for item in cached_serp.get("organic_results", [])
+        ] if cached_serp else get_serp_results(keyword, num_results=10)
+
+        for result in source_results:
+            competitor_domain = result.get("domain", "").lower().removeprefix("www.")
+            competitor_url = result.get("url", "")
+            if not competitor_url or competitor_domain == user_domain or competitor_url in seen_urls:
+                continue
+            seen_urls.add(competitor_url)
+            observed_results.append({**result, "query": keyword})
+
+    # Step 2: Analyze the first five observed competitors concurrently.
     competitor_data = []
-    for url in competitor_urls[:5]:  # Limit to top 5
-        data = extract_competitor_keywords(url)
-        competitor_data.append(data)
-        time.sleep(0.5)  # Be polite to servers
-    
+    selected = observed_results[:5]
+    with ThreadPoolExecutor(max_workers=min(5, len(selected) or 1)) as pool:
+        futures = {
+            pool.submit(extract_competitor_keywords, result["url"], 8): result
+            for result in selected
+        }
+        for future in as_completed(futures):
+            result = futures[future]
+            try:
+                data = future.result()
+            except Exception as exc:
+                data = {"url": result["url"], "status": "error", "error": str(exc)}
+            data.update({
+                "serp_position": result.get("position"),
+                "query": result.get("query"),
+                "domain": result.get("domain"),
+                "provenance": "observed_serp",
+            })
+            competitor_data.append(data)
+
+    competitor_data.sort(key=lambda item: item.get("serp_position") or 999)
+
     # Step 3: Analyze gaps
     if competitor_data:
         gap_analysis = analyze_competitor_gap(user_content, competitor_data)
@@ -203,7 +249,7 @@ def run_competitor_analysis(user_url: str, target_keywords: List[str], user_cont
         gap_analysis = {
             "gap_keywords": [],
             "high_priority_gaps": [],
-            "message": "No competitor data available. Integrate SERP API for full functionality."
+            "message": "No observed competitor results were available for this analysis."
         }
     
     return {
@@ -233,7 +279,7 @@ def generate_recommendations(gap_analysis: Dict) -> List[str]:
     
     if not high_priority and not gap_analysis.get("gap_keywords"):
         recommendations.append(
-            "Integrate a SERP API (SerpAPI, Google Custom Search) to enable competitor analysis."
+            "No observed competitor gaps were available for the selected queries."
         )
     
     return recommendations

@@ -45,7 +45,7 @@ MOCK_COMPARISON_RESULT = {
 @pytest.mark.comparative
 class TestComparativeInputView:
 
-    def test_input_form_returns_200(self, authenticated_client):
+    def test_input_form_returns_200(self, authenticated_client, pro_subscription):
         response = authenticated_client.get('/comparative-analysis/')
         assert response.status_code == 200
 
@@ -112,13 +112,13 @@ class TestAnalyzeView:
 @pytest.mark.comparative
 class TestResultsView:
 
-    def test_results_page_with_valid_id(self, authenticated_client, sample_comparison_report):
+    def test_results_page_with_valid_id(self, authenticated_client, pro_subscription, sample_comparison_report):
         response = authenticated_client.get(
             f'/comparative-analysis/results/{sample_comparison_report.id}/'
         )
         assert response.status_code == 200
 
-    def test_results_page_with_invalid_id_returns_404_or_redirect(self, authenticated_client):
+    def test_results_page_with_invalid_id_returns_404_or_redirect(self, authenticated_client, pro_subscription):
         response = authenticated_client.get('/comparative-analysis/results/99999/')
         assert response.status_code in (200, 302, 404)
 
@@ -128,7 +128,7 @@ class TestResultsView:
         )
         assert response.status_code in (200, 302)
 
-    def test_results_display_scores(self, authenticated_client, sample_comparison_report):
+    def test_results_display_scores(self, authenticated_client, pro_subscription, sample_comparison_report):
         response = authenticated_client.get(
             f'/comparative-analysis/results/{sample_comparison_report.id}/'
         )

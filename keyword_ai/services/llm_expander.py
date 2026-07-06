@@ -1,3 +1,4 @@
+import os
 """
 Advanced LLM-Powered Keyword Expansion Service (Phase 3)
 Uses GPT-4 for intelligent keyword discovery with reasoning.
@@ -103,7 +104,12 @@ def get_client():
         if getattr(settings, "USE_GROQ", True):
             api_key = getattr(settings, "GROQ_API_KEY", None)
             if api_key:
-                _client = OpenAI(api_key=api_key, base_url="https://api.groq.com/openai/v1")
+                _client = OpenAI(
+                    api_key=api_key,
+                    base_url="https://api.groq.com/openai/v1",
+                    timeout=float(os.getenv("KEYWORD_LLM_TIMEOUT", "20")),
+                    max_retries=0,
+                )
         else:
             api_key = getattr(settings, "OPENAI_API_KEY", None)
             if api_key:

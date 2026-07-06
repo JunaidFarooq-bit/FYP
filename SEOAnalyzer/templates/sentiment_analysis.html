@@ -34,7 +34,7 @@
 
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{% static 'fyp.css'%}" />
-    <link rel="stylesheet" href="{% static 'modern-style.css'%}" />
+    <link rel="stylesheet" href="{% static 'modern-style.css'%}?v=20260618" />
 
     <style>
       /* ================================================
@@ -157,6 +157,31 @@
       .error-box i {
         font-size: 1.25rem;
       }
+      .input-wrap {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: var(--surface);
+        border: 1.5px solid var(--border);
+        border-radius: var(--r-md);
+        padding: 0 14px;
+        transition: border-color .2s, box-shadow .2s;
+    }
+    .input-wrap:focus-within {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+    .input-wrap i { color: var(--ink-muted); font-size: .9rem; }
+    .input-wrap input, .input-wrap select {
+        border: none;
+        background: transparent;
+        width: 100%;
+        padding: 11px 0;
+        font-family: var(--font-body);
+        font-size: .9rem;
+        color: var(--ink);
+        outline: none;
+    }
 
       /* Info Section */
       .info-section {
@@ -218,9 +243,11 @@
         }
       }
     </style>
+    <link rel="stylesheet" href="{% static 'sidebar-tool-theme.css' %}?v=20260618" />
+      <link rel="stylesheet" href="{% static 'keyword-page-system.css' %}?v=20260706-heading-lock" />
   </head>
 
-  <body>
+  <body class="keyword-system-page">
     <!-- Loader -->
     <div id="loader">
       <div class="loader-animation">
@@ -238,7 +265,7 @@
         <div class="sidebar-header">
           <div class="sidebar-logo">
             <img src="{% static 'logo.png'%}" alt="WEB LIFT Logo" />
-            <h5>WEBLIFT</h5>
+            <h5>WEB LIFT</h5>
           </div>
           <!-- Close Button - Only visible on mobile -->
           <button
@@ -274,15 +301,12 @@
             <i class="fas fa-bars"></i>
           </button>
 
-          <!-- Spacer -->
-          <div style="flex: 1"></div>
+          <div class="navbar-page-context">
+            <strong>Sentiment Analysis</strong>
+          </div>
 
-          <!-- Navbar Actions -->
           <div class="navbar-actions">
-            <a href="{% url 'logout' %}" class="btn btn-primary">
-              <i class="fas fa-sign-out-alt"></i>
-              <span>Logout</span>
-            </a>
+            {% include 'partials/_profile_dropdown.html' %}
           </div>
         </div>
       </nav>
@@ -340,21 +364,11 @@
             method="post"
           >
             {% csrf_token %}
-
-            <!-- URL Input -->
-            <div class="search-input-group">
-              <i class="fas fa-search search-icon"></i>
-              <input
-                placeholder="e.g. https://example.com/blog-post"
-                name="url"
-                autocomplete="on"
-                type="url"
-                id="id_url"
-                class="search-input"
-                aria-label="Page URL"
-                required
-              />
-            </div>
+                    <div class="form-group">
+                        <div class="input-wrap">
+                            <i class="fas fa-globe"></i>
+                            <input type="url" name="url" id="url" placeholder="https://example.com" value="{{ url|default:'' }}">
+                        </div></div>
 
             <!-- Analysis Mode -->
             <div class="mode-select-group">
@@ -389,6 +403,39 @@
             </div>
           </form>
         </div>
+
+        <section class="analysis-section features-section">
+          <div class="section-header">
+            <div class="section-title">
+              <i class="fas fa-sparkles section-icon"></i>
+              <h2>What We Analyze</h2>
+            </div>
+          </div>
+          <div class="section-content">
+            <div class="features-grid">
+              <div class="feature-card">
+                <div class="feature-icon authority-icon"><i class="fas fa-smile"></i></div>
+                <h3 class="feature-title">Sentiment Detection</h3>
+                <p class="feature-description">Identifies positive, neutral, or negative emotional signals in page content.</p>
+              </div>
+              <div class="feature-card">
+                <div class="feature-icon intent-icon"><i class="fas fa-bullseye"></i></div>
+                <h3 class="feature-title">Tone Analysis</h3>
+                <p class="feature-description">Detects promotional, informative, clickbait, or professional tone patterns.</p>
+              </div>
+              <div class="feature-card">
+                <div class="feature-icon onpage-icon"><i class="fas fa-lightbulb"></i></div>
+                <h3 class="feature-title">Intent Classification</h3>
+                <p class="feature-description">Classifies whether content is informational, transactional, navigational, or commercial.</p>
+              </div>
+              <div class="feature-card">
+                <div class="feature-icon technical-icon"><i class="fas fa-chart-line"></i></div>
+                <h3 class="feature-title">Content Recommendations</h3>
+                <p class="feature-description">Surfaces practical improvements for clarity, engagement, and search performance.</p>
+              </div>
+            </div>
+          </div>
+        </section>
 
         <!-- Info Section -->
         <div class="info-section">

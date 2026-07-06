@@ -7,8 +7,20 @@ from functools import wraps
 from django.shortcuts import redirect
 from django.contrib import messages
 from django.http import JsonResponse
+from django.utils.http import url_has_allowed_host_and_scheme
 from .models import Subscription, UsageTracker
 from .services.subscription_service import SubscriptionService
+
+
+def _safe_referer_redirect(request):
+    referer = request.META.get('HTTP_REFERER')
+    if referer and url_has_allowed_host_and_scheme(
+        referer,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        return redirect(referer)
+    return redirect('Home')
 
 
 def require_subscription(view_func):
@@ -44,10 +56,7 @@ def require_subscription(view_func):
         # No active subscription and no free trial
         request.session['upgrade_required'] = True
         request.session['upgrade_reason'] = "You've used your free audit. Subscribe to continue."
-        referer = request.META.get('HTTP_REFERER')
-        if referer:
-            return redirect(referer)
-        return redirect('Home')
+        return _safe_referer_redirect(request)
     
     return _wrapped_view
 
@@ -108,10 +117,7 @@ def track_usage(feature_type, count=1):
 
                 request.session['upgrade_required'] = True
                 request.session['upgrade_reason'] = reason
-                referer = request.META.get('HTTP_REFERER')
-                if referer:
-                    return redirect(referer)
-                return redirect('Home')
+                return _safe_referer_redirect(request)
             
             # Execute the view
             response = view_func(request, *args, **kwargs)
@@ -173,10 +179,7 @@ def enforce_free_trial_limit(view_func):
             
             request.session['upgrade_required'] = True
             request.session['upgrade_reason'] = "You've used your free SEO audit. Subscribe to run more audits!"
-            referer = request.META.get('HTTP_REFERER')
-            if referer:
-                return redirect(referer)
-            return redirect('Home')
+            return _safe_referer_redirect(request)
         
         # First use - allow and mark as used
         response = view_func(request, *args, **kwargs)
@@ -219,10 +222,7 @@ def require_feature(feature_name):
                 feature_display = feature_name.replace('_', ' ').title()
                 request.session['upgrade_required'] = True
                 request.session['upgrade_reason'] = f"{feature_display} is not available on your plan. Upgrade to access this feature!"
-                referer = request.META.get('HTTP_REFERER')
-                if referer:
-                    return redirect(referer)
-                return redirect('Home')
+                return _safe_referer_redirect(request)
             
             return view_func(request, *args, **kwargs)
         
@@ -249,9 +249,9 @@ def api_subscription_check(view_func):
         except (Subscription.DoesNotExist, AttributeError):
             subscription = SubscriptionService.create_default_subscription(user)
         
-        if not subscription.is_active() and not subscription.has_free_trial_available():
+        if not subscription.can_use_feature('api_access'):
             return JsonResponse({
-                'error': 'Active subscription required',
+                'error': 'API access requires a Pro or Enterprise subscription',
                 'subscription_required': True,
                 'redirect_url': '/subscriptions/pricing/'
             }, status=403)

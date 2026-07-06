@@ -187,12 +187,16 @@ class TestSeoToolViews:
 @pytest.mark.seo
 class TestSentimentAnalysisView:
 
-    def test_sentiment_page_accessible_without_login(self, client):
+    def test_sentiment_page_requires_login(self, client):
         response = client.get('/sentimentanalysis/')
+        assert response.status_code == 302
+
+    def test_sentiment_page_accessible_for_pro_user(self, authenticated_client, pro_subscription):
+        response = authenticated_client.get('/sentimentanalysis/')
         assert response.status_code == 200
 
     @patch('SEOAnalyzer.views_pages.analyze_sentiment')
-    def test_sentiment_analyze_post(self, mock_analyze, client):
+    def test_sentiment_analyze_post(self, mock_analyze, authenticated_client, pro_subscription):
         # analyze_sentiment_view uses the module-level analyze_sentiment function
         mock_analyze.return_value = {
             'sentiment': 'positive',
@@ -200,11 +204,11 @@ class TestSentimentAnalysisView:
             'sentiment_score': 75,
             'success': True,
         }
-        response = client.post('/sentimentanalysis/analyze/', {
+        response = authenticated_client.post('/sentimentanalysis/analyze/', {
             'url': 'https://example.com',
         }, follow=True)
         assert response.status_code == 200
 
-    def test_sentiment_analyze_empty_url(self, client):
-        response = client.post('/sentimentanalysis/analyze/', {'url': ''}, follow=True)
+    def test_sentiment_analyze_empty_url(self, authenticated_client, pro_subscription):
+        response = authenticated_client.post('/sentimentanalysis/analyze/', {'url': ''}, follow=True)
         assert response.status_code == 200

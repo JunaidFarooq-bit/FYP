@@ -34,7 +34,7 @@
 
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{% static 'fyp.css'%}" />
-    <link rel="stylesheet" href="{% static 'modern-style.css'%}" />
+    <link rel="stylesheet" href="{% static 'modern-style.css'%}?v=20260618" />
 
     <style>
       /* ================================================
@@ -108,6 +108,37 @@
       /* Results section */
       .results-section {
         animation: fadeInUp 0.5s ease forwards;
+      }
+      .input-wrap {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: var(--surface);
+        border: 1.5px solid var(--border);
+        border-radius: var(--r-md);
+        padding: 0 14px;
+        transition:
+          border-color 0.2s,
+          box-shadow 0.2s;
+      }
+      .input-wrap:focus-within {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px var(--accent-glow);
+      }
+      .input-wrap i {
+        color: var(--ink-muted);
+        font-size: 0.9rem;
+      }
+      .input-wrap input,
+      .input-wrap select {
+        border: none;
+        background: transparent;
+        width: 100%;
+        padding: 11px 0;
+        font-family: var(--font-body);
+        font-size: 0.9rem;
+        color: var(--ink);
+        outline: none;
       }
 
       /* Results header */
@@ -319,9 +350,18 @@
         }
       }
     </style>
+    <link
+      rel="stylesheet"
+      href="{% static 'sidebar-tool-theme.css' %}?v=20260618"
+    />
+    <link
+      rel="stylesheet"
+      href="{% static 'keyword-page-system.css' %}?v=20260706-heading-lock"
+    />
+    <link rel="stylesheet" href="{% static 'result-page-system.css' %}?v=20260706" />
   </head>
 
-  <body>
+  <body class="keyword-system-page result-system-page">
     <!-- Loader -->
     <div id="loader">
       <div class="loader-animation">
@@ -335,11 +375,7 @@
     <!-- Main Navigation Header -->
     <header>
       <!-- Sidebar Navigation -->
-      <nav
-        id="sidebarMenu"
-        class="sidebar"
-        aria-label="Main navigation"
-      >
+      <nav id="sidebarMenu" class="sidebar" aria-label="Main navigation">
         <div class="sidebar-header">
           <div class="sidebar-logo">
             <img src="{% static 'logo.png'%}" alt="WEB LIFT Logo" />
@@ -361,7 +397,7 @@
           <button
             class="navbar-toggler"
             id="navbar-toggle"
-            type="button"
+            type="submit"
             aria-controls="sidebarMenu"
             aria-expanded="false"
             aria-label="Toggle navigation"
@@ -378,18 +414,12 @@
           </div>
           {% endcomment %}
 
-          <!-- Navbar actions -->
-          <div style="flex: 1"></div>
+          <div class="navbar-page-context">
+            <strong>Mobile Friendly Test</strong>
+          </div>
+
           <div class="navbar-actions" style="margin-left: auto">
-            <a
-              class="btn btn-primary"
-              href="{% url 'logout' %}"
-              class="btn btn-outline logout-btn"
-              id="logout"
-            >
-              <i class="fas fa-sign-out-alt"></i>
-              <span>Logout</span>
-            </a>
+            {% include 'partials/_profile_dropdown.html' %}
           </div>
         </div>
       </nav>
@@ -438,32 +468,23 @@
             method="post"
           >
             {% csrf_token %}
-            <div class="search-input-group">
-              <i class="fas fa-search search-icon"></i>
-              <input
-                placeholder="e.g. https://example.com"
-                name="fname"
-                autocomplete="on"
-                type="search"
-                id="id_url"
-                class="search-input"
-                aria-label="Website URL"
-                required
-                {%
-                if
-                url
-                %}value="{{ url }}"
-                {%
-                endif
-                %}
-              />
+            <div class="form-group">
+              <div class="input-wrap">
+                <i class="fas fa-globe"></i>
+                <input
+                  type="url"
+                  name="url"
+                  id="url"
+                  placeholder="https://example.com"
+                  value="{{ url|default:'' }}"
+                />
+              </div>
             </div>
             <div class="form-actions">
               <button
                 id="analyzeBtn"
-                onclick="submitForm()"
                 class="btn btn-primary"
-                type="button"
+                type="submit"
               >
                 <i class="fas fa-search-plus"></i>
                 <span>Run Test</span>
@@ -475,6 +496,58 @@
             </div>
           </form>
         </div>
+
+        <section class="analysis-section features-section">
+          <div class="section-header">
+            <div class="section-title">
+              <i class="fas fa-sparkles section-icon"></i>
+              <h2>What We Analyze</h2>
+            </div>
+          </div>
+          <div class="section-content">
+            <div class="features-grid">
+              <div class="feature-card">
+                <div class="feature-icon content-icon">
+                  <i class="fas fa-mobile-alt"></i>
+                </div>
+                <h3 class="feature-title">Mobile Usability</h3>
+                <p class="feature-description">
+                  Checks if your page is usable and readable on mobile devices.
+                </p>
+              </div>
+              <div class="feature-card">
+                <div class="feature-icon technical-icon">
+                  <i class="fas fa-tachometer-alt"></i>
+                </div>
+                <h3 class="feature-title">Performance</h3>
+                <p class="feature-description">
+                  Lighthouse performance and loading signals that affect mobile
+                  experience.
+                </p>
+              </div>
+              <div class="feature-card">
+                <div class="feature-icon ux-icon">
+                  <i class="fas fa-universal-access"></i>
+                </div>
+                <h3 class="feature-title">Accessibility</h3>
+                <p class="feature-description">
+                  Readable structure, usable controls, and accessibility
+                  best-practice checks.
+                </p>
+              </div>
+              <div class="feature-card">
+                <div class="feature-icon onpage-icon">
+                  <i class="fas fa-search"></i>
+                </div>
+                <h3 class="feature-title">Mobile SEO</h3>
+                <p class="feature-description">
+                  SEO and best-practice scores that help Google understand
+                  mobile pages.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
 
         <!-- Results (conditional) -->
         {% if final_verdict %}
@@ -493,9 +566,18 @@
             </div>
 
             {% if lighthouse_error %}
-            <div class="alert alert-info" style="margin-bottom:1rem;background:#e7f3ff;border-color:#b3d9ff;color:#004085;">
-              <i class="fas fa-info-circle" style="color:#004085;"></i>
-              <strong>Performance analysis limited:</strong> {{ lighthouse_error }}
+            <div
+              class="alert alert-info"
+              style="
+                margin-bottom: 1rem;
+                background: #e7f3ff;
+                border-color: #b3d9ff;
+                color: #004085;
+              "
+            >
+              <i class="fas fa-info-circle" style="color: #004085"></i>
+              <strong>Performance analysis limited:</strong> {{ lighthouse_error
+              }}
             </div>
             {% endif %}
 
@@ -503,12 +585,19 @@
               <div class="lighthouse-item">
                 <div class="lighthouse-label">Performance</div>
                 {% if performance_score is not None %}
-                <div class="lighthouse-score {% if performance_score >= 90 %}excellent{% elif performance_score >= 50 %}good{% elif performance_score >= 25 %}needs-improvement{% else %}poor{% endif %}">
+                <div
+                  class="lighthouse-score {% if performance_score >= 90 %}excellent{% elif performance_score >= 50 %}good{% elif performance_score >= 25 %}needs-improvement{% else %}poor{% endif %}"
+                >
                   {{ performance_score }}
                 </div>
                 <div class="lighthouse-max">/ 100</div>
                 {% else %}
-                <div class="lighthouse-score" style="color:var(--gray-400);font-size:1.5rem;">N/A</div>
+                <div
+                  class="lighthouse-score"
+                  style="color: var(--gray-400); font-size: 1.5rem"
+                >
+                  N/A
+                </div>
                 <div class="lighthouse-max">Unavailable</div>
                 {% endif %}
               </div>
@@ -516,12 +605,19 @@
               <div class="lighthouse-item">
                 <div class="lighthouse-label">Accessibility</div>
                 {% if accessibility_score is not None %}
-                <div class="lighthouse-score {% if accessibility_score >= 90 %}excellent{% elif accessibility_score >= 50 %}good{% elif accessibility_score >= 25 %}needs-improvement{% else %}poor{% endif %}">
+                <div
+                  class="lighthouse-score {% if accessibility_score >= 90 %}excellent{% elif accessibility_score >= 50 %}good{% elif accessibility_score >= 25 %}needs-improvement{% else %}poor{% endif %}"
+                >
                   {{ accessibility_score }}
                 </div>
                 <div class="lighthouse-max">/ 100</div>
                 {% else %}
-                <div class="lighthouse-score" style="color:var(--gray-400);font-size:1.5rem;">N/A</div>
+                <div
+                  class="lighthouse-score"
+                  style="color: var(--gray-400); font-size: 1.5rem"
+                >
+                  N/A
+                </div>
                 <div class="lighthouse-max">Unavailable</div>
                 {% endif %}
               </div>
@@ -529,12 +625,19 @@
               <div class="lighthouse-item">
                 <div class="lighthouse-label">Best Practices</div>
                 {% if best_practices_score is not None %}
-                <div class="lighthouse-score {% if best_practices_score >= 90 %}excellent{% elif best_practices_score >= 50 %}good{% elif best_practices_score >= 25 %}needs-improvement{% else %}poor{% endif %}">
+                <div
+                  class="lighthouse-score {% if best_practices_score >= 90 %}excellent{% elif best_practices_score >= 50 %}good{% elif best_practices_score >= 25 %}needs-improvement{% else %}poor{% endif %}"
+                >
                   {{ best_practices_score }}
                 </div>
                 <div class="lighthouse-max">/ 100</div>
                 {% else %}
-                <div class="lighthouse-score" style="color:var(--gray-400);font-size:1.5rem;">N/A</div>
+                <div
+                  class="lighthouse-score"
+                  style="color: var(--gray-400); font-size: 1.5rem"
+                >
+                  N/A
+                </div>
                 <div class="lighthouse-max">Unavailable</div>
                 {% endif %}
               </div>
@@ -542,12 +645,19 @@
               <div class="lighthouse-item">
                 <div class="lighthouse-label">SEO</div>
                 {% if seo_score is not None %}
-                <div class="lighthouse-score {% if seo_score >= 90 %}excellent{% elif seo_score >= 50 %}good{% elif seo_score >= 25 %}needs-improvement{% else %}poor{% endif %}">
+                <div
+                  class="lighthouse-score {% if seo_score >= 90 %}excellent{% elif seo_score >= 50 %}good{% elif seo_score >= 25 %}needs-improvement{% else %}poor{% endif %}"
+                >
                   {{ seo_score }}
                 </div>
                 <div class="lighthouse-max">/ 100</div>
                 {% else %}
-                <div class="lighthouse-score" style="color:var(--gray-400);font-size:1.5rem;">N/A</div>
+                <div
+                  class="lighthouse-score"
+                  style="color: var(--gray-400); font-size: 1.5rem"
+                >
+                  N/A
+                </div>
                 <div class="lighthouse-max">Unavailable</div>
                 {% endif %}
               </div>
@@ -555,7 +665,9 @@
               {% if pwa_score %}
               <div class="lighthouse-item">
                 <div class="lighthouse-label">PWA</div>
-                <div class="lighthouse-score {% if pwa_score >= 0.9 %}excellent{% elif pwa_score >= 0.5 %}good{% elif pwa_score >= 0.25 %}needs-improvement{% else %}poor{% endif %}">
+                <div
+                  class="lighthouse-score {% if pwa_score >= 0.9 %}excellent{% elif pwa_score >= 0.5 %}good{% elif pwa_score >= 0.25 %}needs-improvement{% else %}poor{% endif %}"
+                >
                   {{ pwa_score }}
                 </div>
                 <div class="lighthouse-max">/ 100</div>
@@ -704,7 +816,7 @@
 
       // Form validation and submission
       function submitForm() {
-        const url = document.getElementById("id_url").value;
+        const url = document.getElementById("url").value;
         var urlRegex = /^(https?|ftp):\/\/[^\s/$.?#].[^\s]*$/i;
 
         if (!url.trim()) {
@@ -732,6 +844,6 @@
         });
       }, 4000);
     </script>
-  {% include 'partials/_upgrade_modal.html' %}
+    {% include 'partials/_upgrade_modal.html' %}
   </body>
 </html>

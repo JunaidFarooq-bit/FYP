@@ -13,8 +13,8 @@
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
-    <link rel="stylesheet" href="{% static 'css/styles.css'%}?v=4" />
-    <link rel="stylesheet" href="{% static 'css/stitch-compare.css' %}?v=1" />
+    <link rel="stylesheet" href="{% static 'css/styles.css'%}?v=20260618" />
+    <link rel="stylesheet" href="{% static 'css/stitch-compare.css' %}?v=20260613" />
     <style>
       /* ── Chart containers ── */
       .chart-container { position: relative; width: 100%; }
@@ -81,9 +81,11 @@
       .gap-card__body strong { display:block !important; color:#0f172a !important; font-size:.875rem !important; font-weight:600 !important; margin-bottom:.25rem !important; }
       .gap-card__body p { color:#64748b !important; font-size:.8125rem !important; line-height:1.55 !important; margin:0 !important; padding:0 !important; background:none !important; border:none !important; }
     </style>
+      <link rel="stylesheet" href="{% static 'keyword-page-system.css' %}?v=20260706-heading-lock" />
+    <link rel="stylesheet" href="{% static 'result-page-system.css' %}?v=20260706" />
   </head>
 
-  <body class="compare-shell">
+  <body class="compare-shell keyword-system-page result-system-page">
     <!-- Loader -->
     <div id="loader">
       <div class="loader-animation">
@@ -110,13 +112,10 @@
           <button class="navbar-toggler" id="navbar-toggle" type="button" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle navigation" onclick="navbar()">
             <i class="fas fa-bars"></i>
           </button>
-          <div class="navbar-logo" id="mylogo">
-            <img src="{% static 'logo.png'%}" alt="WEB LIFT Logo" />
-            <h4>WEB LIFT</h4>
+          <div class="navbar-page-context">
+            <strong>Comparative Results</strong>
           </div>
           <div class="navbar-actions">
-            <a href="{% url 'comparative_analysis:input_form' %}" class="btn btn-outline"><i class="fas fa-redo"></i><span>New Comparison</span></a>
-            <a href="{% url 'Home' %}" class="btn btn-outline" id="try"><i class="fas fa-home"></i><span>Home</span></a>
             {% include 'partials/_profile_dropdown.html' %}
           </div>
         </div>
@@ -134,7 +133,7 @@
               <h1>SEO Comparative Analysis Report</h1>
               <p>Benchmark <strong>{{ url_primary }}</strong> against <strong>{{ url_competitor }}</strong> and surface the fastest opportunities to outrank the competition.</p>
               <div class="hero-meta">
-                <span><i class="far fa-clock"></i>Generated {{ comparison_generated_at|default:primary.generated_at|default:competitor.generated_at|default:"Just now" }}</span>
+                <span><i class="far fa-clock"></i>Generated {{ report.created_at|default:"Just now" }}</span>
                 <span><i class="fas fa-sync"></i>Data window: last 24h</span>
               </div>
               <div class="hero-actions">

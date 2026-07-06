@@ -9,7 +9,7 @@ import time
 import logging
 from typing import Optional, Dict, Any
 from openai import OpenAI
-import openai
+import openai  # OpenAI-compatible SDK used for Groq/OpenRouter exceptions
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
@@ -42,7 +42,7 @@ class EEATAnalyzer:
         self._model = None
     
     def _get_client(self) -> Optional[OpenAI]:
-        """Get or create AI client (Groq preferred, OpenRouter/OpenAI fallback)."""
+        """Get or create AI client (Groq preferred, OpenRouter fallback)."""
         if self._client is not None:
             return self._client
             
@@ -58,6 +58,7 @@ class EEATAnalyzer:
                 max_retries=3
             )
             self._model = getattr(settings, 'GROQ_MODEL', 'llama-3.3-70b-versatile')
+            logger.info("EEATAnalyzer using Groq API with model %s", self._model)
         else:
             api_key = self.api_key or os.getenv('OPENROUTER_API_KEY') or getattr(settings, 'OPENROUTER_API_KEY', '')
             if not api_key:
@@ -70,7 +71,8 @@ class EEATAnalyzer:
                 max_retries=3
             )
             self._model = getattr(settings, 'OPENAI_MODEL', 'openai/gpt-4o-mini')
-        
+            logger.info("EEATAnalyzer using OpenRouter API with model %s", self._model)
+
         return self._client
     
     def analyze(self, content_type: str, content: str, context: Optional[str] = None) -> Dict[str, Any]:

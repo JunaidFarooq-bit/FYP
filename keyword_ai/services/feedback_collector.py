@@ -362,7 +362,7 @@ class ContinuousLearningMonitor:
     """
     
     RETRAIN_THRESHOLDS = {
-        "min_feedback_samples": 100,
+        "min_feedback_samples": 20,
         "min_acceptance_rate": 60,  # Percentage
         "max_days_since_retrain": 30,
     }
@@ -380,7 +380,7 @@ class ContinuousLearningMonitor:
         # Get recent feedback
         recent_feedback = SuggestionFeedback.objects.filter(
             timestamp__gte=since,
-            opportunity__keyword_type__in=['keybert', 'ml_generated', 'llm_expansion']
+            user_action__in=["accepted", "implemented", "rejected"],
         )
         
         total_feedback = recent_feedback.count()

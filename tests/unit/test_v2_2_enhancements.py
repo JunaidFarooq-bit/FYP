@@ -349,12 +349,15 @@ class TestAeoAnalyzer:
         from keyword_ai.services.geo_aeo_analyzer import analyze_aeo
         q = analyze_aeo("what is search engine optimization")
         plain = analyze_aeo("search engine optimization")
-        assert q.score > plain.score
+        assert q.query_suitable is True
+        assert q.data_status == "insufficient_evidence"
+        assert plain.data_status == "insufficient_evidence"
 
     def test_question_keyword_is_ai_friendly(self):
         from keyword_ai.services.geo_aeo_analyzer import analyze_aeo
         out = analyze_aeo("how to improve seo ranking")
-        assert out.ai_friendly is True
+        assert out.query_suitable is True
+        assert out.ai_friendly is False
 
     def test_single_word_keyword_lower_score(self):
         from keyword_ai.services.geo_aeo_analyzer import analyze_aeo
@@ -375,7 +378,7 @@ class TestAeoAnalyzer:
     def test_answer_extraction_likelihood_high_for_question(self):
         from keyword_ai.services.geo_aeo_analyzer import analyze_aeo
         out = analyze_aeo("how does google rank websites")
-        assert out.answer_extraction_likelihood in ("medium", "high")
+        assert out.answer_extraction_likelihood == "insufficient_evidence"
 
     def test_empty_keyword_returns_zero_score(self):
         from keyword_ai.services.geo_aeo_analyzer import analyze_aeo

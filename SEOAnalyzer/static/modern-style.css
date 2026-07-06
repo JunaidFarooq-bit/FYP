@@ -4,17 +4,14 @@
    Root Variables - Brand Colors & Design System
    ======================================== */
 
+@import url("https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&display=swap");
+
 :root {
   /* Brand Colors */
   --primary-dark: #023761;
   --primary-mid: #02569b;
   --primary-light: #80aacd;
-  --primary-gradient: linear-gradient(
-    135deg,
-    #023761 0%,
-    #02569b 50%,
-    #80aacd 100%
-  );
+  --primary-gradient: #02569b;
 
   /* Neutral Colors */
   --white: #ffffff;
@@ -180,13 +177,11 @@ body {
   left: 0;
   width: var(--sidebar-width);
   height: 100vh;
-  background: linear-gradient(
-    180deg,
-    var(--primary-dark) 0%,
-    var(--primary-mid) 100%
-  );
+  background:
+    radial-gradient(circle at top, rgba(71, 95, 255, 0.18), transparent 24%),
+    linear-gradient(180deg, #061d5c 0%, #08235f 42%, #031642 100%);
   padding: var(--spacing-xl) 0;
-  box-shadow: var(--shadow-xl);
+  box-shadow: 16px 0 42px rgba(3, 16, 52, 0.22);
   overflow-y: auto;
   z-index: 998;
   transition: transform var(--transition-base);
@@ -202,8 +197,8 @@ body {
 }
 
 .sidebar-header {
-  padding: 0 var(--spacing-lg);
-  margin-bottom: var(--spacing-2xl);
+  padding: 0 26px;
+  margin-bottom: 28px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -212,23 +207,24 @@ body {
 .sidebar-logo {
   display: flex;
   align-items: center;
-  gap: var(--spacing-md);
+  gap: 14px;
 }
 
 .sidebar-logo img {
-  width: 42px;
-  height: 42px;
+  width: 56px;
+  height: 56px;
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-md);
+  object-fit: contain;
 }
 
 .sidebar-logo h5 {
   font-family: var(--font-primary);
-  font-weight: 700;
-  font-size: 1.25rem;
+  font-weight: 800;
+  font-size: 1.55rem;
   color: var(--white);
   margin: 0;
-  letter-spacing: 0.02em;
+  letter-spacing: 0;
 }
 
 /* ✅ CLOSE BUTTON - Only visible on mobile */
@@ -258,7 +254,7 @@ body {
 }
 
 .sidebar-content {
-  padding: 0 var(--spacing-md);
+  padding: 8px 18px 28px;
 }
 
 .nav-section {
@@ -268,57 +264,62 @@ body {
 .nav-section-title {
   display: block;
   font-family: var(--font-primary);
-  font-size: 0.75rem;
-  font-weight: 600;
+  font-size: 0.78rem;
+  font-weight: 800;
   color: rgba(255, 255, 255, 0.5);
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  padding: 0 var(--spacing-md);
-  margin-bottom: var(--spacing-sm);
+  padding: 0 14px;
+  margin-bottom: 16px;
 }
 
 .sidebar-link {
   display: flex;
   align-items: center;
-  gap: var(--spacing-md);
-  padding: var(--spacing-md) var(--spacing-lg);
-  margin-bottom: var(--spacing-xs);
-  border-radius: var(--radius-lg);
-  color: rgba(255, 255, 255, 0.8);
+  gap: 16px;
+  min-height: 62px;
+  padding: 14px 20px;
+  margin-bottom: 12px;
+  border-radius: 14px;
+  color: rgba(255, 255, 255, 0.88);
   text-decoration: none;
-  font-weight: 500;
+  font-weight: 700;
   transition: all var(--transition-base);
   position: relative;
   overflow: hidden;
+  transform: none;
 }
 
 .sidebar-link::before {
   content: "";
   position: absolute;
-  left: 0;
-  top: 0;
-  width: 4px;
-  height: 100%;
-  background: var(--white);
-  transform: scaleY(0);
-  transition: transform var(--transition-base);
+  inset: 0;
+  background: linear-gradient(135deg, rgba(93, 116, 255, 0.18), rgba(22, 199, 216, 0.08));
+  opacity: 0;
+  transition: opacity var(--transition-base);
 }
 
 .sidebar-link:hover,
 .sidebar-link.active {
-  background: rgba(255, 255, 255, 0.1);
+  background: linear-gradient(135deg, #5d74ff 0%, #3157ff 100%);
   color: var(--white);
-  transform: translateX(4px);
+  box-shadow: 0 14px 28px rgba(49, 87, 255, 0.34);
+  transform: none;
 }
 
 .sidebar-link.active::before {
-  transform: scaleY(1);
+  opacity: 1;
+}
+
+.sidebar-link:hover::before {
+  opacity: 1;
 }
 
 .sidebar-link i {
-  font-size: 1.125rem;
-  width: 20px;
+  font-size: 1.2rem;
+  width: 24px;
   text-align: center;
+  color: var(--white);
 }
 
 /* ========================================
@@ -995,7 +996,7 @@ body {
 
 /* Email Button Variant */
 .btn-email {
-  background: linear-gradient(135deg, #023761 0%, #02569b 50%, #3b82f6 100%);
+  background: #02569b;
   color: var(--white);
   padding: 1rem 2rem;
   font-size: 1.0625rem;
@@ -1011,7 +1012,7 @@ body {
 
 /* Download Button Variant */
 .btn-download-direct {
-  background: linear-gradient(135deg, #059669 0%, #10b981 50%, #34d399 100%);
+  background: #02569b;
   color: var(--white);
   padding: 1rem 2rem;
   font-size: 1.0625rem;
@@ -1959,7 +1960,7 @@ Copy
 
 .metric-fill {
   height: 100%;
-  background: linear-gradient(90deg, #80aacd 0%, #02569b 100%);
+  background: #02569b;
   border-radius: var(--radius-md);
   transition: width var(--transition-slow);
 }
@@ -2304,4 +2305,79 @@ Copy
   .helpful-content-badge {
     border: 2px solid currentColor;
   }
+}
+
+/* ========================================
+   Sidebar Tool Hero Theme
+   Matches the Keyword AI blue hero treatment on non-audit sidebar pages.
+   ======================================== */
+
+.tool-hero {
+  background:
+    radial-gradient(circle at top right, rgba(75, 94, 255, 0.28) 0%, rgba(75, 94, 255, 0) 34%),
+    radial-gradient(circle at bottom left, rgba(30, 203, 212, 0.16) 0%, rgba(30, 203, 212, 0) 34%),
+    linear-gradient(135deg, #0d1640 0%, #1a226b 50%, #0f1a55 100%) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 36px !important;
+  box-shadow: 0 24px 60px rgba(11, 15, 30, 0.16) !important;
+  overflow: hidden !important;
+  position: relative !important;
+}
+
+.tool-hero .hero-icon {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  border-radius: 20px !important;
+  box-shadow: none !important;
+}
+
+.tool-hero .hero-icon i {
+  color: #1ecbd4 !important;
+}
+
+.tool-hero h1,
+.tool-hero h2 {
+  color: #ffffff !important;
+  font-family: "Syne", var(--font-primary) !important;
+  font-weight: 800 !important;
+  line-height: 1.18 !important;
+  letter-spacing: 0 !important;
+}
+
+.tool-hero p {
+  color: rgba(255, 255, 255, 0.74) !important;
+  font-family: var(--font-secondary) !important;
+  font-weight: 400 !important;
+}
+
+@media (max-width: 768px) {
+  .tool-hero {
+    border-radius: 28px !important;
+    padding: 28px 22px !important;
+  }
+}
+
+/* Unified sidebar page header */
+#main-navbar {
+  height: 70px !important;
+  min-height: 70px !important;
+  max-height: 70px !important;
+  padding: 0 !important;
+}
+
+#main-navbar .navbar-container {
+  height: 70px !important;
+  min-height: 70px !important;
+  max-height: 70px !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+#main-navbar .navbar-page-context {
+  gap: 0 !important;
+}
+
+#main-navbar .navbar-page-context strong {
+  margin: 0 !important;
 }

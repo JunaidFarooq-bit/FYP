@@ -35,11 +35,76 @@
 
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{% static 'fyp.css'%}" />
-    <link rel="stylesheet" href="{% static 'modern-style.css'%}" />
-    
+    <link rel="stylesheet" href="{% static 'modern-style.css'%}?v=20260618" />
+    <link
+      rel="stylesheet"
+      href="{% static 'sidebar-tool-theme.css' %}?v=20260618"
+    />
+    <link
+      rel="stylesheet"
+      href="{% static 'website-audit-tool.css' %}?v=20260705"
+    />
+    <style id="audit-url-input-layout-fix">
+      .input-wrap {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: var(--surface);
+        border: 1.5px solid var(--border);
+        border-radius: var(--r-md);
+        padding: 0 14px;
+        transition:
+          border-color 0.2s,
+          box-shadow 0.2s;
+      }
+      .input-wrap:focus-within {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px var(--accent-glow);
+      }
+      .input-wrap i {
+        color: var(--ink-muted);
+        font-size: 0.9rem;
+      }
+      .input-wrap input,
+      .input-wrap select {
+        border: none;
+        background: transparent;
+        width: 100%;
+        padding: 11px 0;
+        font-family: var(--font-body);
+        font-size: 0.9rem;
+        color: var(--ink);
+        outline: none;
+      }
+      body.website-audit-tool-page .audit-tool-form-card .search-input-group {
+        align-items: center !important;
+        display: flex !important;
+        gap: 12px !important;
+        padding: 0 20px !important;
+      }
+
+      body.website-audit-tool-page .audit-tool-form-card .search-icon {
+        flex: 0 0 20px !important;
+        height: 20px !important;
+        left: auto !important;
+        margin: 0 !important;
+        position: static !important;
+        top: auto !important;
+        transform: none !important;
+        width: 20px !important;
+      }
+
+      body.website-audit-tool-page .audit-tool-form-card .search-input {
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
+        padding: 0 !important;
+        width: auto !important;
+      }
+    </style>
+    <link rel="stylesheet" href="{% static 'keyword-page-system.css' %}?v=20260706-heading-lock" />
   </head>
 
-  <body>
+  <body class="website-audit-tool-page keyword-system-page">
     <!-- Loader -->
     <div id="loader">
       <div class="loader-animation">
@@ -60,8 +125,8 @@
             <h5>WEB LIFT</h5>
           </div>
           <!-- ✅ CLOSE BUTTON - Only visible on mobile -->
-          <button 
-            class="sidebar-close" 
+          <button
+            class="sidebar-close"
             id="sidebar-close"
             onclick="closeSidebar()"
             aria-label="Close sidebar"
@@ -101,62 +166,13 @@
           </div>
           {% endcomment %}
 
-          <!-- Search Form -->
-          <form
-            name="myForm"
-            id="myForm"
-            action="/show/"
-            method="post"
-            class="navbar-search"
-          >
-            {% csrf_token %}
-            <div class="search-wrapper">
-              <div class="search-input-group">
-                <i class="fas fa-search search-icon"></i>
-                <input
-                  placeholder="Enter website URL to analyze..."
-                  name="fname"
-                  autocomplete="on"
-                  type="search"
-                  id="id_url"
-                  class="search-input"
-                  aria-label="Website URL"
-                  {%
-                  if
-                  url
-                  %}value="{{url}}"
-                  {%
-                  endif
-                  %}
-                />
-              </div>
+          <div class="navbar-page-context">
+            <strong>Website Audit</strong>
+          </div>
 
-              <div class="navbar-actions">
-                <button
-                  id="analyzeBtn"
-                  onclick="myFunction()"
-                  class="btn btn-primary"
-                  type="submit"
-                >
-                  <i class="fas fa-search-plus"></i>
-                  <span>Analyze</span>
-                </button>
-
-                <a
-                  class="btn btn-primary"
-                  href="{% url 'Home' %}"
-                  class="btn btn-outline"
-                  id="try"
-                >
-                  <i class="fas fa-redo"></i>
-                  <span>New URL</span>
-                </a>
-
-                <!-- Profile Dropdown -->
-                {% include 'partials/_profile_dropdown.html' %}
-              </div>
-            </div>
-          </form>
+          <div class="navbar-actions audit-navbar-actions">
+            {% include 'partials/_profile_dropdown.html' %}
+          </div>
         </div>
       </nav>
     </header>
@@ -164,24 +180,170 @@
     <!-- Main Content Area -->
     <main class="main-content">
       <!-- Alert Messages -->
-      {% if messages %}
-        {% for message in messages %}
-        <div class="alert alert-modern alert-{{ message.tags }}" id="msg" role="alert">
-          <div class="alert-content">
-            <i class="fas {% if message.tags == 'success' %}fa-check-circle{% else %}fa-exclamation-circle{% endif %}"></i>
-            <span>{{ message }}</span>
-          </div>
-          <button class="alert-close" onclick="this.parentElement.remove()">
-            <i class="fas fa-times"></i>
-          </button>
+      {% if messages %} {% for message in messages %}
+      <div
+        class="alert alert-modern alert-{{ message.tags }}"
+        id="msg"
+        role="alert"
+      >
+        <div class="alert-content">
+          <i
+            class="fas {% if message.tags == 'success' %}fa-check-circle{% else %}fa-exclamation-circle{% endif %}"
+          ></i>
+          <span>{{ message }}</span>
         </div>
-        {% endfor %}
-      {% endif %}
+        <button class="alert-close" onclick="this.parentElement.remove()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      {% endfor %} {% endif %}
 
       <div class="container-fluid content-wrapper px-2 px-md-3">
+        <section class="tool-hero audit-tool-hero">
+          <div class="audit-hero-content">
+            <div class="hero-icon">
+              <i class="fas fa-tachometer-alt"></i>
+            </div>
+            <h2>Website Audit</h2>
+            <p>
+              Analyze technical health, content quality, structured data,
+              security, social signals, and page speed from one focused audit.
+            </p>
+            <div class="audit-hero-pills" aria-label="Audit coverage">
+              <span><i class="fas fa-file-alt"></i> Content</span>
+              <span><i class="fas fa-shield-alt"></i> Security</span>
+              <span><i class="fas fa-bolt"></i> Speed</span>
+            </div>
+            <div class="audit-depth-line">
+              <strong>Audit depth:</strong>
+              <span>360 Full signal scan</span>
+            </div>
+            <div class="audit-depth-icons" aria-label="Included checks">
+              <i class="fas fa-code"></i>
+              <i class="fas fa-server"></i>
+              <i class="fas fa-lock"></i>
+            </div>
+          </div>
+          <div class="audit-hero-visual" aria-hidden="true">
+            <div class="audit-arc arc-one"></div>
+            <div class="audit-arc arc-two"></div>
+            <div class="audit-arc arc-three"></div>
+            <span class="audit-arc-dot dot-one"></span>
+            <span class="audit-arc-dot dot-two"></span>
+            <span class="audit-arc-dot dot-three"></span>
+            <div class="audit-orbit-card card-a">
+              <i class="fas fa-code"></i>
+            </div>
+            <div class="audit-orbit-card card-b">
+              <i class="fas fa-chart-line"></i>
+            </div>
+            <div class="audit-orbit-card card-c">
+              <i class="fas fa-lock"></i>
+            </div>
+          </div>
+        </section>
+
+        <section class="tool-form-card audit-tool-form-card">
+          <label class="form-label" for="url"
+            >Enter a URL to run a website audit</label
+          >
+          <form name="myForm" id="myForm" action="/show/" method="post">
+            {% csrf_token %}
+            <div class="form-group">
+              <div class="input-wrap">
+                <i class="fas fa-globe"></i>
+                <input
+                  type="url"
+                  name="url"
+                  id="url"
+                  placeholder="https://example.com"
+                  value="{{ url|default:'' }}"
+                />
+              </div>
+            </div>
+            <div class="form-actions">
+              <button
+                id="analyzeBtn"
+                class="btn btn-primary"
+                type="submit"
+              >
+                <i class="fas fa-search-plus"></i>
+                <span>Analyze</span>
+              </button>
+              <a href="{% url 'Home' %}" class="btn btn-outline" id="try">
+                <i class="fas fa-redo"></i>
+                <span>Try New URL</span>
+              </a>
+            </div>
+          </form>
+        </section>
+
+        {% if not url %}
+        <section
+          class="analysis-section features-section"
+          aria-label="Website audit coverage"
+        >
+          <div class="section-header">
+            <div class="section-title">
+              <i class="fas fa-sparkles section-icon"></i>
+              <h2>What We Analyze</h2>
+            </div>
+          </div>
+          <div class="section-content">
+            <div class="features-grid">
+              <article class="feature-card">
+                <div class="feature-icon content-icon">
+                  <i class="fas fa-file-alt"></i>
+                </div>
+                <h3 class="feature-title">Content Quality</h3>
+                <p class="feature-description">
+                  Title, description, headings, keywords, and image alt signals.
+                </p>
+              </article>
+              <article class="feature-card">
+                <div class="feature-icon intent-icon">
+                  <i class="fas fa-project-diagram"></i>
+                </div>
+                <h3 class="feature-title">Technical SEO</h3>
+                <p class="feature-description">
+                  Crawl access, indexing, sitemap, schema, links, and server signals.
+                </p>
+              </article>
+              <article class="feature-card">
+                <div class="feature-icon technical-icon">
+                  <i class="fas fa-tachometer-alt"></i>
+                </div>
+                <h3 class="feature-title">Performance &amp; UX</h3>
+                <p class="feature-description">
+                  Core Web Vitals, mobile usability, accessibility, and page speed.
+                </p>
+              </article>
+              <article class="feature-card">
+                <div class="feature-icon authority-icon">
+                  <i class="fas fa-shield-alt"></i>
+                </div>
+                <h3 class="feature-title">Security Signals</h3>
+                <p class="feature-description">
+                  SSL status, HTTPS redirect, certificate metadata, and trust
+                  checks.
+                </p>
+              </article>
+
+            </div>
+          </div>
+        </section>
+
+
+        {% endif %} {% if url %}
         <!-- Content Analysis Section -->
         <section class="analysis-section">
-          <div class="section-header" data-toggle="collapse" data-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+          <div
+            class="section-header"
+            data-toggle="collapse"
+            data-target="#collapseOne"
+            aria-expanded="true"
+            aria-controls="collapseOne"
+          >
             <div class="section-title">
               <i class="fas fa-file-alt section-icon"></i>
               <h2>Content Analysis</h2>
@@ -352,7 +514,13 @@
 
         <!-- Structured Analysis Section -->
         <section class="analysis-section">
-          <div class="section-header" data-toggle="collapse" data-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+          <div
+            class="section-header"
+            data-toggle="collapse"
+            data-target="#collapseTwo"
+            aria-expanded="false"
+            aria-controls="collapseTwo"
+          >
             <div class="section-title">
               <i class="fas fa-sitemap section-icon"></i>
               <h2>Structured Data Analysis</h2>
@@ -473,7 +641,13 @@
 
         <!-- Technology Analysis Section -->
         <section class="analysis-section">
-          <div class="section-header" data-toggle="collapse" data-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+          <div
+            class="section-header"
+            data-toggle="collapse"
+            data-target="#collapseThree"
+            aria-expanded="false"
+            aria-controls="collapseThree"
+          >
             <div class="section-title">
               <i class="fas fa-cogs section-icon"></i>
               <h2>Technology Stack</h2>
@@ -597,7 +771,13 @@
 
         <!-- Security Analysis Section -->
         <section class="analysis-section">
-          <div class="section-header" data-toggle="collapse" data-target="#collapseFour" aria-expanded="false" aria-controls="collapseFour">
+          <div
+            class="section-header"
+            data-toggle="collapse"
+            data-target="#collapseFour"
+            aria-expanded="false"
+            aria-controls="collapseFour"
+          >
             <div class="section-title">
               <i class="fas fa-shield-alt section-icon"></i>
               <h2>Security Analysis</h2>
@@ -694,7 +874,13 @@
 
         <!-- Social Analysis Section -->
         <section class="analysis-section">
-          <div class="section-header" data-toggle="collapse" data-target="#collapseFive" aria-expanded="false" aria-controls="collapseFive">
+          <div
+            class="section-header"
+            data-toggle="collapse"
+            data-target="#collapseFive"
+            aria-expanded="false"
+            aria-controls="collapseFive"
+          >
             <div class="section-title">
               <i class="fas fa-share-alt-square section-icon"></i>
               <h2>Social Media Presence</h2>
@@ -822,7 +1008,13 @@
 
         <!-- Performance Analysis Section -->
         <section class="analysis-section">
-          <div class="section-header" data-toggle="collapse" data-target="#collapseSix" aria-expanded="false" aria-controls="collapseSix">
+          <div
+            class="section-header"
+            data-toggle="collapse"
+            data-target="#collapseSix"
+            aria-expanded="false"
+            aria-controls="collapseSix"
+          >
             <div class="section-title">
               <i class="fas fa-tachometer-alt section-icon"></i>
               <h2>Performance Metrics</h2>
@@ -952,12 +1144,16 @@
         <!-- Download Report Button -->
         <div class="report-action">
           <div class="report-buttons">
-            <a href="{% url 'report' %}" class="btn btn-download btn-download-direct">
+            <a
+              href="{% url 'report' %}"
+              class="btn btn-download btn-download-direct"
+            >
               <i class="fas fa-file-pdf"></i>
               <span>Download PDF Report</span>
             </a>
           </div>
         </div>
+        {% endif %}
       </div>
     </main>
 
@@ -983,9 +1179,9 @@
       function toggleSidebar() {
         const sidebar = document.getElementById("sidebarMenu");
         const toggler = document.getElementById("navbar-toggle");
-        
+
         sidebar.classList.toggle("show");
-        
+
         // Update aria-expanded
         const isExpanded = sidebar.classList.contains("show");
         toggler.setAttribute("aria-expanded", isExpanded);
@@ -995,19 +1191,22 @@
       function closeSidebar() {
         const sidebar = document.getElementById("sidebarMenu");
         const toggler = document.getElementById("navbar-toggle");
-        
+
         sidebar.classList.remove("show");
         toggler.setAttribute("aria-expanded", "false");
       }
 
       // ✅ Close sidebar when clicking outside (mobile only)
-      document.addEventListener("click", function(event) {
+      document.addEventListener("click", function (event) {
         const sidebar = document.getElementById("sidebarMenu");
         const toggler = document.getElementById("navbar-toggle");
-        
+
         // Only on mobile (when sidebar has show class)
         if (sidebar.classList.contains("show")) {
-          if (!sidebar.contains(event.target) && !toggler.contains(event.target)) {
+          if (
+            !sidebar.contains(event.target) &&
+            !toggler.contains(event.target)
+          ) {
             closeSidebar();
           }
         }
@@ -1088,6 +1287,6 @@
         observer.observe(card);
       });
     </script>
-  {% include 'partials/_upgrade_modal.html' %}
+    {% include 'partials/_upgrade_modal.html' %}
   </body>
 </html>

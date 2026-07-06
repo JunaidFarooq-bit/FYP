@@ -289,6 +289,9 @@ if os.getenv('USE_REDIS_CACHE', 'false').lower() == 'true':
 
 
 
+LOG_DIR = BASE_DIR / "logs"
+LOG_DIR.mkdir(exist_ok=True)
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -302,7 +305,7 @@ LOGGING = {
         "console": {"class": "logging.StreamHandler", "formatter": "verbose"},
         "file": {
             "class": "logging.handlers.RotatingFileHandler",
-            "filename": BASE_DIR / "logs" / "django.log",
+            "filename": LOG_DIR / "django.log",
             "maxBytes": 10485760,
             "backupCount": 5,
             "formatter": "verbose",
@@ -312,7 +315,7 @@ LOGGING = {
         "SEOAnalyzer": {"handlers": ["console", "file"], "level": "INFO", "propagate": False},
         "comparative_analysis": {"handlers": ["console", "file"], "level": "INFO", "propagate": False},
         "keyword_ai": {"handlers": ["console", "file"], "level": "INFO", "propagate": False},
-        "django.db.backends": {"handlers": ["console"], "level": "DEBUG", "propagate": False} if DEBUG else {"handlers": [], "level": "WARNING"},
+        "django.db.backends": {"handlers": [], "level": "WARNING", "propagate": False},
     },
 }
 

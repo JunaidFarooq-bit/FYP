@@ -201,6 +201,15 @@ class TestSubscriptionServiceUpgrade:
         assert upgraded.tier.name == 'pro'
         assert upgraded.status == 'active'
 
+    def test_upgrade_to_free_does_not_create_active_subscription(self, test_user, db):
+        SubscriptionService.create_default_tiers()
+        SubscriptionService.create_default_subscription(test_user)
+        upgraded = SubscriptionService.upgrade_subscription(test_user, 'free', 'monthly')
+        assert upgraded.tier.name == 'free'
+        assert upgraded.status == 'free_trial_used'
+        assert upgraded.current_period_end is None
+        assert upgraded.is_active() is False
+
     def test_upgrade_sets_period_end(self, test_user, db):
         SubscriptionService.create_default_tiers()
         SubscriptionService.create_default_subscription(test_user)
@@ -265,3 +274,18 @@ class TestSubscriptionSummary:
         tracker.record_audit()
         summary = SubscriptionService.get_subscription_summary(test_user)
         assert 'audits_used' in summary['usage']
+
+
+@pytest.mark.unit
+@pytest.mark.subscription
+class TestSubscriptionFeatureAccess:
+
+    def test_canceled_paid_subscription_cannot_use_premium_feature(self, test_user, basic_subscription):
+        basic_subscription.status = 'canceled'
+        basic_subscription.save()
+        assert basic_subscription.can_use_feature('pdf_export') is False
+
+    def test_active_free_subscription_cannot_use_premium_feature(self, test_user, free_subscription):
+        free_subscription.status = 'active'
+        free_subscription.save()
+        assert free_subscription.can_use_feature('ai_suggestions') is False

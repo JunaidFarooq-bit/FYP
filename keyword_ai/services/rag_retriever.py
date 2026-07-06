@@ -21,7 +21,9 @@ def retrieve_similar_analyses(
     content_embedding: np.ndarray,
     top_k: int = 5,
     min_quality_score: float = 50.0,
-    include_keywords: bool = True
+    include_keywords: bool = True,
+    exclude_url: str = None,
+    embedding_version: str = None,
 ) -> List[Dict]:
     """
     Retrieve similar content analyses using vector similarity search.
@@ -48,7 +50,9 @@ def retrieve_similar_analyses(
             content_embedding=content_embedding,
             top_k=top_k,
             min_quality_score=min_quality_score,
-            include_keywords=include_keywords
+            include_keywords=include_keywords,
+            exclude_url=exclude_url,
+            embedding_version=embedding_version,
         )
     except Exception as e:
         logger.error(f"Vector search failed: {e}")
@@ -77,7 +81,7 @@ def retrieve_by_keyword_gap(
     gap_opportunities = KeywordOpportunity.objects.filter(
         keyword__icontains=target_keyword,
         relevance_score__gte=70,
-        is_rejected=False
+        is_accepted=True
     ).select_related('content_analysis').order_by('-relevance_score')[:top_k]
     
     results = []
@@ -128,7 +132,9 @@ def format_rag_context(
         if 'top_keywords' in analysis and analysis['top_keywords']:
             section += "- Successful Keywords:\n"
             for kw in analysis['top_keywords'][:5]:
-                section += f"  • {kw['keyword']} (score: {kw['score']:.1f}, {kw.get('intent', 'unknown')})\n"
+                score = kw.get("score")
+                score_text = f"score: {score:.1f}, " if score is not None else ""
+                section += f"  - {kw['keyword']} ({score_text}{kw.get('intent', 'unknown')})\n"
         
         section += "\n"
         

@@ -250,12 +250,7 @@ class PineconeService:
                     "similarity": match.score,  # Pinecone returns similarity directly
                 }
                 if match.metadata:
-                    result.update({
-                        "url": match.metadata.get("url"),
-                        "title": match.metadata.get("title"),
-                        "quality_score": match.metadata.get("quality_score"),
-                        "analyzed_at": match.metadata.get("analyzed_at"),
-                    })
+                    result.update(dict(match.metadata))
                 formatted_results.append(result)
             
             return formatted_results
@@ -362,7 +357,7 @@ def sync_content_analysis_to_pinecone(analysis_id: Optional[int] = None) -> bool
             # Get top keywords for metadata
             keywords = KeywordOpportunity.objects.filter(
                 content_analysis=analysis,
-                is_rejected=False
+                is_accepted=True
             ).order_by('-relevance_score')[:5]
             
             # Build metadata
@@ -372,6 +367,12 @@ def sync_content_analysis_to_pinecone(analysis_id: Optional[int] = None) -> bool
                 "quality_score": float(analysis.quality_score),
                 "analyzed_at": analysis.analyzed_at.isoformat() if analysis.analyzed_at else "",
                 "top_keywords": [k.keyword for k in keywords],
+                "top_keyword_scores": [float(k.relevance_score) for k in keywords],
+                "embedding_version": (
+                    (analysis.structure_data or {})
+                    .get("_embedding", {})
+                    .get("version", "")
+                ),
                 "content_hash": analysis.content_hash,
             }
             
@@ -408,7 +409,9 @@ def sync_content_analysis_to_pinecone(analysis_id: Optional[int] = None) -> bool
 def search_similar_with_pinecone(
     content_embedding: np.ndarray,
     top_k: int = 5,
-    min_quality_score: float = 50.0
+    min_quality_score: float = 50.0,
+    exclude_url: str = None,
+    embedding_version: str = None,
 ) -> List[Dict]:
     """
     Search for similar content using Pinecone instead of pgvector.
@@ -432,13 +435,16 @@ def search_similar_with_pinecone(
     # Search Pinecone
     results = pc.search(
         query_vector=content_embedding,
-        top_k=top_k,
-        min_quality_score=min_quality_score
+        top_k=top_k + (1 if exclude_url else 0),
+        min_quality_score=min_quality_score,
+        filter_dict=({"embedding_version": embedding_version} if embedding_version else None),
     )
     
     # Format to match pgvector output structure
     formatted = []
     for r in results:
+        if exclude_url and r.get("url") == exclude_url:
+            continue
         item = {
             "url": r.get("url", ""),
             "title": r.get("title", ""),
@@ -450,10 +456,17 @@ def search_similar_with_pinecone(
         
         # Add keywords from metadata if available
         if "top_keywords" in r:
-            item["top_keywords"] = [{"keyword": k, "score": 0} for k in r["top_keywords"]]
+            scores = r.get("top_keyword_scores", [])
+            item["top_keywords"] = [
+                {
+                    "keyword": keyword,
+                    "score": scores[index] if index < len(scores) else None,
+                }
+                for index, keyword in enumerate(r["top_keywords"])
+            ]
         if "tfidf_keywords" in r:
             item["tfidf_keywords"] = r["tfidf_keywords"]
         
         formatted.append(item)
     
-    return formatted
+    return formatted[:top_k]

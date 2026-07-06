@@ -34,7 +34,7 @@
 
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{% static 'fyp.css'%}" />
-    <link rel="stylesheet" href="{% static 'modern-style.css'%}" />
+    <link rel="stylesheet" href="{% static 'modern-style.css'%}?v=20260618" />
 
     <style>
       /* Results Page Specific Styles */
@@ -385,9 +385,11 @@
         }
       }
     </style>
+      <link rel="stylesheet" href="{% static 'keyword-page-system.css' %}?v=20260706-heading-lock" />
+    <link rel="stylesheet" href="{% static 'result-page-system.css' %}?v=20260706" />
   </head>
 
-  <body>
+  <body class="keyword-system-page result-system-page">
     <!-- Loader -->
     <div id="loader">
       <div class="loader-animation">

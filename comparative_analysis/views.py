@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 import time
 import logging
 import json as json_lib
@@ -9,6 +10,7 @@ import json as json_lib
 from .models import ComparisonReport
 from .services.comparison_orchestrator import ComparisonOrchestrator
 from .utils.validators import validate_url
+from subscriptions.decorators import require_feature, track_usage
 
 logger = logging.getLogger(__name__)
 
@@ -126,11 +128,16 @@ def _parse_ranking_explanation(raw):
 # ============================================================
 
 @require_http_methods(["GET"])
+@login_required(login_url='login')
+@require_feature('competitor_analysis')
 def input_form(request):
     return render(request, 'comparative_analysis/input_form.html')
 
 
 @require_http_methods(["POST"])
+@login_required(login_url='login')
+@require_feature('competitor_analysis')
+@track_usage('competitor')
 def analyze_comparison(request):
     url_primary = request.POST.get('url_primary', '').strip()
     url_competitor = request.POST.get('url_competitor', '').strip()
@@ -208,6 +215,7 @@ def analyze_comparison(request):
             return d
 
         request.session[f'analysis_results_{report.id}'] = _strip_soup(results)
+        request._audit_performed = True
         return redirect('comparative_analysis:results', report_id=report.id)
 
     except Exception as e:
@@ -217,6 +225,8 @@ def analyze_comparison(request):
 
 
 @require_http_methods(["GET"])
+@login_required(login_url='login')
+@require_feature('competitor_analysis')
 def view_results(request, report_id):
     report = get_object_or_404(ComparisonReport, id=report_id)
 

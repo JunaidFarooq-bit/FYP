@@ -3,183 +3,618 @@
 
 {% block title %}Pricing - WebLift{% endblock %}
 
+{% block extra_css %}
+<!-- Google Fonts (match keyword_ai_suggestions.html design system) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet">
+
+<style>
+/* =============================================
+   DESIGN TOKENS — shared with keyword_ai_suggestions.html
+   ============================================= */
+.pricing-scope {
+    --ink:       #0b0f1e;
+    --ink-soft:  #374166;
+    --ink-muted: #6b75a0;
+    --surface:   #f5f7ff;
+    --card:      #ffffff;
+    --border:    #e3e8f8;
+    --border-strong: #cdd3ef;
+
+    --accent:      #3855d6;
+    --accent-dark: #243d9a;
+    --accent-glow: rgba(56,85,214,0.12);
+    --teal:        #5b7bdc;
+    --teal-light:  rgba(91,123,220,0.10);
+
+    --good:  #2f855a;
+    --warn:  #b7791f;
+    --risk:  #c05621;
+    --info:  #4a5568;
+
+    --font-display: 'Outfit', sans-serif;
+    --font-body:    'DM Sans', sans-serif;
+
+    --r-sm:  8px;
+    --r-md:  14px;
+    --r-lg:  20px;
+    --r-xl:  28px;
+    --r-2xl: 36px;
+
+    --sh-card:  0 2px 8px rgba(11,15,30,0.06), 0 8px 24px rgba(11,15,30,0.04);
+    --sh-lift:  0 8px 32px rgba(11,15,30,0.10), 0 2px 8px rgba(11,15,30,0.06);
+    --sh-hero:  0 24px 60px rgba(11,15,30,0.14);
+
+    font-family: var(--font-body);
+    color: var(--ink);
+}
+
+.pricing-scope .kw-page {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 36px 32px 72px;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+}
+
+.pricing-scope .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-display);
+    font-size: .7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .14em;
+    color: var(--accent);
+    background: var(--accent-glow);
+    padding: 5px 12px;
+    border-radius: 999px;
+}
+.pricing-scope .eyebrow.light {
+    color: #fff;
+    background: rgba(255,255,255,.14);
+    border: 1px solid rgba(255,255,255,.2);
+}
+
+/* =============================================
+   HERO
+   ============================================= */
+.pricing-scope .kw-hero {
+    background:
+        radial-gradient(circle at 76% 22%, rgba(71, 95, 255, 0.26), transparent 30%),
+        radial-gradient(circle at 92% 78%, rgba(30, 203, 212, 0.12), transparent 28%),
+        linear-gradient(135deg, #07164c 0%, #101f6e 52%, #2234b6 100%);
+    border-radius: 28px;
+    padding: 48px;
+    text-align: center;
+    box-shadow: var(--sh-hero);
+    position: relative;
+    overflow: hidden;
+}
+.pricing-scope .kw-hero::before {
+    content: '';
+    position: absolute;
+    top: -60px; right: -90px;
+    width: 420px; height: 420px;
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 50%;
+    pointer-events: none;
+}
+.pricing-scope .kw-hero::after {
+    content: '';
+    position: absolute;
+    bottom: -90px; left: 30%;
+    width: 300px; height: 300px;
+    background: radial-gradient(circle, rgba(30,203,212,.14) 0%, transparent 70%);
+    pointer-events: none;
+}
+.pricing-scope .kw-hero-inner { position: relative; z-index: 1; max-width: 680px; margin: 0 auto; }
+.pricing-scope .kw-hero h1 {
+    font-family: var(--font-display);
+    font-size: clamp(2.1rem, 3.4vw, 2.9rem);
+    font-weight: 800;
+    color: #fff;
+    line-height: 1.15;
+    margin: 14px 0 12px;
+}
+.pricing-scope .kw-hero p {
+    color: rgba(255,255,255,.78);
+    font-size: 1rem;
+    line-height: 1.65;
+}
+
+/* =============================================
+   USAGE SUMMARY
+   ============================================= */
+.pricing-scope .section-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--r-xl);
+    padding: 28px;
+    box-shadow: var(--sh-card);
+}
+.pricing-scope .section-header {
+    
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+.pricing-scope .section-header h2 {
+    font-family: var(--font-display);
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: white;
+    margin: 6px 0 0;
+}
+.pricing-scope .usage-summary-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+}
+.pricing-scope .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    padding: 20px;
+    text-align: center;
+}
+.pricing-scope .stat-value {
+    font-family: var(--font-display);
+    font-size: 1.9rem;
+    font-weight: 800;
+    color: var(--ink);
+    line-height: 1;
+    margin-bottom: 6px;
+}
+.pricing-scope .stat-label {
+    font-size: .74rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    color: var(--ink-muted);
+}
+.pricing-scope .alert-modern {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px;
+    border-radius: var(--r-md);
+    font-size: .85rem;
+    font-weight: 500;
+    border-left: 4px solid var(--good);
+    background: #f0fdf4;
+    color: #166534;
+    margin-top: 20px;
+}
+
+/* =============================================
+   PRICING CARDS
+   ============================================= */
+.pricing-scope .pricing-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 22px;
+    align-items: stretch;
+}
+.pricing-scope .price-card {
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    border-radius: var(--r-xl);
+    box-shadow: var(--sh-card);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+    transition: transform .2s ease, box-shadow .2s ease;
+}
+.pricing-scope .price-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--sh-lift);
+}
+.pricing-scope .price-card.featured {
+    border-color: var(--accent);
+    box-shadow: var(--sh-lift);
+    transform: scale(1.03);
+}
+.pricing-scope .price-card.featured:hover { transform: scale(1.03) translateY(-4px); }
+
+.pricing-scope .price-card-badge {
+    background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+    color: #fff;
+    text-align: center;
+    font-family: var(--font-display);
+    font-size: .68rem;
+    font-weight: 800;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    padding: 8px;
+}
+.pricing-scope .price-card-body {
+    padding: 32px 28px 24px;
+    text-align: center;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+.pricing-scope .price-card-title {
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 14px;
+}
+.pricing-scope .price-card-amount {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 4px;
+    margin-bottom: 4px;
+}
+.pricing-scope .price-card-amount .amount {
+    font-family: var(--font-display);
+    font-size: 2.6rem;
+    font-weight: 800;
+    color: var(--ink);
+    line-height: 1;
+}
+.pricing-scope .price-card-amount .period {
+    font-size: .9rem;
+    color: var(--ink-muted);
+    font-weight: 500;
+}
+.pricing-scope .price-card-yearly {
+    font-size: .8rem;
+    color: var(--good);
+    font-weight: 600;
+    margin-bottom: 14px;
+}
+.pricing-scope .price-card-desc {
+    font-size: .85rem;
+    color: var(--ink-muted);
+    line-height: 1.55;
+    margin-bottom: 20px;
+}
+.pricing-scope .price-card-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 0 0 20px;
+}
+.pricing-scope .price-feature-list {
+    list-style: none;
+    margin: 0 0 24px;
+    padding: 0;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex: 1;
+}
+.pricing-scope .price-feature-list li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: .87rem;
+    color: var(--ink-soft);
+}
+.pricing-scope .price-feature-list li strong { color: var(--ink); }
+.pricing-scope .price-feature-list li i {
+    color: var(--good);
+    font-size: .8rem;
+    width: 16px;
+    text-align: center;
+    flex-shrink: 0;
+}
+.pricing-scope .price-feature-list li.muted { color: var(--ink-muted); }
+.pricing-scope .price-feature-list li.muted i { color: var(--ink-muted); opacity: .5; }
+
+.pricing-scope .price-card-footer { padding: 0 28px 28px; }
+
+.pricing-scope .btn-primary-kw {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+    color: #fff;
+    border: none;
+    border-radius: var(--r-md);
+    padding: 13px 22px;
+    font-family: var(--font-display);
+    font-size: .9rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(56,85,214,.3);
+    transition: transform .15s, box-shadow .15s;
+    text-decoration: none;
+}
+.pricing-scope .btn-primary-kw:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(56,85,214,.4); color: #fff; }
+
+.pricing-scope .btn-outline-kw {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    background: transparent;
+    color: var(--ink-soft);
+    border: 1.5px solid var(--border-strong);
+    border-radius: var(--r-md);
+    padding: 12px 20px;
+    font-size: .9rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: border-color .2s, color .2s;
+}
+.pricing-scope .btn-outline-kw:hover { border-color: var(--accent); color: var(--accent); }
+
+.pricing-scope .btn-current-kw {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    background: #edf7f1;
+    color: #256244;
+    border: 1.5px solid #c9e6d2;
+    border-radius: var(--r-md);
+    padding: 12px 20px;
+    font-size: .9rem;
+    font-weight: 700;
+    cursor: default;
+}
+
+/* =============================================
+   FAQ
+   ============================================= */
+.pricing-scope .faq-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.pricing-scope .faq-item {
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    overflow: hidden;
+    background: var(--surface);
+}
+.pricing-scope .faq-question {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px 20px;
+    cursor: pointer;
+    font-family: var(--font-display);
+    font-size: .95rem;
+    font-weight: 700;
+    color: var(--ink);
+    background: var(--card);
+    border: none;
+    width: 100%;
+    text-align: left;
+}
+.pricing-scope .faq-question i {
+    color: var(--accent);
+    transition: transform .2s ease;
+    flex-shrink: 0;
+}
+.pricing-scope .faq-item.open .faq-question i { transform: rotate(180deg); }
+.pricing-scope .faq-answer {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height .25s ease;
+    background: var(--card);
+}
+.pricing-scope .faq-item.open .faq-answer { max-height: 240px; }
+.pricing-scope .faq-answer-inner {
+    padding: 0 20px 18px;
+    font-size: .87rem;
+    color: var(--ink-muted);
+    line-height: 1.65;
+}
+
+@media (max-width: 900px) {
+    .pricing-scope .usage-summary-row { grid-template-columns: 1fr; }
+    .pricing-scope .price-card.featured { transform: none; }
+    .pricing-scope .price-card.featured:hover { transform: translateY(-4px); }
+}
+@media (max-width: 640px) {
+    .pricing-scope .kw-page { padding: 24px 16px 60px; }
+    .pricing-scope .kw-hero { padding: 32px 22px; }
+}
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container py-5">
-    <!-- Header -->
-    <div class="text-center mb-5">
-        <h1 class="display-4 fw-bold">Choose Your Plan</h1>
-        <p class="lead text-muted">
-            Start with a free SEO audit. Upgrade to unlock unlimited power.
-        </p>
-    </div>
+<div class="pricing-scope">
+  <div class="kw-page">
+
+    <!-- ── HERO ── -->
+    <section class="kw-hero">
+      <div class="kw-hero-inner">
+        <span class="eyebrow light"><i class="fas fa-layer-group"></i> Plans &amp; Pricing</span>
+        <h1>Choose Your Plan</h1>
+        <p>Start with a free SEO audit. Upgrade to unlock unlimited power.</p>
+      </div>
+    </section>
 
     <!-- Current Usage Card -->
     {% if usage %}
-    <div class="row justify-content-center mb-5">
-        <div class="col-md-8">
-            <div class="card border-primary">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">Your Current Usage</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row text-center">
-                        <div class="col-4">
-                            <h3 class="mb-0">{{ usage.usage.audits_used }}</h3>
-                            <small class="text-muted">Audits Used</small>
-                        </div>
-                        <div class="col-4">
-                            <h3 class="mb-0">{{ usage.usage.audits_remaining }}</h3>
-                            <small class="text-muted">Remaining</small>
-                        </div>
-                        <div class="col-4">
-                            <h3 class="mb-0">{{ usage.tier.display_name }}</h3>
-                            <small class="text-muted">Current Plan</small>
-                        </div>
-                    </div>
-                    {% if not usage.usage.free_audit_used and usage.tier.name == 'free' %}
-                    <div class="alert alert-success mt-3 mb-0">
-                        <i class="fas fa-gift"></i> <strong>You have 1 free SEO audit available!</strong>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
+    <div class="section-card">
+      <div class="section-header">
+        <div>
+          <span class="eyebrow"><i class="fas fa-chart-pie"></i> Your Account</span>
+          <h2>Your Current Usage</h2>
         </div>
+      </div>
+      <div class="usage-summary-row">
+        <div class="stat-card">
+          <div class="stat-value">{{ usage.usage.audits_used }}</div>
+          <div class="stat-label">Audits Used</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">{{ usage.usage.audits_remaining }}</div>
+          <div class="stat-label">Remaining</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="font-size:1.3rem">{{ usage.tier.display_name }}</div>
+          <div class="stat-label">Current Plan</div>
+        </div>
+      </div>
+      {% if not usage.usage.free_audit_used and usage.tier.name == 'free' %}
+      <div class="alert-modern">
+        <i class="fas fa-gift"></i> <span><strong>You have 1 free SEO audit available!</strong></span>
+      </div>
+      {% endif %}
     </div>
     {% endif %}
 
     <!-- Pricing Cards -->
-    <div class="row g-4 justify-content-center">
-        {% for tier in tiers %}
-        <div class="col-md-3">
-            <div class="card h-100 {% if tier.name == 'pro' %}border-primary shadow-lg{% else %}{% endif %}">
-                {% if tier.name == 'pro' %}
-                <div class="card-header bg-primary text-white text-center">
-                    <span class="badge bg-warning text-dark">MOST POPULAR</span>
-                </div>
-                {% endif %}
-                <div class="card-body text-center">
-                    <h3 class="card-title">{{ tier.display_name }}</h3>
-                    <div class="mb-3">
-                        <span class="display-4">${{ tier.price_monthly }}</span>
-                        <span class="text-muted">/month</span>
-                    </div>
-                    {% if tier.price_yearly and tier.price_yearly < tier.price_monthly|add:0|add:0 %}
-                    <p class="text-success">
-                        <small>${{ tier.price_yearly }}/year (save 2 months)</small>
-                    </p>
-                    {% endif %}
-                    <p class="card-text text-muted">{{ tier.description }}</p>
-                    
-                    <hr>
-                    
-                    <ul class="list-unstyled mb-4">
-                        <li class="mb-2">
-                            {% if tier.max_audits_per_month %}
-                            <strong>{{ tier.max_audits_per_month }}</strong> audits/month
-                            {% else %}
-                            <strong>Unlimited</strong> audits
-                            {% endif %}
-                        </li>
-                        <li class="mb-2">
-                            <strong>{{ tier.max_keywords_per_analysis }}</strong> keywords/analysis
-                        </li>
-                        {% if tier.has_ai_suggestions %}
-                        <li class="mb-2"><i class="fas fa-check text-success"></i> AI suggestions</li>
-                        {% endif %}
-                        {% if tier.has_competitor_analysis %}
-                        <li class="mb-2"><i class="fas fa-check text-success"></i> Competitor analysis</li>
-                        {% endif %}
-                        {% if tier.has_pdf_export %}
-                        <li class="mb-2"><i class="fas fa-check text-success"></i> PDF export</li>
-                        {% endif %}
-                        {% if tier.has_api_access %}
-                        <li class="mb-2"><i class="fas fa-check text-success"></i> API access</li>
-                        {% endif %}
-                    </ul>
-                </div>
-                <div class="card-footer text-center">
-                    {% if current_tier and current_tier.name == tier.name %}
-                        {% if subscription.status == 'active' %}
-                        <button class="btn btn-success w-100" disabled>
-                            <i class="fas fa-check"></i> Current Plan
-                        </button>
-                        {% else %}
-                        <form method="post" action="{% url 'subscriptions:payment_instructions' %}">
-                            {% csrf_token %}
-                            <input type="hidden" name="tier" value="{{ tier.name }}">
-                            <button type="submit" class="btn btn-primary w-100">
-                                Reactivate Plan
-                            </button>
-                        </form>
-                        {% endif %}
-                    {% else %}
-                        <form method="post" action="{% url 'subscriptions:payment_instructions' %}">
-                            {% csrf_token %}
-                            <input type="hidden" name="tier" value="{{ tier.name }}">
-                            {% if tier.price_monthly == 0 %}
-                            <button type="submit" class="btn btn-outline-primary w-100">
-                                Start Free
-                            </button>
-                            {% else %}
-                            <button type="submit" class="btn btn-primary w-100 {% if tier.name == 'pro' %}btn-lg{% endif %}">
-                                Pay via Bank Transfer
-                            </button>
-                            {% endif %}
-                        </form>
-                    {% endif %}
-                </div>
-            </div>
+    <div class="pricing-grid">
+      {% for tier in tiers %}
+      <div class="price-card {% if tier.name == 'pro' %}featured{% endif %}">
+        {% if tier.name == 'pro' %}
+        <div class="price-card-badge"><i class="fas fa-star"></i> Most Popular</div>
+        {% endif %}
+        <div class="price-card-body">
+          <div class="price-card-title">{{ tier.display_name }}</div>
+          <div class="price-card-amount">
+            <span class="amount">${{ tier.price_monthly }}</span>
+            <span class="period">/month</span>
+          </div>
+          {% if tier.price_yearly and tier.price_yearly < tier.price_monthly|add:0|add:0 %}
+          <div class="price-card-yearly">${{ tier.price_yearly }}/year (save 2 months)</div>
+          {% endif %}
+          <p class="price-card-desc">{{ tier.description }}</p>
+
+          <div class="price-card-divider"></div>
+
+          <ul class="price-feature-list">
+            <li>
+              <i class="fas fa-check"></i>
+              {% if tier.max_audits_per_month %}
+              <span><strong>{{ tier.max_audits_per_month }}</strong> audits/month</span>
+              {% else %}
+              <span><strong>Unlimited</strong> audits</span>
+              {% endif %}
+            </li>
+            <li>
+              <i class="fas fa-check"></i>
+              <span><strong>{{ tier.max_keywords_per_analysis }}</strong> keywords/analysis</span>
+            </li>
+            {% if tier.has_ai_suggestions %}
+            <li><i class="fas fa-check"></i> <span>AI suggestions</span></li>
+            {% endif %}
+            {% if tier.has_competitor_analysis %}
+            <li><i class="fas fa-check"></i> <span>Competitor analysis</span></li>
+            {% endif %}
+            {% if tier.has_pdf_export %}
+            <li><i class="fas fa-check"></i> <span>PDF export</span></li>
+            {% endif %}
+            {% if tier.has_api_access %}
+            <li><i class="fas fa-check"></i> <span>API access</span></li>
+            {% endif %}
+          </ul>
         </div>
-        {% endfor %}
+        <div class="price-card-footer">
+          {% if current_tier and current_tier.name == tier.name %}
+            {% if subscription.status == 'active' %}
+            <button class="btn-current-kw" disabled>
+              <i class="fas fa-check"></i> Current Plan
+            </button>
+            {% else %}
+            <form method="post" action="{% url 'subscriptions:payment_instructions' %}">
+              {% csrf_token %}
+              <input type="hidden" name="tier" value="{{ tier.name }}">
+              <button type="submit" class="btn-primary-kw">
+                Reactivate Plan
+              </button>
+            </form>
+            {% endif %}
+          {% else %}
+            <form method="post" action="{% url 'subscriptions:payment_instructions' %}">
+              {% csrf_token %}
+              <input type="hidden" name="tier" value="{{ tier.name }}">
+              {% if tier.price_monthly == 0 %}
+              <button type="submit" class="btn-outline-kw">
+                Start Free
+              </button>
+              {% else %}
+              <button type="submit" class="btn-primary-kw">
+                Pay via Bank Transfer
+              </button>
+              {% endif %}
+            </form>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
     </div>
 
     <!-- FAQ Section -->
-    <div class="row justify-content-center mt-5">
-        <div class="col-md-8">
-            <h3 class="text-center mb-4">Frequently Asked Questions</h3>
-            <div class="accordion" id="faqAccordion">
-                <div class="accordion-item">
-                    <h2 class="accordion-header">
-                        <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#faq1">
-                            What happens after my free audit?
-                        </button>
-                    </h2>
-                    <div id="faq1" class="accordion-collapse collapse show" data-bs-parent="#faqAccordion">
-                        <div class="accordion-body">
-                            After using your free SEO audit, you'll need to subscribe to run more audits. 
-                            Your free audit results are saved and accessible anytime.
-                        </div>
-                    </div>
-                </div>
-                <div class="accordion-item">
-                    <h2 class="accordion-header">
-                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq2">
-                            Can I cancel my subscription anytime?
-                        </button>
-                    </h2>
-                    <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
-                        <div class="accordion-body">
-                            Yes! You can cancel anytime from your dashboard. You'll continue to have access 
-                            until the end of your billing period.
-                        </div>
-                    </div>
-                </div>
-                <div class="accordion-item">
-                    <h2 class="accordion-header">
-                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq3">
-                            How do I pay for my subscription?
-                        </button>
-                    </h2>
-                    <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
-                        <div class="accordion-body">
-                            We accept payments via direct bank transfer to our account. After selecting a plan, 
-                            you'll receive bank transfer instructions. Once we receive and verify your payment 
-                            (usually within 24 hours), your subscription will be activated automatically.
-                        </div>
-                    </div>
-                </div>
-            </div>
+    <div class="section-card">
+      <div class="section-header">
+        <div>
+          <span class="eyebrow"><i class="fas fa-circle-question"></i> Help</span>
+          <h2>Frequently Asked Questions</h2>
         </div>
+      </div>
+      <div class="faq-list" id="faqAccordion">
+        <div class="faq-item open">
+          <button type="button" class="faq-question" onclick="toggleFaq(this)">
+            What happens after my free audit?
+            <i class="fas fa-chevron-down"></i>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-inner">
+              After using your free SEO audit, you'll need to subscribe to run more audits.
+              Your free audit results are saved and accessible anytime.
+            </div>
+          </div>
+        </div>
+        <div class="faq-item">
+          <button type="button" class="faq-question" onclick="toggleFaq(this)">
+            Can I cancel my subscription anytime?
+            <i class="fas fa-chevron-down"></i>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-inner">
+              Yes! You can cancel anytime from your dashboard. You'll continue to have access
+              until the end of your billing period.
+            </div>
+          </div>
+        </div>
+        <div class="faq-item">
+          <button type="button" class="faq-question" onclick="toggleFaq(this)">
+            How do I pay for my subscription?
+            <i class="fas fa-chevron-down"></i>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-inner">
+              We accept payments via direct bank transfer to our account. After selecting a plan,
+              you'll receive bank transfer instructions. Once we receive and verify your payment
+              (usually within 24 hours), your subscription will be activated automatically.
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
+
+  </div>
 </div>
+
+<script>
+function toggleFaq(btn) {
+  const item = btn.closest('.faq-item');
+  const wasOpen = item.classList.contains('open');
+  item.parentElement.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
+  if (!wasOpen) item.classList.add('open');
+}
+</script>
 {% endblock %}

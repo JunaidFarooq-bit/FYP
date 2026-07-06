@@ -34,7 +34,7 @@
 
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{% static 'fyp.css'%}" />
-    <link rel="stylesheet" href="{% static 'modern-style.css'%}" />
+    <link rel="stylesheet" href="{% static 'modern-style.css'%}?v=20260618" />
 
     <style>
       .tool-hero {
@@ -248,6 +248,7 @@
         }
       }
     </style>
+    <link rel="stylesheet" href="{% static 'sidebar-tool-theme.css' %}?v=20260618" />
   </head>
 
   <body>
@@ -307,8 +308,12 @@
           </div>
           {% endcomment %}
 
-          <!-- Navbar actions (no search on tool pages) -->
-          <div style="flex: 1"></div>
+          <div class="navbar-page-context">
+            <span class="navbar-eyebrow">Workspace</span>
+            <i class="fas fa-chevron-right navbar-crumb-icon"></i>
+            <strong>Domain Authority</strong>
+          </div>
+
           <div class="navbar-actions" style="margin-left: auto">
             {% include 'partials/_profile_dropdown.html' %}
           </div>
@@ -391,6 +396,39 @@
             </div>
           </form>
         </div>
+
+        <section class="analysis-section features-section">
+          <div class="section-header">
+            <div class="section-title">
+              <i class="fas fa-sparkles section-icon"></i>
+              <h2>What We Analyze</h2>
+            </div>
+          </div>
+          <div class="section-content">
+            <div class="features-grid">
+              <div class="feature-card">
+                <div class="feature-icon"><i class="fas fa-globe"></i></div>
+                <h3 class="feature-title">Domain Strength</h3>
+                <p class="feature-description">A Moz-based authority score estimating how likely the domain is to rank.</p>
+              </div>
+              <div class="feature-card">
+                <div class="feature-icon"><i class="fas fa-link"></i></div>
+                <h3 class="feature-title">Link Equity</h3>
+                <p class="feature-description">Signals from backlinks and linking domains that support domain authority.</p>
+              </div>
+              <div class="feature-card">
+                <div class="feature-icon"><i class="fas fa-chart-line"></i></div>
+                <h3 class="feature-title">Ranking Potential</h3>
+                <p class="feature-description">A directional view of how competitive the domain may be in SERPs.</p>
+              </div>
+              <div class="feature-card">
+                <div class="feature-icon"><i class="fas fa-shield-alt"></i></div>
+                <h3 class="feature-title">Trust Indicators</h3>
+                <p class="feature-description">Authority signals that help benchmark credibility against competitors.</p>
+              </div>
+            </div>
+          </div>
+        </section>
 
         <!-- Results (conditional) -->
         {% if da %}

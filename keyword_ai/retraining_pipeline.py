@@ -23,7 +23,7 @@ class RetrainingPipeline:
     
     MODEL_CONFIGS = {
         "relevance_scorer_v2": {
-            "min_samples": 100,
+            "min_samples": 30,
             "retrain_frequency_days": 30,
             "performance_threshold": 0.60,  # 60% acceptance rate
         },
@@ -81,14 +81,23 @@ class RetrainingPipeline:
         
         since = timezone.now() - timedelta(days=days)
         
-        # Get feedback for the specified model type
+        # Accepted/implemented and rejected actions are the relevance labels.
+        # KeywordOpportunity.keyword_type describes discovery source, not model name.
         feedback = SuggestionFeedback.objects.filter(
             timestamp__gte=since,
-            opportunity__keyword_type=model_name.replace('_', ''),
-        ).select_related('opportunity', 'opportunity__content_analysis')
-        
-        if feedback.count() < 50:
-            logger.warning(f"Insufficient feedback for {model_name}: {feedback.count()} samples")
+            user_action__in=["accepted", "implemented", "rejected"],
+        ).select_related("opportunity", "opportunity__content_analysis").order_by(
+            "opportunity_id", "-timestamp"
+        )
+
+        # Keep the latest decisive action for each opportunity.
+        latest_by_opportunity = {}
+        for item in feedback:
+            latest_by_opportunity.setdefault(item.opportunity_id, item)
+        feedback = list(latest_by_opportunity.values())
+
+        if len(feedback) < 20:
+            logger.warning(f"Insufficient feedback for {model_name}: {len(feedback)} samples")
             return None
         
         # Prepare labeled dataset
@@ -108,6 +117,7 @@ class RetrainingPipeline:
                 "label": label,
                 "user_rating": fb.rating,
                 "feedback_id": fb.id,
+                "content_url": content.url,
             })
         
         logger.info(f"Prepared {len(training_data)} training samples for {model_name}")
@@ -122,57 +132,110 @@ class RetrainingPipeline:
     
     @staticmethod
     def retrain_relevance_scorer(data: Dict) -> Dict:
-        """
-        Retrain the relevance scorer v2 model.
-        
-        Args:
-            data: Training data prepared by prepare_training_data
-            
-        Returns:
-            Dict with training results
-        """
+        """Evaluate with URL-grouped holdout data and deploy only when mature."""
+        from sklearn.metrics import accuracy_score
+        from sklearn.model_selection import GroupShuffleSplit
         from .ml_models.relevance_scorer_v2 import (
             KeywordFeatureExtractor,
             train_relevance_model,
         )
-        
-        logger.info("Starting relevance scorer retraining...")
-        
-        # Extract features for each sample
+
+        samples = data.get("data", [])
+        if len(samples) < 50:
+            return {
+                "success": False,
+                "deployed": False,
+                "error": f"At least 50 decisive feedback samples are required; found {len(samples)}.",
+            }
+
+        features = []
+        labels = []
+        groups = []
         training_pairs = []
-        extractor = KeywordFeatureExtractor()
-        
-        for sample in data["data"]:
+        for sample in samples:
             try:
-                features = extractor.extract_features(sample["keyword"])
-                label = sample["relevance_score"] / 100.0  # Normalize to 0-1
-                training_pairs.append((sample["keyword"], features, label))
-            except Exception as e:
-                logger.warning(f"Failed to extract features for {sample['keyword']}: {e}")
-        
-        if len(training_pairs) < 50:
+                embedding = sample.get("content_embedding")
+                embedding = np.asarray(embedding, dtype=np.float32) if embedding else None
+                extractor = KeywordFeatureExtractor(content_embedding=embedding)
+                vector = extractor.extract_features(sample["keyword"])
+                label = float(sample["label"])
+                features.append(vector)
+                labels.append(label)
+                groups.append(sample.get("content_url") or f"unknown-{sample['feedback_id']}")
+                training_pairs.append((sample["keyword"], vector, label))
+            except Exception as exc:
+                logger.warning("Feedback feature extraction failed: %s", exc)
+
+        unique_groups = set(groups)
+        if len(features) < 50 or len(unique_groups) < 5:
             return {
                 "success": False,
-                "error": f"Insufficient training data: {len(training_pairs)} samples",
+                "deployed": False,
+                "error": "Need at least 50 usable decisions across five different URLs.",
             }
-        
-        # Train model
-        try:
-            model, scaler = train_relevance_model(training_pairs)
-            
+
+        splitter = GroupShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
+        train_idx, test_idx = next(
+            splitter.split(np.asarray(features), np.asarray(labels), groups=np.asarray(groups))
+        )
+        train_pairs = [training_pairs[index] for index in train_idx]
+        model, scaler = train_relevance_model(train_pairs, save_model=False)
+
+        test_x = scaler.transform(np.asarray([features[index] for index in test_idx]))
+        actual = np.asarray([labels[index] for index in test_idx])
+        predictions = model.predict(test_x)
+        predicted_labels = (predictions >= 0.5).astype(int)
+        accuracy = float(accuracy_score(actual, predicted_labels))
+
+        deploy = len(training_pairs) >= 200 and accuracy >= 0.60
+        if deploy:
+            train_relevance_model(training_pairs, save_model=True)
+
+        return {
+            "success": deploy,
+            "evaluated": True,
+            "deployed": deploy,
+            "model_name": "relevance_scorer_v2",
+            "training_samples": len(train_idx),
+            "holdout_samples": len(test_idx),
+            "url_groups": len(unique_groups),
+            "holdout_accuracy": round(accuracy, 4),
+            "reason": (
+                "Model passed grouped holdout evaluation and was deployed."
+                if deploy
+                else "Provisional evaluation only; deployment needs 200 decisions and 60% grouped holdout accuracy."
+            ),
+        }
+    @staticmethod
+    def maybe_retrain_relevance_scorer() -> Dict:
+        """Retrain at feedback milestones without doing work after every click."""
+        from .models import SuggestionFeedback
+
+        decisive_count = SuggestionFeedback.objects.filter(
+            user_action__in=["accepted", "implemented", "rejected"]
+        ).count()
+        if decisive_count < 50 or decisive_count % 25 != 0:
             return {
-                "success": True,
-                "model_name": "relevance_scorer_v2",
-                "training_samples": len(training_pairs),
-                "message": "Model retrained successfully",
+                "triggered": False,
+                "feedback_count": decisive_count,
+                "reason": "Waiting for the next feedback milestone",
             }
-        except Exception as e:
-            logger.error(f"Training failed: {e}")
+
+        data = RetrainingPipeline.prepare_training_data("relevance_scorer_v2")
+        if not data:
             return {
-                "success": False,
-                "error": str(e),
+                "triggered": False,
+                "feedback_count": decisive_count,
+                "reason": "Insufficient usable feedback",
             }
-    
+        result = RetrainingPipeline.retrain_relevance_scorer(data)
+        return {
+            "triggered": bool(result.get("success")),
+            "feedback_count": decisive_count,
+            **result,
+        }
+
+
     @staticmethod
     def run_full_retraining() -> Dict:
         """

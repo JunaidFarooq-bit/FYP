@@ -5,9 +5,10 @@ Optimizes model loading by maintaining singleton instances
 and providing efficient model access patterns.
 """
 import threading
+import os
 import logging
 from typing import Optional, Dict, Any
-from sentence_transformers import SentenceTransformer
+from sentence_transformers import SentenceTransformer, CrossEncoder
 import torch
 from django.conf import settings
 
@@ -52,7 +53,7 @@ class ModelManager:
         else:
             return 'cpu'
     
-    def get_embedding_model(self, model_name: str = 'all-MiniLM-L6-v2') -> SentenceTransformer:
+    def get_embedding_model(self, model_name: str = None) -> SentenceTransformer:
         """
         Get or load the sentence transformer model.
         
@@ -62,6 +63,7 @@ class ModelManager:
         Returns:
             SentenceTransformer instance
         """
+        model_name = model_name or os.getenv('KEYWORD_EMBEDDING_MODEL', 'BAAI/bge-small-en-v1.5')
         cache_key = f'embedding_{model_name}'
         
         if cache_key not in self._models:
@@ -86,7 +88,22 @@ class ModelManager:
         
         return self._models[cache_key]
     
-    def get_model_info(self, model_name: str = 'all-MiniLM-L6-v2') -> Dict[str, Any]:
+    def get_reranker_model(self, model_name: str = None):
+        """Get the shared local cross-encoder used for candidate reranking."""
+        model_name = model_name or os.getenv(
+            "KEYWORD_RERANKER_MODEL",
+            "cross-encoder/ms-marco-MiniLM-L6-v2",
+        )
+        cache_key = f"reranker_{model_name}"
+        if cache_key not in self._models:
+            with self._lock:
+                if cache_key not in self._models:
+                    logger.info("Loading keyword reranker: %s", model_name)
+                    self._models[cache_key] = CrossEncoder(model_name, device=self._device)
+        return self._models[cache_key]
+
+
+    def get_model_info(self, model_name: str = None) -> Dict[str, Any]:
         """
         Get information about a loaded model.
         
@@ -96,6 +113,7 @@ class ModelManager:
         Returns:
             Dictionary with model information
         """
+        model_name = model_name or os.getenv('KEYWORD_EMBEDDING_MODEL', 'BAAI/bge-small-en-v1.5')
         cache_key = f'embedding_{model_name}'
         
         if cache_key not in self._models:
@@ -110,13 +128,14 @@ class ModelManager:
             'embedding_dimension': model.get_sentence_embedding_dimension(),
         }
     
-    def unload_model(self, model_name: str = 'all-MiniLM-L6-v2'):
+    def unload_model(self, model_name: str = None):
         """
         Unload a model to free memory.
         
         Args:
             model_name: Name of the model to unload
         """
+        model_name = model_name or os.getenv('KEYWORD_EMBEDDING_MODEL', 'BAAI/bge-small-en-v1.5')
         cache_key = f'embedding_{model_name}'
         
         if cache_key in self._models:
@@ -158,7 +177,7 @@ class ModelManager:
 model_manager = ModelManager()
 
 
-def get_embedding_model(model_name: str = 'all-MiniLM-L6-v2') -> SentenceTransformer:
+def get_embedding_model(model_name: str = None) -> SentenceTransformer:
     """
     Convenience function to get the embedding model.
     
@@ -171,7 +190,7 @@ def get_embedding_model(model_name: str = 'all-MiniLM-L6-v2') -> SentenceTransfo
     return model_manager.get_embedding_model(model_name)
 
 
-def get_model_info(model_name: str = 'all-MiniLM-L6-v2') -> Dict[str, Any]:
+def get_model_info(model_name: str = None) -> Dict[str, Any]:
     """
     Convenience function to get model information.
     
@@ -182,3 +201,7 @@ def get_model_info(model_name: str = 'all-MiniLM-L6-v2') -> Dict[str, Any]:
         Dictionary with model information
     """
     return model_manager.get_model_info(model_name)
+
+
+def get_reranker_model(model_name: str = None):
+    return model_manager.get_reranker_model(model_name)

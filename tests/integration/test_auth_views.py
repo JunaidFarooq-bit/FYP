@@ -213,6 +213,26 @@ class TestPasswordReset:
         }, follow=True)
         assert response.status_code in (200, 302)
 
+    def test_change_password_ignores_tampered_user_id(self, client, test_user, another_user):
+        from SEOAnalyzer.models import Profile
+        import uuid
+
+        profile, _ = Profile.objects.get_or_create(user=test_user)
+        token = uuid.uuid4()
+        profile.forget_password_token = str(token)
+        profile.save()
+
+        client.post(f'/change-password/{token}/', {
+            'new_password': 'OwnerNewPass789!',
+            'reconfirm_password': 'OwnerNewPass789!',
+            'user_id': another_user.id,
+        }, follow=True)
+
+        test_user.refresh_from_db()
+        another_user.refresh_from_db()
+        assert test_user.check_password('OwnerNewPass789!')
+        assert not another_user.check_password('OwnerNewPass789!')
+
 
 @pytest.mark.integration
 @pytest.mark.auth

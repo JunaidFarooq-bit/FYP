@@ -1,0 +1,17 @@
+[
+  {
+    "domain": "healthcare",
+    "predicted": ["telehealth appointment scheduling", "patient portal software", "core web vitals"],
+    "accepted": ["telehealth appointment scheduling", "patient portal software"]
+  },
+  {
+    "domain": "legal",
+    "predicted": ["employment contract lawyer", "wrongful termination advice", "affiliate marketing"],
+    "accepted": ["employment contract lawyer", "wrongful termination advice"]
+  },
+  {
+    "domain": "saas",
+    "predicted": ["workflow automation software", "business process integrations", "commerce infrastructure operational"],
+    "accepted": ["workflow automation software", "business process integrations"]
+  }
+]

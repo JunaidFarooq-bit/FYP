@@ -118,6 +118,13 @@ class TrafficSignals:
     data_source: str = "estimated"
     last_updated: str = None
     provider_used: str = ""  # Which API provided the data
+    provenance: str = "heuristic_fallback"
+    confidence: str = "low"
+    dataset_version: str = ""
+    demand_level: str = "Medium"
+    modeled_range: str = "500-5K"
+    commercial_value: str = "Low"
+    competition_band: str = "Moderate"
 
     def __post_init__(self):
         if self.last_updated is None:
@@ -285,7 +292,7 @@ class TrafficEnricher:
             return None
         return self.data_aggregator.get_keyword_metrics(keyword)
 
-    def _estimate_from_keyword(self, keyword: str, real_metrics: Optional[KeywordMetrics] = None) -> TrafficSignals:
+    def _estimate_from_keyword(self, keyword: str, real_metrics: Optional[KeywordMetrics] = None, llm_estimate=None) -> TrafficSignals:
         """
         Build traffic signals from real data or estimation.
         
@@ -300,122 +307,65 @@ class TrafficEnricher:
         # Base signals
         signals = TrafficSignals(keyword=keyword)
         
-        # ===== USE REAL DATA IF AVAILABLE =====
-        if real_metrics and real_metrics.monthly_volume:
+        # ===== MEASURED PROVIDER DATA OR TRANSPARENT OFFLINE BAND =====
+        if real_metrics and real_metrics.monthly_volume and real_metrics.data_source != "estimated":
             signals.monthly_volume = real_metrics.monthly_volume
-            signals.volume_range = real_metrics.volume_range if hasattr(real_metrics, 'volume_range') else ""
+            if real_metrics.volume_range_low and real_metrics.volume_range_high:
+                signals.volume_range = f"{real_metrics.volume_range_low:,}-{real_metrics.volume_range_high:,}"
             signals.difficulty_score = real_metrics.keyword_difficulty
             signals.cpc_value = real_metrics.cpc
             signals.competition_index = real_metrics.competition_index
             signals.competition_level = real_metrics.competition_level or "Medium"
+            signals.competition_band = signals.competition_level
             signals.data_source = real_metrics.data_source
             signals.provider_used = real_metrics.data_source
-            
-            # Map real volume to category for compatibility
+            signals.provenance = "measured"
+            signals.confidence = "high"
             vol = real_metrics.monthly_volume
-            if vol >= 100000:
-                signals.estimated_volume = "Very High"
-            elif vol >= 10000:
-                signals.estimated_volume = "High"
-            elif vol >= 1000:
-                signals.estimated_volume = "Medium"
-            elif vol >= 100:
-                signals.estimated_volume = "Low"
-            else:
-                signals.estimated_volume = "Very Low"
-            
-            # Use real difficulty if available
+            signals.demand_level = (
+                "Very High" if vol >= 100000 else "High" if vol >= 10000
+                else "Medium" if vol >= 1000 else "Low" if vol >= 100 else "Very Low"
+            )
+            signals.estimated_volume = signals.demand_level
+            signals.modeled_range = signals.volume_range
             if real_metrics.keyword_difficulty is not None:
                 diff = real_metrics.keyword_difficulty
-                signals.keyword_difficulty = "Easy" if diff < 30 else "Medium" if diff < 60 else "Hard" if diff < 80 else "Very Hard"
-            
-            # Use real CPC for signal
-            if real_metrics.cpc:
-                cpc = real_metrics.cpc
-                signals.cpc_signal = "Low" if cpc < 1 else "Medium" if cpc < 3 else "High" if cpc < 5 else "Very High"
-        
-        elif self.use_llm_estimation:
-            # ===== FALLBACK: Use LLM for intelligent estimation =====
-            signals.data_source = "llm_estimated"
-            logger.info(f"[TRAFFIC-LlM] No real data for '{keyword}' - using LLM estimation")
-            try:
-                from .llm_traffic_estimator import estimate_keyword_traffic_llm
-                llm_estimate = estimate_keyword_traffic_llm(keyword, page_topic="", target_region="GLOBAL")
-                
-                signals.monthly_volume = llm_estimate.monthly_volume
-                signals.difficulty_score = llm_estimate.keyword_difficulty
-                signals.cpc_value = llm_estimate.cpc_usd
-                signals.competition_level = llm_estimate.competition_level
-                signals.intent = llm_estimate.search_intent.capitalize()
-                
-                logger.info(f"[TRAFFIC-LlM] '{keyword}': vol={llm_estimate.monthly_volume}, cpc=${llm_estimate.cpc_usd}, diff={llm_estimate.keyword_difficulty}, conf={llm_estimate.volume_confidence}")
-                
-                # Map volume to category
-                vol = llm_estimate.monthly_volume
-                if vol >= 100000:
-                    signals.estimated_volume = "Very High"
-                    signals.volume_range = "50K-500K"
-                elif vol >= 10000:
-                    signals.estimated_volume = "High"
-                    signals.volume_range = "5K-50K"
-                elif vol >= 1000:
-                    signals.estimated_volume = "Medium"
-                    signals.volume_range = "500-5K"
-                elif vol >= 100:
-                    signals.estimated_volume = "Low"
-                    signals.volume_range = "10-500"
-                else:
-                    signals.estimated_volume = "Very Low"
-                    signals.volume_range = "<10"
-                    
-                # Map CPC to signal
-                cpc = llm_estimate.cpc_usd
-                signals.cpc_signal = "Low" if cpc < 1 else "Medium" if cpc < 3 else "High" if cpc < 5 else "Very High"
-                
-            except Exception as e:
-                logger.warning(f"LLM traffic estimation failed for '{keyword}', using heuristic fallback: {e}")
-                # ===== LAST RESORT: Heuristic based on keyword length =====
-                signals.data_source = "estimated_heuristic"
-                if word_count >= 5:
-                    signals.estimated_volume = "Low"
-                    signals.volume_range = "10-500"
-                    signals.monthly_volume = 100
-                elif word_count == 4:
-                    signals.estimated_volume = "Medium"
-                    signals.volume_range = "500-5K"
-                    signals.monthly_volume = 1000
-                elif word_count == 3:
-                    signals.estimated_volume = "High"
-                    signals.volume_range = "5K-50K"
-                    signals.monthly_volume = 10000
-                else:
-                    signals.estimated_volume = "Very High"
-                    signals.volume_range = "50K-500K"
-                    signals.monthly_volume = 100000
+                signals.keyword_difficulty = (
+                    "Easy" if diff < 30 else "Moderate" if diff < 60
+                    else "Hard" if diff < 80 else "Very Hard"
+                )
+            if real_metrics.cpc is not None:
+                signals.commercial_value = (
+                    "Low" if real_metrics.cpc < 1 else
+                    "Medium" if real_metrics.cpc < 3 else "High"
+                )
+                signals.cpc_signal = signals.commercial_value
         else:
-            # ===== FALLBACK: Heuristic based on keyword length =====
-            signals.data_source = "estimated_heuristic"
-            logger.info(f"[TRAFFIC-HEURISTIC] '{keyword}' - using word-count heuristic (LLM disabled or failed)")
-            if word_count >= 5:
-                signals.estimated_volume = "Low"
-                signals.volume_range = "10-500"
-                signals.monthly_volume = 100
-            elif word_count == 4:
-                signals.estimated_volume = "Medium"
-                signals.volume_range = "500-5K"
-                signals.monthly_volume = 1000
-            elif word_count == 3:
-                signals.estimated_volume = "High"
-                signals.volume_range = "5K-50K"
-                signals.monthly_volume = 10000
-            else:
-                signals.estimated_volume = "Very High"
-                signals.volume_range = "50K-500K"
-                signals.monthly_volume = 100000
-        
+            from .offline_benchmark import classify_keyword_opportunity
+            modeled = classify_keyword_opportunity(keyword)
+            signals.monthly_volume = None
+            signals.cpc_value = None
+            signals.difficulty_score = None
+            signals.competition_index = None
+            signals.data_source = modeled["provenance"]
+            signals.provenance = modeled["provenance"]
+            signals.confidence = modeled["confidence"]
+            signals.dataset_version = modeled["dataset_version"]
+            signals.demand_level = modeled["demand_level"]
+            signals.estimated_volume = modeled["demand_level"]
+            signals.modeled_range = modeled["modeled_range"]
+            signals.volume_range = modeled["modeled_range"]
+            signals.commercial_value = modeled["commercial_value"]
+            signals.cpc_signal = modeled["commercial_value"]
+            signals.competition_band = modeled["competition_band"]
+            signals.competition_level = modeled["competition_band"]
+            signals.keyword_difficulty = modeled["competition_band"]
+            signals.trend_status = "Not measured"
+            signals.trend_score = 50.0
+            signals.traffic_velocity = "Unknown"
+
         # Adjust for question keywords (typically lower volume but high intent)
         if has_question_intent(keyword):
-            signals.estimated_volume = "Medium" if signals.estimated_volume == "Very High" else "Low"
             signals.intent = "Informational"
             signals.serp_opportunities.append("people_also_ask")
             signals.serp_opportunities.append("featured_snippet")
@@ -435,90 +385,25 @@ class TrafficEnricher:
             signals.funnel_stage = "Consideration"
             signals.serp_opportunities.append("featured_snippet")
         
-        # ===== ESTIMATE KEYWORD DIFFICULTY =====
-        # Based on length, commercial terms, and competition indicators
-        difficulty_score = 0
-        
-        if word_count <= 2:
-            difficulty_score += 40  # Head terms are hard
-        elif word_count == 3:
-            difficulty_score += 25
-        elif word_count >= 5:
-            difficulty_score += 10  # Long-tail is easier
-        
-        if signals.intent in ["Transactional", "Commercial"]:
-            difficulty_score += 20  # Money keywords are competitive
-        
-        if any(ind in keyword_lower for ind in ['best', 'top', 'review']):
-            difficulty_score += 15
-        
-        if difficulty_score >= 70:
-            signals.keyword_difficulty = "Very Hard"
-        elif difficulty_score >= 50:
-            signals.keyword_difficulty = "Hard"
-        elif difficulty_score >= 30:
-            signals.keyword_difficulty = "Medium"
-        else:
-            signals.keyword_difficulty = "Easy"
-        
-        # ===== DETECT SEASONAL/TRENDING PATTERNS =====
-        seasonal_keywords = {
-            'christmas': 12, 'holiday': 12, 'black friday': 11, 'cyber monday': 11,
-            'new year': 1, 'valentine': 2, 'easter': 4, 'summer': 6,
-            'back to school': 8, 'halloween': 10, 'thanksgiving': 11,
-            'winter': 12, 'spring': 3, 'autumn': 9, 'fall': 9
-        }
-        
-        current_month = datetime.now().month
-        for season, month in seasonal_keywords.items():
-            if season in keyword_lower:
-                month_diff = abs(current_month - month)
-                if month_diff <= 1:
-                    signals.trend_status = "🔥 TRENDING NOW"
-                    signals.trend_score = 90.0
-                    signals.traffic_velocity = "Fast"
-                elif month_diff <= 2:
-                    signals.trend_status = "📈 RISING"
-                    signals.trend_score = 70.0
-                    signals.traffic_velocity = "Moderate"
-                else:
-                    signals.trend_status = "📉 DECLINING"
-                    signals.trend_score = 30.0
-                break
-        
-        # ===== DETECT TECH TRENDS (2024-2025) =====
-        trending_tech = [
-            'ai', 'artificial intelligence', 'chatgpt', 'llm', 'machine learning',
-            'automation', 'n8n', 'make.com', 'zapier', 'workflow automation',
-            'seo ai', 'ai content', 'ai tools', 'ai marketing'
-        ]
-        if any(trend in keyword_lower for trend in trending_tech):
-            signals.trend_status = "🔥 TRENDING NOW"
-            signals.trend_score = 95.0
-            signals.traffic_velocity = "Fast"
-            signals.estimated_volume = "Very High" if signals.estimated_volume == "High" else signals.estimated_volume
-        
-        # ===== CALCULATE PRIORITY SCORE =====
-        # Weighted combination: Traffic potential (40%), Trend momentum (35%), Strategic fit (25%)
-        volume_scores = {"Very Low": 10, "Low": 25, "Medium": 50, "High": 75, "Very High": 100}
-        difficulty_scores = {"Easy": 100, "Medium": 70, "Hard": 40, "Very Hard": 20}
-        cpc_scores = {"Low": 25, "Medium": 50, "High": 80, "Very High": 100}
-        
-        traffic_score = (
-            volume_scores.get(signals.estimated_volume, 50) * 0.4 +
-            difficulty_scores.get(signals.keyword_difficulty, 50) * 0.3 +
-            cpc_scores.get(signals.cpc_signal, 50) * 0.3
+        # Competition is measured by a provider or classified by the offline model.
+        signals.keyword_difficulty = signals.competition_band
+
+        # No trend claim is made without observed trend data.
+        demand_scores = {"Very Low": 15, "Low": 35, "Medium": 60, "High": 80, "Very High": 95}
+        competition_opportunity = {"Low": 90, "Moderate": 65, "Medium": 65, "High": 35, "Very Hard": 20}
+        commercial_scores = {"Low": 35, "Medium": 65, "High": 90}
+        signals.traffic_score = round(
+            demand_scores.get(signals.demand_level, 50) * 0.45
+            + competition_opportunity.get(signals.competition_band, 50) * 0.35
+            + commercial_scores.get(signals.commercial_value, 50) * 0.20,
+            1,
         )
-        
-        priority_score = (
-            signals.trend_score * 0.35 +
-            traffic_score * 0.40 +
-            (100 if signals.intent in ["Transactional", "Commercial"] else 60) * 0.25
+        signals.priority_score = round(
+            signals.traffic_score * 0.75
+            + (85 if signals.intent in ["Transactional", "Commercial"] else 60) * 0.25,
+            1,
         )
-        
-        signals.traffic_score = round(traffic_score, 1)
-        signals.priority_score = round(priority_score, 1)
-        
+
         return signals
     
     def enrich_keywords(
@@ -572,7 +457,10 @@ class TrafficEnricher:
             trend_scores = self._fetch_google_trends(keywords_to_fetch[:20])
             logger.info(f"Fetched Google Trends for {len(trend_scores)} keywords")
         
-        # ===== STEP 3: ENRICH EACH KEYWORD =====
+        # ===== STEP 3: OFFLINE MODEL IS APPLIED LOCALLY =====
+        # No LLM is used to invent volume, CPC, or difficulty.
+
+        # ===== STEP 4: ENRICH EACH KEYWORD LOCALLY =====
         for keyword in keywords_to_fetch:
             # Get real metrics if available
             metrics = real_metrics.get(keyword)
@@ -599,25 +487,22 @@ class TrafficEnricher:
                     signals.trend_status = "📉 DECLINING"
                     signals.traffic_velocity = "Slow"
             
-            # Recalculate priority with real numbers
-            volume_score = min(100, (signals.monthly_volume or 0) / 1000) if signals.monthly_volume else 50
-            difficulty_score = 100 - (signals.difficulty_score or 50)  # Lower difficulty = higher score
-            
-            # Cap CPC contribution to avoid excessive scores (max $10 CPC = 100 points)
-            cpc_score = min((signals.cpc_value or 1) * 10, 100)
-            
-            signals.traffic_score = min(100, round(
-                volume_score * 0.5 +
-                difficulty_score * 0.3 +
-                cpc_score * 0.2
-            , 1))
-            
-            signals.priority_score = min(100, round(
-                signals.trend_score * 0.25 +
-                signals.traffic_score * 0.45 +
-                (100 if signals.intent in ["Transactional", "Commercial"] else 60) * 0.30
-            , 1))
-            
+            # Preserve modeled band scoring. Recalculate only measured rows.
+            if signals.provenance == "measured":
+                volume_score = min(100, (signals.monthly_volume or 0) / 1000)
+                difficulty_score = 100 - (signals.difficulty_score or 50)
+                commercial_score = {"Low": 35, "Medium": 65, "High": 90}.get(
+                    signals.commercial_value, 50
+                )
+                signals.traffic_score = min(100, round(
+                    volume_score * 0.5 + difficulty_score * 0.3 + commercial_score * 0.2, 1
+                ))
+                signals.priority_score = min(100, round(
+                    signals.traffic_score * 0.7
+                    + (100 if signals.intent in ["Transactional", "Commercial"] else 60) * 0.3,
+                    1,
+                ))
+
             # Adjust for audience
             if target_audience:
                 signals = self._adjust_for_audience(signals, target_audience)
@@ -792,7 +677,7 @@ def enrich_with_traffic_signals(
     # Enrich all keywords
     signals_list = enricher.enrich_keywords(keywords, page_topic, target_audience)
     
-    # Build output structure with ACTUAL NUMBERS
+    # Build source-aware output structure
     output = {
         "trending_alerts": enricher.get_trending_alerts(signals_list),
         "traffic_prioritized_keywords": [
@@ -801,13 +686,13 @@ def enrich_with_traffic_signals(
                 "trend_status": s.trend_status,
                 "traffic_velocity": s.traffic_velocity,
                 
-                # ACTUAL NUMBERS (new)
+                # Exact fields are populated only for measured providers
                 "monthly_volume": s.monthly_volume,
-                "volume_display": f"{s.monthly_volume:,}/mo" if s.monthly_volume else s.volume_range,
+                "volume_display": f"{s.monthly_volume:,}/mo" if s.provenance == "measured" and s.monthly_volume else s.modeled_range,
                 "volume_range": s.volume_range,
-                "traffic_potential": f"~{int((s.monthly_volume or 0) * 0.3):,}/mo" if s.monthly_volume else "Unknown",
+                "traffic_potential": f"~{int(s.monthly_volume * 0.3):,}/mo" if s.provenance == "measured" and s.monthly_volume else None,
                 "difficulty_score": s.difficulty_score,
-                "cpc_value": f"${s.cpc_value:.2f}" if s.cpc_value else None,
+                "cpc_value": f"${s.cpc_value:.2f}" if s.provenance == "measured" and s.cpc_value is not None else None,
                 "competition_index": s.competition_index,
                 
                 # Legacy categories (backward compatibility)
@@ -825,7 +710,14 @@ def enrich_with_traffic_signals(
                 "trend_score": s.trend_score,
                 "data_source": s.data_source,
                 "provider_used": s.provider_used,
-                "reasoning": f"{s.trend_status} {s.intent.lower()} keyword with {s.monthly_volume or s.estimated_volume} monthly searches — difficulty: {s.difficulty_score or s.keyword_difficulty}"
+                "provenance": s.provenance,
+                "confidence": s.confidence,
+                "dataset_version": s.dataset_version,
+                "demand_level": s.demand_level,
+                "modeled_range": s.modeled_range,
+                "commercial_value": s.commercial_value,
+                "competition_band": s.competition_band,
+                "reasoning": f"{s.demand_level} modeled demand, {s.competition_band.lower()} competition, {s.commercial_value.lower()} commercial value"
             }
             for s in signals_list
         ],
@@ -834,16 +726,138 @@ def enrich_with_traffic_signals(
         "topic_cluster": enricher.build_topic_cluster(signals_list, page_topic),
         "enrichment_metadata": {
             "total_keywords_processed": len(keywords),
-            "keywords_with_real_data": len([s for s in signals_list if s.data_source != "estimated"]),
+            "keywords_with_real_data": len([s for s in signals_list if s.provenance == "measured"]),
             "keywords_with_trends_data": len([s for s in signals_list if s.data_source == "google_trends"]),
             "data_providers_used": list(set([s.provider_used for s in signals_list if s.provider_used])),
             "avg_priority_score": round(sum(s.priority_score for s in signals_list) / len(signals_list), 1) if signals_list else 0,
-            "avg_monthly_volume": round(sum(s.monthly_volume or 0 for s in signals_list) / len([s for s in signals_list if s.monthly_volume]), 0) if any(s.monthly_volume for s in signals_list) else 0,
+            "avg_monthly_volume": round(sum(s.monthly_volume for s in signals_list if s.provenance == "measured" and s.monthly_volume) / len([s for s in signals_list if s.provenance == "measured" and s.monthly_volume]), 0) if any(s.provenance == "measured" and s.monthly_volume for s in signals_list) else None,
             "processed_at": datetime.now().isoformat()
         }
     }
     
     return output
+
+
+def _infer_serp_intent(organic_results: List[Dict]) -> Dict:
+    counts = {"informational": 0, "commercial": 0, "transactional": 0, "navigational": 0}
+    for result in organic_results[:10]:
+        text = f"{result.get('title', '')} {result.get('link', '')}".lower()
+        if any(term in text for term in ("buy", "shop", "product", "pricing", "book", "quote")):
+            counts["transactional"] += 1
+        elif any(term in text for term in ("best", "review", "compare", "comparison", "alternative", " vs ")):
+            counts["commercial"] += 1
+        elif any(term in text for term in ("login", "sign in", "official", "dashboard")):
+            counts["navigational"] += 1
+        else:
+            counts["informational"] += 1
+
+    total = sum(counts.values())
+    primary = max(counts, key=counts.get) if total else None
+    confidence = round(counts[primary] / total, 2) if primary and total else 0.0
+    return {
+        "primary_intent": primary,
+        "confidence": confidence,
+        "distribution": counts,
+        "sample_size": total,
+        "provenance": "observed_serp" if total else None,
+    }
+
+
+def apply_serp_evidence(
+    traffic_analysis: Dict,
+    serp_features: Dict[str, Dict],
+    trend_evidence: Optional[Dict[str, Dict]] = None,
+) -> Dict:
+    """Merge observed SERP composition and relative demand into opportunity rows."""
+    rows = traffic_analysis.get("traffic_prioritized_keywords", [])
+    trend_evidence = trend_evidence or {}
+    observed_count = 0
+    trend_count = 0
+    weights = {
+        "paid_ads": 3, "shopping": 3, "local_pack": 2,
+        "knowledge_graph": 2, "ai_overview": 2,
+        "featured_snippet": 1, "people_also_ask": 1, "news": 1,
+    }
+
+    for item in rows:
+        keyword = item.get("keyword")
+        serp = serp_features.get(keyword, {})
+        trend = trend_evidence.get(keyword, {})
+        has_serp = bool(serp and serp.get("data_source") == "serpapi")
+
+        if has_serp:
+            observed_count += 1
+            features = list(dict.fromkeys(serp.get("serp_features") or []))
+            pressure_score = sum(weights.get(feature, 0) for feature in features)
+            if pressure_score >= 4:
+                pressure = "High"
+                item["competition_band"] = "High"
+                item["priority_score"] = max(0, round(item.get("priority_score", 0) - 10, 1))
+            elif pressure_score >= 2:
+                pressure = "Moderate"
+                if item.get("competition_band") == "Low":
+                    item["competition_band"] = "Moderate"
+                item["priority_score"] = max(0, round(item.get("priority_score", 0) - 5, 1))
+            else:
+                pressure = "Standard"
+
+            domains = [
+                result.get("domain")
+                for result in (serp.get("organic_results") or [])[:5]
+                if result.get("domain")
+            ]
+            intent_evidence = _infer_serp_intent(serp.get("organic_results") or [])
+            if intent_evidence["sample_size"] >= 3 and intent_evidence["confidence"] >= 0.5:
+                item["intent"] = intent_evidence["primary_intent"].title()
+                item["intent_source"] = "observed_serp"
+
+            item.update({
+                "serp_observed": True,
+                "evidence_provenance": "observed_serp",
+                "evidence_source": "serpapi",
+                "evidence_confidence": "high",
+                "source_label": "SERP observed + modeled demand",
+                "serp_pressure": pressure,
+                "serp_pressure_score": pressure_score,
+                "observed_features": features,
+                "competitor_domains": domains,
+                "serp_intent": intent_evidence,
+                "serp_opportunity": features or ["standard_organic_results"],
+                "related_query_count": len(serp.get("related_searches") or []),
+                "paa_question_count": len(serp.get("people_also_ask") or []),
+            })
+        else:
+            item["serp_observed"] = False
+
+        if trend:
+            trend_count += 1
+            item.update({
+                "relative_demand_index": trend.get("relative_interest"),
+                "trend_direction": trend.get("trend_direction"),
+                "trend_change_index": trend.get("change_index"),
+                "trend_period": trend.get("period"),
+                "demand_provenance": "observed_serp",
+                "trend_status": trend.get("trend_direction", "Stable"),
+            })
+            if trend.get("trend_direction") == "Rising":
+                item["priority_score"] = min(100, round(item.get("priority_score", 0) + 5, 1))
+            elif trend.get("trend_direction") == "Declining":
+                item["priority_score"] = max(0, round(item.get("priority_score", 0) - 5, 1))
+
+        item["evidence_status"] = (
+            "observed" if has_serp and trend
+            else "partial_evidence" if has_serp or trend
+            else "insufficient_evidence"
+        )
+        if item["evidence_status"] == "insufficient_evidence":
+            item["source_label"] = "Insufficient live evidence"
+
+    metadata = traffic_analysis.setdefault("enrichment_metadata", {})
+    metadata["keywords_with_serp_evidence"] = observed_count
+    metadata["keywords_with_trend_evidence"] = trend_count
+    metadata["serp_evidence_source"] = "serpapi" if observed_count else None
+    metadata["trend_evidence_source"] = "serpapi_google_trends" if trend_count else None
+    return traffic_analysis
 
 
 # Convenience function for pipeline integration

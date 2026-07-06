@@ -316,8 +316,8 @@ def keyword_suggestions(request):
 
 
 @require_http_methods(["GET", "POST"])
-@rate_limit_ai(requests_per_minute=10)  # AI endpoints are expensive
 @api_subscription_check
+@rate_limit_ai(requests_per_minute=10)  # AI endpoints are expensive
 def keyword_suggestions_v2(request):
     """
     Enhanced keyword suggestions endpoint (v2) with AI features.
@@ -446,11 +446,21 @@ def submit_feedback(request):
             user_comment=data.get("comment", ""),
             rating=data.get("rating"),
         )
+
+        retraining = {"triggered": False}
+        if action in ("accepted", "implemented", "rejected"):
+            try:
+                from .retraining_pipeline import RetrainingPipeline
+                retraining = RetrainingPipeline.maybe_retrain_relevance_scorer()
+            except Exception as retrain_error:
+                logger.warning("Feedback retraining check failed: %s", retrain_error)
+                retraining = {"triggered": False, "error": str(retrain_error)}
         
         return JsonResponse({
             "success": True,
             "feedback_id": feedback.id,
-            "message": f"Feedback recorded: {action}"
+            "message": f"Feedback recorded: {action}",
+            "retraining": retraining
         })
         
     except KeywordOpportunity.DoesNotExist:
@@ -521,8 +531,8 @@ def get_opportunities(request):
 # -----------------------------------------------------------------------------
 
 @require_http_methods(["POST"])
-@rate_limit_api(requests_per_minute=20)  # Async analysis rate limit
 @api_subscription_check
+@rate_limit_api(requests_per_minute=20)  # Async analysis rate limit
 def analyze_url_async(request):
     """
     Start async analysis of a single URL.
@@ -566,8 +576,8 @@ def analyze_url_async(request):
 
 
 @require_http_methods(["POST"])
-@rate_limit_api(requests_per_minute=5)  # Batch is expensive, strict limit
 @api_subscription_check
+@rate_limit_api(requests_per_minute=5)  # Batch is expensive, strict limit
 def analyze_batch_async(request):
     """
     Start async batch analysis of multiple URLs.

@@ -36,11 +36,15 @@ from subscriptions.decorators import track_usage, enforce_free_trial_limit, requ
 logger = logging.getLogger(__name__)
 
 
+@login_required(login_url='login')
+@require_feature('api_access')
 def sentiment_analysis_page(request):
     """Render the sentiment analysis page."""
     return render(request, 'sentiment_analysis.html')
 
 
+@login_required(login_url='login')
+@require_feature('api_access')
 def analyze_sentiment_view(request):
     """Analyze sentiment of content from a URL."""
     if request.method == 'POST':
@@ -351,7 +355,7 @@ def show(request):
     import json
     from django.core.cache import cache
     
-    url = request.POST.get("fname")
+    url = (request.POST.get("url") or request.POST.get("fname"))
     
     if not url:
         return render(request, 'index.html')
@@ -744,6 +748,7 @@ def _build_priority_issues(data):
 
 
 @login_required(login_url='login')
+@require_feature('api_access')
 def seo_metrics(request):
     """Display SEO metrics using Moz API."""
     import validators
@@ -753,14 +758,13 @@ def seo_metrics(request):
     if request.method == "GET":
         return render(request, 'seo_metrics.html')
 
-    url = request.POST.get("fname")
+    url = request.POST.get("url", "").strip()
+    if url and not url.startswith(('http://', 'https://')):
+        url = 'https://' + url
 
     if not url or not validators.url(url):
         messages.error(request, 'Please enter a valid URL.')
-        return render(request, 'seo_metrics.html')
-
-    if not url.startswith(('http://', 'https://')):
-        url = 'https://' + url
+        return render(request, 'seo_metrics.html', {'url': url})
 
     access_id = getattr(settings, 'MOZ_ACCESS_ID', '')
     secret_key = getattr(settings, 'MOZ_SECRET_KEY', '')
@@ -786,26 +790,28 @@ def seo_metrics(request):
 
         if response.status_code != 200:
             messages.error(request, f"Moz API error (Status {response.status_code}): {response.text[:200]}")
-            return render(request, 'seo_metrics.html', data)
+            return render(request, 'seo_metrics.html', {'url': url})
 
         json_data = response.json()
 
         data = {
-            'pda': json_data.get('pda', 'N/A'),
-            'upa': json_data.get('upa', 'N/A'),
-            'links': json_data.get('uid', 'N/A'),
-            'equity_links': json_data.get('ueid', 'N/A'),
-            'moz_rank': json_data.get('umrp', 'N/A'),
+            'url': url,
+            'da': round(json_data.get('pda', 0), 2),
+            'pa': round(json_data.get('upa', 0), 2),
+            'total_backlinks': json_data.get('ueid', 'N/A'),
+            'linking_root_domains': json_data.get('uid', 'N/A'),
+            'moz_rank': round(json_data.get('umrp', 0), 2),
         }
 
         return render(request, 'seo_metrics.html', data)
 
     except Exception as e:
         messages.error(request, f"Error fetching Moz metrics: {str(e)}")
-        return render(request, 'seo_metrics.html', data)
+        return render(request, 'seo_metrics.html', {'url': url})
 
 
 @login_required(login_url='login')
+@require_feature('api_access')
 def mobiletest(request):
     """Test mobile-friendliness using PageSpeed Insights API."""
     import validators
@@ -815,7 +821,10 @@ def mobiletest(request):
         if request.method == "GET":
             return render(request, 'mobiletest.html')
 
-        url = request.POST.get("fname")
+        url = (request.POST.get("url") or request.POST.get("fname") or "").strip()
+        if url and not url.startswith(('http://','https://')):
+            url = 'https://' + url
+
         if not url or not validators.url(url):
             messages.error(request, "Invalid URL")
             return render(request, 'mobiletest.html')
@@ -934,6 +943,7 @@ def mobiletest(request):
 
 
 @login_required(login_url='login')
+@require_feature('api_access')
 def robot(request):
     """Generate robots.txt content for a URL."""
     import validators
@@ -968,6 +978,7 @@ def robot(request):
 
 
 @login_required(login_url='login')
+@require_feature('api_access')
 def keyPosition(request):
     """Check keyword ranking position in Google search results."""
     import validators
@@ -1023,6 +1034,7 @@ def keyPosition(request):
 
 
 @login_required(login_url='login')
+@require_feature('api_access')
 def keysuggestion(request):
     """Get keyword suggestions from Google Autocomplete."""
     try:
@@ -1060,6 +1072,7 @@ def keysuggestion(request):
 
 
 @login_required(login_url='login')
+@require_feature('ai_suggestions')
 @track_usage('audit')  # Track keyword analysis as audit usage
 def keyword_ai_suggestions(request):
     """AI-Powered Keyword Suggestion using keyword_ai pipeline."""
@@ -1242,11 +1255,6 @@ def ChangePassword(request, token):
         if request.method == 'POST':
             new_password = request.POST.get('new_password')
             confirm_password = request.POST.get('reconfirm_password')
-            user_id = request.POST.get('user_id')
-
-            if not user_id:
-                messages.error(request, 'No user id found.')
-                return redirect(f'/change-password/{token}/')
 
             if new_password != confirm_password:
                 messages.error(request, 'Passwords do not match.')
@@ -1256,7 +1264,7 @@ def ChangePassword(request, token):
                 messages.error(request, 'Password must be at least 8 characters long.')
                 return redirect(f'/change-password/{token}/')
 
-            user_obj = User.objects.get(id=user_id)
+            user_obj = profile_obj.user
             user_obj.set_password(new_password)
             user_obj.save()
 

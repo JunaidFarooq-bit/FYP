@@ -167,6 +167,9 @@ class Subscription(models.Model):
     
     def can_use_feature(self, feature_name):
         """Check if user can use a specific feature."""
+        if not self.is_active():
+            return False
+
         if not self.tier:
             return False
         

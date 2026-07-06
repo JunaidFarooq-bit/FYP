@@ -34,7 +34,7 @@
 
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{% static 'fyp.css'%}" />
-    <link rel="stylesheet" href="{% static 'modern-style.css'%}" />
+    <link rel="stylesheet" href="{% static 'modern-style.css'%}?v=20260618" />
 
     <style>
       /* ================================================
@@ -131,6 +131,37 @@
       .results-url a:hover {
         text-decoration: underline;
       }
+      .input-wrap {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: var(--surface);
+        border: 1.5px solid var(--border);
+        border-radius: var(--r-md);
+        padding: 0 14px;
+        transition:
+          border-color 0.2s,
+          box-shadow 0.2s;
+      }
+      .input-wrap:focus-within {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px var(--accent-glow);
+      }
+      .input-wrap i {
+        color: var(--ink-muted);
+        font-size: 0.9rem;
+      }
+      .input-wrap input,
+      .input-wrap select {
+        border: none;
+        background: transparent;
+        width: 100%;
+        padding: 11px 0;
+        font-family: var(--font-body);
+        font-size: 0.9rem;
+        color: var(--ink);
+        outline: none;
+      }
 
       /* Metric grid */
       .metrics-grid {
@@ -145,7 +176,9 @@
         box-shadow: var(--shadow-md);
         padding: var(--spacing-xl) var(--spacing-lg);
         text-align: center;
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        transition:
+          transform 0.2s ease,
+          box-shadow 0.2s ease;
       }
       .metric-card:hover {
         transform: translateY(-4px);
@@ -197,9 +230,18 @@
         font-size: 1.25rem;
       }
     </style>
+    <link
+      rel="stylesheet"
+      href="{% static 'sidebar-tool-theme.css' %}?v=20260618"
+    />
+    <link
+      rel="stylesheet"
+      href="{% static 'keyword-page-system.css' %}?v=20260706-heading-lock"
+    />
+    <link rel="stylesheet" href="{% static 'result-page-system.css' %}?v=20260706" />
   </head>
 
-  <body>
+  <body class="keyword-system-page result-system-page">
     <!-- Loader -->
     <div id="loader">
       <div class="loader-animation">
@@ -243,16 +285,12 @@
             <i class="fas fa-bars"></i>
           </button>
 
-          <div style="flex: 1"></div>
+          <div class="navbar-page-context">
+            <strong>SEO Metrics</strong>
+          </div>
+
           <div class="navbar-actions" style="margin-left: auto">
-            <a
-              class="btn btn-primary"
-              href="{% url 'logout' %}"
-              id="logout"
-            >
-              <i class="fas fa-sign-out-alt"></i>
-              <span>Logout</span>
-            </a>
+            {% include 'partials/_profile_dropdown.html' %}
           </div>
         </div>
       </nav>
@@ -261,19 +299,19 @@
     <!-- Main Content Area -->
     <main class="main-content">
       <!-- Alert Messages -->
-      {% if messages %}
-        {% for message in messages %}
-        <div class="alert-modern alert-{{ message.tags }}" id="msg" role="alert">
-          <div class="alert-content">
-            <i class="fas {% if message.tags == 'success' %}fa-check-circle{% else %}fa-exclamation-circle{% endif %}"></i>
-            <span>{{ message }}</span>
-          </div>
-          <button class="alert-close" onclick="this.parentElement.remove()">
-            <i class="fas fa-times"></i>
-          </button>
+      {% if messages %} {% for message in messages %}
+      <div class="alert-modern alert-{{ message.tags }}" id="msg" role="alert">
+        <div class="alert-content">
+          <i
+            class="fas {% if message.tags == 'success' %}fa-check-circle{% else %}fa-exclamation-circle{% endif %}"
+          ></i>
+          <span>{{ message }}</span>
         </div>
-        {% endfor %}
-      {% endif %}
+        <button class="alert-close" onclick="this.parentElement.remove()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      {% endfor %} {% endif %}
 
       <div class="container-fluid content-wrapper">
         <!-- Hero -->
@@ -283,8 +321,8 @@
           </div>
           <h2>SEO Metrics</h2>
           <p>
-            Get comprehensive SEO insights including Domain Authority,
-            Page Authority, MozRank, total backlinks, and linking root domains.
+            Get comprehensive SEO insights including Domain Authority, Page
+            Authority, MozRank, total backlinks, and linking root domains.
             Powered by the Moz API for accurate, real-time data.
           </p>
         </div>
@@ -299,19 +337,17 @@
             method="post"
           >
             {% csrf_token %}
-            <div class="search-input-group">
-              <i class="fas fa-search search-icon"></i>
-              <input
-                placeholder="e.g. https://example.com"
-                name="fname"
-                autocomplete="on"
-                type="search"
-                id="id_url"
-                class="search-input"
-                aria-label="Website URL"
-                required
-                {% if url %}value="{{ url }}"{% endif %}
-              />
+            <div class="form-group">
+              <div class="input-wrap">
+                <i class="fas fa-globe"></i>
+                <input
+                  type="url"
+                  name="url"
+                  id="url"
+                  placeholder="https://example.com"
+                  value="{{ url|default:'' }}"
+                />
+              </div>
             </div>
             <div class="form-actions">
               <button
@@ -330,6 +366,57 @@
             </div>
           </form>
         </div>
+
+        <section class="analysis-section features-section">
+          <div class="section-header">
+            <div class="section-title">
+              <i class="fas fa-sparkles section-icon"></i>
+              <h2>What We Analyze</h2>
+            </div>
+          </div>
+          <div class="section-content">
+            <div class="features-grid">
+              <div class="feature-card">
+                <div class="feature-icon intent-icon">
+                  <i class="fas fa-award"></i>
+                </div>
+                <h3 class="feature-title">Domain Authority</h3>
+                <p class="feature-description">
+                  Moz authority score that estimates how strongly a domain can
+                  compete in search.
+                </p>
+              </div>
+              <div class="feature-card">
+                <div class="feature-icon onpage-icon">
+                  <i class="fas fa-file-alt"></i>
+                </div>
+                <h3 class="feature-title">Page Authority</h3>
+                <p class="feature-description">
+                  Page-level ranking strength for the exact URL you submit.
+                </p>
+              </div>
+              <div class="feature-card">
+                <div class="feature-icon authority-icon">
+                  <i class="fas fa-link"></i>
+                </div>
+                <h3 class="feature-title">Backlink Signals</h3>
+                <p class="feature-description">
+                  Total backlinks and linking root domains that influence
+                  organic visibility.
+                </p>
+              </div>
+              <div class="feature-card">
+                <div class="feature-icon technical-icon">
+                  <i class="fas fa-chart-line"></i>
+                </div>
+                <h3 class="feature-title">MozRank</h3>
+                <p class="feature-description">
+                  A quick quality signal for link popularity and search equity.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
 
         <!-- Results (conditional) -->
         {% if url %}
@@ -440,6 +527,6 @@
         });
       }, 5000);
     </script>
-  {% include 'partials/_upgrade_modal.html' %}
+    {% include 'partials/_upgrade_modal.html' %}
   </body>
 </html>

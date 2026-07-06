@@ -1,0 +1,69 @@
+{
+  "version": "2026-07",
+  "name": "Offline keyword opportunity benchmark",
+  "methodology": "Transparent query-shape and intent bands; not live search-volume data.",
+  "demand_bands": {
+    "very_high": {
+      "label": "Very High",
+      "range": "10K-50K+"
+    },
+    "high": {
+      "label": "High",
+      "range": "5K-50K"
+    },
+    "medium": {
+      "label": "Medium",
+      "range": "500-5K"
+    },
+    "low": {
+      "label": "Low",
+      "range": "100-1K"
+    },
+    "very_low": {
+      "label": "Very Low",
+      "range": "<100"
+    }
+  },
+  "commercial_terms": [
+    "best",
+    "buy",
+    "price",
+    "pricing",
+    "cost",
+    "software",
+    "service",
+    "platform",
+    "tool",
+    "review",
+    "comparison",
+    "alternative",
+    "agency"
+  ],
+  "transactional_terms": [
+    "buy",
+    "order",
+    "hire",
+    "book",
+    "quote",
+    "pricing",
+    "discount",
+    "deal"
+  ],
+  "question_terms": [
+    "what",
+    "why",
+    "how",
+    "when",
+    "where",
+    "who",
+    "which"
+  ],
+  "competition_terms": [
+    "best",
+    "top",
+    "software",
+    "platform",
+    "service",
+    "review"
+  ]
+}

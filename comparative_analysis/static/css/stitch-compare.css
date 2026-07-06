@@ -12,7 +12,7 @@
   --compare-good: #28c081;
   --compare-fair: #fbbf24;
   --compare-risk: #f87171;
-  --font-hero: "Space Grotesk", "Outfit", "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-hero: "Syne", "Space Grotesk", "Outfit", "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 body.compare-shell {
@@ -31,27 +31,38 @@ body.compare-shell {
 }
 
 .hero-band {
-  background: radial-gradient(circle at top left, rgba(77, 61, 247, 0.18), transparent 55%), #10133f;
+  background:
+    radial-gradient(circle at 76% 22%, rgba(71, 95, 255, 0.26), transparent 30%),
+    radial-gradient(circle at 92% 78%, rgba(30, 203, 212, 0.12), transparent 28%),
+    linear-gradient(135deg, #07164c 0%, #101f6e 52%, #2234b6 100%);
+  align-items: center;
   border-radius: 28px;
-  padding: 36px;
+  min-height: 268px;
+  padding: 42px 48px;
   color: #fff;
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
   gap: 32px;
   position: relative;
-  box-shadow: 0 30px 50px rgba(15, 16, 49, 0.35);
+  overflow: hidden;
+  box-shadow: 0 24px 60px rgba(11, 15, 30, 0.16);
 }
 
 .hero-text h1 {
   font-family: var(--font-hero);
-  font-size: clamp(1.75rem, 4vw, 2.8rem);
-  margin: 12px 0;
+  font-size: clamp(2.05rem, 3vw, 2.85rem);
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 1.1;
+  margin: 12px 0 14px;
+  max-width: 720px;
 }
 
 .hero-text p {
+  color: rgba(255, 255, 255, 0.78);
+  line-height: 1.65;
   margin-bottom: 16px;
-  color: rgba(255, 255, 255, 0.85);
-  line-height: 1.7;
+  max-width: 620px;
 }
 
 .hero-meta {
@@ -71,12 +82,25 @@ body.compare-shell {
 }
 
 .hero-btn {
-  border-radius: 999px;
+  border-radius: 12px;
   padding: 10px 20px;
   display: inline-flex;
   align-items: center;
   gap: 8px;
   font-weight: 600;
+}
+
+#main-navbar {
+  background: rgba(255, 255, 255, 0.94) !important;
+  border-bottom: 1px solid #e4eaf5 !important;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08) !important;
+  backdrop-filter: blur(14px);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #5b74ff, #3157ff) !important;
+  border: 0 !important;
+  box-shadow: 0 12px 24px rgba(49, 87, 255, 0.22) !important;
 }
 
 .hero-urls {
@@ -85,10 +109,10 @@ body.compare-shell {
 }
 
 .url-card {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.08);
   border-radius: 20px;
   padding: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
 }
 
@@ -292,6 +316,30 @@ body.compare-shell {
 }
 
 @media (max-width: 640px) {
-  .hero-band { padding: 24px; }
+  .hero-band { min-height: 0; padding: 28px 22px; }
   .hero-actions { flex-direction: column; }
+}
+
+/* Unified sidebar page header */
+#main-navbar {
+  height: 70px !important;
+  min-height: 70px !important;
+  max-height: 70px !important;
+  padding: 0 !important;
+}
+
+#main-navbar .navbar-container {
+  height: 70px !important;
+  min-height: 70px !important;
+  max-height: 70px !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+#main-navbar .navbar-page-context {
+  gap: 0 !important;
+}
+
+#main-navbar .navbar-page-context strong {
+  margin: 0 !important;
 }

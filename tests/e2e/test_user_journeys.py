@@ -275,8 +275,8 @@ class TestComparativeAnalysisJourney:
         assert response.status_code == 200
         assert ComparisonReport.objects.count() >= initial_count
 
-    def test_comparison_results_page_loads(self, authenticated_client, sample_comparison_report):
-        response = authenticated_client.get(
+    def test_comparison_results_page_loads(self, pro_client, pro_subscription, sample_comparison_report):
+        response = pro_client.get(
             f'/comparative-analysis/results/{sample_comparison_report.id}/'
         )
         assert response.status_code == 200

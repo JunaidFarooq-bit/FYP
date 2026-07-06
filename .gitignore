@@ -122,3 +122,61 @@ prof/
 .Spotlight-V100
 .Trashes
 ehthumbs.db
+# Additional safe-push protections
+
+# Environment variants (keep the documented template)
+.env.*
+*.env
+!.env.example
+
+# Local database variants
+*.sqlite
+*.sqlite3
+*.db
+
+# Additional ML weights and local model caches
+keyword_ai/models/*.npz
+keyword_ai/models/*.joblib
+keyword_ai/models/*.onnx
+keyword_ai/models/*.pt
+keyword_ai/models/*.pth
+keyword_ai/models/*.bin
+keyword_ai/models/*.safetensors
+keyword_ai/models/*.ckpt
+keyword_ai/models/*.h5
+.cache/
+.huggingface/
+.sentence_transformers/
+
+# Local visual and browser-test artifacts
+visual-preview/
+visual-*.png
+screenshots/
+playwright-report/
+test-results/
+
+# Private keys, key stores, and cloud credential exports
+*.p12
+*.pfx
+*.jks
+*.keystore
+id_rsa
+id_ed25519
+credentials*.json
+service-account*.json
+client_secret*.json
+*.ovpn
+*credentials*.json
+*service-account*.json
+*client_secret*.json
+secrets*.json
+secrets*.yaml
+secrets*.yml
+.secrets/
+.npmrc
+.pypirc
+.netrc
+kubeconfig*
+*.tfstate
+*.tfstate.*
+.terraform/

@@ -30,7 +30,9 @@ def search_similar_analyses(
     content_embedding: np.ndarray,
     top_k: int = 5,
     min_quality_score: float = 50.0,
-    include_keywords: bool = True
+    include_keywords: bool = True,
+    exclude_url: str = None,
+    embedding_version: str = None,
 ) -> List[Dict]:
     """
     Search for similar content analyses using the configured vector database.
@@ -53,24 +55,31 @@ def search_similar_analyses(
             results = search_similar_with_pinecone(
                 content_embedding=content_embedding,
                 top_k=top_k,
-                min_quality_score=min_quality_score
+                min_quality_score=min_quality_score,
+                exclude_url=exclude_url,
+                embedding_version=embedding_version,
             )
             if results:  # Only use if Pinecone returned results
                 logger.debug(f"Retrieved {len(results)} results from Pinecone")
                 return results
-            logger.warning("Pinecone returned no results, falling back to pgvector")
+            logger.info("Pinecone has no compatible RAG matches; checking pgvector")
         except Exception as e:
             logger.error(f"Pinecone search failed, falling back to pgvector: {e}")
     
     # Fall back to pgvector (PostgreSQL)
-    return _search_with_pgvector(content_embedding, top_k, min_quality_score, include_keywords)
+    return _search_with_pgvector(
+        content_embedding, top_k, min_quality_score, include_keywords,
+        exclude_url, embedding_version
+    )
 
 
 def _search_with_pgvector(
     content_embedding: np.ndarray,
     top_k: int = 5,
     min_quality_score: float = 50.0,
-    include_keywords: bool = True
+    include_keywords: bool = True,
+    exclude_url: str = None,
+    embedding_version: str = None,
 ) -> List[Dict]:
     """
     Internal: Search using PostgreSQL with pgvector extension.
@@ -79,6 +88,7 @@ def _search_with_pgvector(
     pgvector setup.
     """
     from ..models import ContentAnalysis, KeywordOpportunity
+    from pgvector.django import CosineDistance
     
     # Check if PostgreSQL is available
     if connection.vendor != 'postgresql':
@@ -96,18 +106,20 @@ def _search_with_pgvector(
     
     try:
         # Use pgvector's cosine distance operator (<=>)
-        similar_analyses = ContentAnalysis.objects.filter(
+        query = ContentAnalysis.objects.filter(
             quality_score__gte=min_quality_score,
-            embedding__isnull=False
-        ).annotate(
-            distance=models.Func(
-                models.F('embedding'),
-                embedding_list,
-                function='embedding <=>',
-                output_field=models.FloatField()
+            embedding__isnull=False,
+        )
+        if exclude_url:
+            query = query.exclude(url=exclude_url)
+        if embedding_version:
+            query = query.filter(
+                structure_data___embedding__version=embedding_version
             )
-        ).order_by('distance')[:top_k]
-        
+
+        similar_analyses = query.annotate(
+            distance=CosineDistance("embedding", embedding_list)
+        ).order_by("distance")[:top_k]
         results = []
         for analysis in similar_analyses:
             # Convert cosine distance to similarity: similarity = 1 - distance
@@ -126,7 +138,7 @@ def _search_with_pgvector(
                 # Get top keywords from this similar analysis
                 keywords = KeywordOpportunity.objects.filter(
                     content_analysis=analysis,
-                    is_rejected=False
+                    is_accepted=True
                 ).order_by('-relevance_score')[:10]
                 
                 result['top_keywords'] = [

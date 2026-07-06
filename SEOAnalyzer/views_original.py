@@ -96,7 +96,7 @@ from datetime import datetime                                # Date & time
 from collections import Counter                              # Frequency counting
 from typing import Optional, Dict
 from openai import OpenAI
-import openai          # needed for openai.RateLimitError
+import openai          # OpenAI-compatible SDK used for Groq/OpenRouter exceptions
 from django.conf import settings
 logger = logging.getLogger(__name__)
 
@@ -278,7 +278,7 @@ class Website_Audit(object):
         self.lst = []
 
     def _get_ai_client(self):
-        """Get AI client (Groq preferred, OpenRouter/OpenAI fallback)"""
+        """Get AI client (Groq preferred, OpenRouter fallback)."""
         use_groq = getattr(settings, 'USE_GROQ', True)
 
         if use_groq:
@@ -286,6 +286,7 @@ class Website_Audit(object):
             if not api_key:
                 logger.warning("No GROQ_API_KEY found. Using fallback E-E-A-T analysis.")
                 return None
+            logger.info("Using Groq API for E-E-A-T analysis with model %s", self._get_ai_model())
             return OpenAI(
                 api_key=api_key,
                 base_url="https://api.groq.com/openai/v1",
@@ -298,12 +299,17 @@ class Website_Audit(object):
             logger.warning("No API key found. Using fallback E-E-A-T analysis.")
             return None
 
+        logger.info("Using OpenRouter API for E-E-A-T analysis with model %s", self._get_ai_model())
         return OpenAI(
             api_key=api_key,
             base_url="https://openrouter.ai/api/v1",
             timeout=45.0,
             max_retries=3
         )
+
+    def _get_ai_provider(self):
+        """Return the active AI provider name for logging/debugging."""
+        return 'groq' if getattr(settings, 'USE_GROQ', True) else 'openrouter'
 
     def _get_ai_model(self):
         """Get model name based on active provider"""
@@ -661,6 +667,12 @@ Return ONLY valid JSON, no markdown, no preamble."""
                         ],
                         temperature=0.2,  # Lower for more consistent analysis
                         max_tokens=700
+                    )
+                    logger.info(
+                        "E-E-A-T AI analysis completed via %s using model %s for %s",
+                        self._get_ai_provider(),
+                        self._get_ai_model(),
+                        content_type
                     )
                     break  # success — exit retry loop
                 except openai.RateLimitError:

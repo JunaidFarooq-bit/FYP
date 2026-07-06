@@ -330,12 +330,14 @@ def score_keywords_v2(
     # Get ML model score if available
     # Note: Only use ML model if it was properly trained (not the dummy model)
     model = get_relevance_model() if use_ml_model else None
-    
+    score_provenance = "heuristic_fallback"
+
     if model is not None and hasattr(model, 'n_estimators_'):
         scaler = get_scaler()
         try:
             features_scaled = scaler.transform(features)
             ml_scores = model.predict(features_scaled)
+            score_provenance = "feedback_trained_model"
             # Ensure scores are in 0-100 range
             ml_scores = np.clip(ml_scores * 100 if ml_scores.max() <= 1 else ml_scores, 0, 100)
         except Exception as e:
@@ -386,6 +388,8 @@ def score_keywords_v2(
             "competition_gap_score": round(gap_score, 2),
             "is_relevant": is_relevant,
             "search_intent": predict_search_intent(keyword),
+            "relevance_provenance": score_provenance,
+            "relevance_confidence": "medium" if score_provenance == "feedback_trained_model" else "low",
         })
     
     # Sort by composite relevance score
@@ -418,7 +422,10 @@ def predict_search_intent(keyword: str) -> str:
 
 
 # Training function for model training pipeline
-def train_relevance_model(training_data: List[Tuple[str, np.ndarray, float]]):
+def train_relevance_model(
+    training_data: List[Tuple[str, np.ndarray, float]],
+    save_model: bool = True,
+):
     """
     Train the relevance scoring model.
     
@@ -442,12 +449,11 @@ def train_relevance_model(training_data: List[Tuple[str, np.ndarray, float]]):
     )
     model.fit(X_scaled, y)
     
-    # Save model and scaler
-    os.makedirs(MODEL_DIR, exist_ok=True)
-    joblib.dump(model, RELEVANCE_MODEL_PATH)
-    joblib.dump(scaler, SCALER_PATH)
-    
-    logger.info(f"Model saved to {RELEVANCE_MODEL_PATH}")
-    logger.info(f"Scaler saved to {SCALER_PATH}")
-    
+    if save_model:
+        os.makedirs(MODEL_DIR, exist_ok=True)
+        joblib.dump(model, RELEVANCE_MODEL_PATH)
+        joblib.dump(scaler, SCALER_PATH)
+        logger.info(f"Model saved to {RELEVANCE_MODEL_PATH}")
+        logger.info(f"Scaler saved to {SCALER_PATH}")
+
     return model, scaler

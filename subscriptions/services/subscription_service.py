@@ -185,13 +185,17 @@ class SubscriptionService:
         
         subscription.tier = new_tier
         subscription.billing_cycle = billing_cycle
-        subscription.status = 'active'
         subscription.current_period_start = timezone.now()
-        
-        if billing_cycle == 'yearly':
-            subscription.current_period_end = timezone.now() + timedelta(days=365)
+
+        if new_tier.name == 'free':
+            subscription.status = 'free_trial_used'
+            subscription.current_period_end = None
         else:
-            subscription.current_period_end = timezone.now() + timedelta(days=30)
+            subscription.status = 'active'
+            if billing_cycle == 'yearly':
+                subscription.current_period_end = timezone.now() + timedelta(days=365)
+            else:
+                subscription.current_period_end = timezone.now() + timedelta(days=30)
         
         subscription.save()
         
