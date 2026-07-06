@@ -33,6 +33,7 @@ reportlab>=4.0.0               # PDF report generation
 plotly>=5.18.0                 # Interactive charts in audit views
 vaderSentiment>=3.3.2          # Sentiment analysis
 openai>=1.0.0                  # OpenAI-compatible API client
+tiktoken>=0.7.0                # Token counting for LLM prompts
 keybert>=0.8.0                 # Keyword extraction
 pgvector>=0.2.0                # Django vector field migrations
 
