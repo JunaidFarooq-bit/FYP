@@ -261,7 +261,8 @@ Respond ONLY with valid JSON in this format:
             model=model_name,
             messages=[{"role": "user", "content": prompt}],
             temperature=temperature,
-            max_tokens=2000,
+            max_tokens=4000,
+            timeout=25.0,
         )
 
         raw_text = response.choices[0].message.content.strip()
